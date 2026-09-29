@@ -727,6 +727,18 @@ figcaption strong { color: var(--ink-2); }
 .about-panel .about-lead { font-size: 1.12rem; line-height: 1.55; }
 .about-more h3 { margin-top: 1.4rem; }
 .about-panel .about-contact { font-weight: 600; }
+/* What this project is / isn't: two columns, stacked on narrow screens */
+.is-isnt-title { font: 700 1.16rem/1.3 var(--font-body); margin: 0 0 0.75rem; }
+.is-isnt { display: grid; grid-template-columns: repeat(auto-fit, minmax(17rem, 1fr)); gap: 0.9rem; max-width: 52rem; margin: 0 0 1.75rem; }
+.is-isnt > div { border: 1px solid var(--rule); border-radius: var(--radius); background: var(--panel); padding: 0.95rem 1.1rem 0.25rem; }
+.is-isnt .is { border-color: var(--accent-line); background: var(--accent-wash); }
+.is-isnt h4 { margin: 0 0 0.7rem; font: 600 0.74rem/1.2 var(--font-mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); }
+.is-isnt .is h4 { color: var(--accent-ink); }
+.is-isnt ul { list-style: none; margin: 0; padding: 0; }
+.is-isnt li { position: relative; padding-left: 1.5rem; margin: 0 0 0.8rem; font-size: 0.95rem; line-height: 1.5; color: var(--ink); }
+.is-isnt li::before { position: absolute; left: 0; top: 0; font: 700 0.95rem/1.5 var(--font-mono); }
+.is-isnt .is li::before { content: "✓"; color: var(--accent-ink); }
+.is-isnt .isnt li::before { content: "✕"; color: var(--ink-3); }
 
 /* Route map: the curriculum as a sequence of stations */
 .route { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; }
