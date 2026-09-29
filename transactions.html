@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="en" data-lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Moving goods without duplicating them · MoonQwak</title>
+<meta name="description" content="Escrow in the same write, locks ordered by id, re-reading under the lock, all or nothing.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Chakra+Petch:wght@500;600&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="assets/css/site.css">
+<script>(function(){var r=document.documentElement,l,t;try{l=localStorage.getItem("mq-lang");t=localStorage.getItem("mq-theme");}catch(e){}if(l!=="en"&&l!=="fr"){l=(navigator.language||"").toLowerCase().indexOf("fr")===0?"fr":"en";}r.setAttribute("data-lang",l);r.setAttribute("lang",l);if(t==="light"||t==="dark")r.setAttribute("data-theme",t);})();</script>
+</head>
+<body data-page="transactions">
+<a class="skip-link" href="#main"><span lang="en">Skip to content</span><span lang="fr">Aller au contenu</span></a>
+<header class="site-header" id="mq-header"></header>
+<div class="layout">
+<aside class="sidebar" id="mq-sidebar"></aside>
+<main class="content" id="main">
+<article>
+<header class="chapter-head">
+  <div class="eyebrow" data-auto></div>
+  <h1><span lang="en">Moving goods without duplicating them</span><span lang="fr">Déplacer des biens sans les dupliquer</span></h1>
+  <p class="dek"><span lang="en">Escrow in the same write, locks ordered by id, re-reading under the lock, all or nothing.</span><span lang="fr">Séquestre dans la même écriture, verrous ordonnés par identifiant, relecture sous le verrou, tout ou rien.</span></p>
+  <div class="meta-row" data-auto></div>
+</header>
+
+<div class="prose">
+
+<section class="sec" id="stakes">
+<div lang="en">
+<h2>The bug that does not repair</h2>
+<p>Most bugs in a game server cost a frame, a disconnection, an angry report. A duplication costs the economy. An item that exists twice gets sold, traded, crafted into something else; by the time anyone notices, copies of its value are spread across dozens of players, and there is no clean way to take them back. Everything in this chapter is about one property: <strong>goods move, they are never copied and never lost halfway</strong>.</p>
+<div class="note beginner"><p class="note-label">Beginner note</p><p>A <em>lost update</em> happens when two operations read the same value, each computes a new one, and the second write erases the first. With inventories, it is worse than a wrong counter: if a transfer deletes a hold's rows before re-inserting them, the loser of the race can erase a whole hold's contents.</p></div>
+</div>
+<div lang="fr">
+<h2>Le bug qui ne se répare pas</h2>
+<p>La plupart des bugs d'un serveur de jeu coûtent une image, une déconnexion, un rapport agacé. Une duplication coûte l'économie. Un objet qui existe en double est vendu, échangé, transformé en autre chose ; le temps que quelqu'un s'en aperçoive, des copies de sa valeur sont réparties sur des dizaines de joueurs, et il n'existe aucun moyen propre de les reprendre. Tout ce chapitre tourne autour d'une propriété : <strong>les biens se déplacent, ils ne sont jamais copiés ni perdus à mi-chemin</strong>.</p>
+<div class="note beginner"><p class="note-label">Pour débuter</p><p>Une <em>mise à jour perdue</em> survient quand deux opérations lisent la même valeur, que chacune en calcule une nouvelle, et que la seconde écriture efface la première. Avec des inventaires, c'est pire qu'un compteur faux : si un transfert supprime les lignes d'une soute avant de les réinsérer, le perdant de la course peut effacer le contenu entier d'une soute.</p></div>
+</div>
+</section>
+
+<section class="sec" id="locks">
+<div lang="en">
+<h2>One lock per character, and the load inside it</h2>
+<p>An inventory transfer is a read-modify-write across two holds: load the rows, work out what fits, write the result. The server serializes every such operation per character with a lock, created on demand and <strong>static</strong>: the inventory service may legitimately be instantiated more than once (one per player is the natural thing to write), and per-instance locks would each guard a different object while protecting nothing.</p>
+<p>The lock only works if the <em>load</em> is inside it. The first version of the transfer took two already-loaded holds as parameters, so every caller loaded outside any lock and the critical section covered only the harmless half. The entry point now takes a description of the two holds and loads them itself, inside the lock.</p>
+<div class="note rule"><p class="note-label">Rule</p><p>A signature that makes the wrong thing natural is a bug in the signature.</p><p>If correct use requires the caller to remember something (take the lock first, then load), make the function do it, so the wrong order cannot be written.</p></div>
+<p>The comment on that lock also lists its two limits, which is the kind of documentation worth copying:</p>
+<ul>
+<li>The day a hold is <strong>shared</strong> (a corporation warehouse, a boarded ship, cargo spilled into space and picked up by someone else), one lock per character is no longer enough; it must become one lock per hold, taken in a canonical order.</li>
+<li>It is an <strong>in-process</strong> lock. It protects nothing against another game server. That is fine while a character exists on exactly one server at a time, and stops being fine the day two players can touch the same hold from different maps. At that point the answer is a version column and a retry, not a bigger lock.</li>
+</ul>
+</div>
+<div lang="fr">
+<h2>Un verrou par personnage, et le chargement à l'intérieur</h2>
+<p>Un transfert d'inventaire est une lecture-modification-écriture sur deux soutes : charger les lignes, calculer ce qui tient, écrire le résultat. Le serveur sérialise chacune de ces opérations par personnage avec un verrou, créé à la demande et <strong>statique</strong> : le service d'inventaire peut légitimement être instancié plus d'une fois (un par joueur est la chose naturelle à écrire), et des verrous par instance garderaient chacun un objet différent sans rien protéger.</p>
+<p>Le verrou ne fonctionne que si le <em>chargement</em> est à l'intérieur. La première version du transfert prenait en paramètre deux soutes déjà chargées : chaque appelant chargeait hors de tout verrou, et la section critique ne couvrait que la moitié inoffensive. Le point d'entrée prend maintenant une description des deux soutes et les charge lui-même, sous le verrou.</p>
+<div class="note rule"><p class="note-label">Règle</p><p>Une signature qui rend naturelle la mauvaise façon de faire est un bug dans la signature.</p><p>Si le bon usage exige que l'appelant se souvienne de quelque chose (prendre le verrou d'abord, puis charger), faire en sorte que la fonction le fasse elle-même, pour que le mauvais ordre ne puisse pas s'écrire.</p></div>
+<p>Le commentaire de ce verrou énumère aussi ses deux limites, le genre de documentation qui vaut d'être copié :</p>
+<ul>
+<li>Le jour où une soute est <strong>partagée</strong> (un entrepôt de corporation, un vaisseau abordé, une cargaison répandue dans l'espace et ramassée par quelqu'un d'autre), un verrou par personnage ne suffit plus ; il faut un verrou par soute, pris dans un ordre canonique.</li>
+<li>C'est un verrou <strong>interne au processus</strong>. Il ne protège de rien face à un autre serveur de jeu. C'est acceptable tant qu'un personnage n'existe que sur un seul serveur à la fois, et cesse de l'être le jour où deux joueurs peuvent toucher la même soute depuis des cartes différentes. La réponse sera alors une colonne de version et une nouvelle tentative, pas un plus gros verrou.</li>
+</ul>
+</div>
+</section>
+
+<section class="sec" id="all-or-nothing">
+<div lang="en">
+<h2>All or nothing, with nothing to undo</h2>
+<p>A trade between two players, or a market purchase, is several movements: take from one side, give to the other, sometimes both ways. The atomicity does not come from a clever rollback. All the work is done on objects <strong>in memory</strong> (the loaded holds, the tracked rows) and a <strong>single commit</strong> at the very end writes everything. A refusal anywhere in the middle simply returns without having written anything: there is no rollback path to get wrong, because there is nothing to undo.</p>
+<p>The order of operations inside matters too: <strong>take, then give</strong>. The space freed by what you give counts for what you receive; without it, a hold full to the brim could never trade anything, not even a one-for-one swap of the same volume. And a trade that does not fit is refused, never truncated.</p>
+</div>
+<div lang="fr">
+<h2>Tout ou rien, sans rien à annuler</h2>
+<p>Un échange entre deux joueurs, ou un achat au marché, ce sont plusieurs mouvements : prendre d'un côté, donner de l'autre, parfois dans les deux sens. L'atomicité ne vient pas d'une annulation astucieuse. Tout le travail se fait sur des objets <strong>en mémoire</strong> (les soutes chargées, les lignes suivies) et une <strong>unique validation</strong> tout à la fin écrit l'ensemble. Un refus n'importe où au milieu retourne simplement sans avoir rien écrit : il n'y a pas de chemin d'annulation où se tromper, parce qu'il n'y a rien à annuler.</p>
+<p>L'ordre des opérations à l'intérieur compte aussi : <strong>prendre, puis donner</strong>. La place libérée par ce qu'on donne compte pour ce qu'on reçoit ; sans ça, une soute pleine à ras bord ne pourrait jamais rien échanger, pas même un troc un pour un du même volume. Et un échange qui ne tient pas est refusé, jamais tronqué.</p>
+</div>
+</section>
+
+<section class="sec" id="ordered">
+<div lang="en">
+<h2>Two locks, always in the same order</h2>
+<p>A trade is the one inventory gesture that touches two characters, so it takes two locks. If each side took "its own" lock first, two simultaneous trades between the same people, or a chain (A with B while B trades with C), could each hold one lock and wait forever for the other. Taking both locks in increasing order of character id gives one global order, which makes that deadlock <strong>impossible by construction</strong>, not merely unlikely in practice.</p>
+</div>
+<div lang="fr">
+<h2>Deux verrous, toujours dans le même ordre</h2>
+<p>Un échange est le seul geste d'inventaire qui touche deux personnages : il prend donc deux verrous. Si chaque côté prenait « son » verrou d'abord, deux échanges simultanés entre les mêmes personnes, ou une chaîne (A avec B pendant que B échange avec C), pourraient chacun tenir un verrou et attendre l'autre pour toujours. Prendre les deux verrous par identifiant de personnage croissant donne un ordre global unique, ce qui rend cet interblocage <strong>impossible par construction</strong>, et pas seulement improbable en pratique.</p>
+</div>
+<div class="code"><div class="code-head"><span class="file">GameServer/Inventory/InventoryService.Trade.cs · simplified</span></div><pre><code data-lang="cs">public TradeOutcome ExecuteTrade(TradeSide a, TradeSide b)
+{
+    var first  = a.CharacterId &lt;= b.CharacterId ? a : b;  // one global order: by id
+    var second = ReferenceEquals(first, a) ? b : a;
+
+    lock (LockFor(first.CharacterId))
+    lock (LockFor(second.CharacterId))
+    {
+        using var db = _createDb();
+        var holds = new HoldCache(db);  // ONE memory view per (character, phase)
+
+        if (!TakeAll(a, holds) || !TakeAll(b, holds)) return TradeOutcome.Missing;  // 1. take
+        if (!GiveAll(b, a, holds) || !GiveAll(a, b, holds)) return TradeOutcome.NoRoom; // 2. give
+
+        holds.PersistAll();
+        db.SaveChanges();               // the only write: all or nothing
+        return TradeOutcome.Ok;
+    }
+}</code></pre></div>
+<div lang="en">
+<div class="note rule"><p class="note-label">Rule</p><p>Load each piece of storage once per transaction, and reuse that object.</p><p>Loading the same hold twice gives two independent memory views of the same rows, and the second write silently overwrites the first. In a market purchase where the price and the goods sit in the same kind of storage, the buyer's hold is loaded once for paying and must be the <em>same object</em> used for receiving; a second load would write the goods over the payment that had just been taken. That is what the hold cache in the excerpt is for.</p></div>
+</div>
+<div lang="fr">
+<div class="note rule"><p class="note-label">Règle</p><p>Charger chaque stockage une seule fois par transaction, et réutiliser cet objet.</p><p>Charger deux fois la même soute donne deux vues mémoire indépendantes des mêmes lignes, et la seconde écriture écrase la première en silence. Dans un achat au marché où le prix et la marchandise sont dans le même genre de stockage, la soute de l'acheteur est chargée une fois pour payer et doit être le <em>même objet</em> que celui qui reçoit ; un second chargement écrirait la marchandise par-dessus le paiement qu'on vient de prélever. C'est le rôle du cache des soutes de l'extrait.</p></div>
+</div>
+</section>
+
+<section class="sec" id="escrow">
+<div lang="en">
+<h2>Escrow in the same write</h2>
+<p>The market is where players who are not online together exchange goods, so it cannot rely on both being present. Its central guarantee is set when an order is posted: the goods leave the seller's warehouse <strong>in the same write</strong> that creates the order. There is no instant where the goods have disappeared without an order carrying them, and no instant where a visible order is not backed by goods already set aside. Without it, a seller could sell elsewhere what they still display, and the buyer would discover the failure after paying, the one sequence a market cannot afford.</p>
+<p>Buying is the mirror, and it contains a small pattern worth naming:</p>
+<ol>
+<li><strong>Peek outside the lock, only to know whom to lock.</strong> The buyer needs the seller's lock, so the order is read once without locks. That read authorizes nothing; it orients.</li>
+<li><strong>Lock both characters in id order</strong>, for the same deadlock reason as trades: A buying from B while B buys from A.</li>
+<li><strong>Re-read the order under the locks.</strong> Between displaying the list and clicking, someone else may have bought the same order. This re-read is what prevents selling the same goods twice, and nothing else.</li>
+<li><strong>Move everything in one write</strong>: the price leaves the buyer, the escrowed goods reach the buyer, the price reaches the seller at this station, the order is deleted and a history line is added.</li>
+</ol>
+<p>An expired order needs no sweep to become safe: the buy query filters on the expiry date, so it is unbuyable from the second it expires. The background sweep only returns goods to their owners, which can wait (chapter <a href="no-db-in-tick.html#patterns">3.4</a>).</p>
+</div>
+<div lang="fr">
+<h2>Le séquestre dans la même écriture</h2>
+<p>Le marché est l'endroit où des joueurs qui ne sont pas en ligne ensemble échangent des biens : il ne peut pas compter sur la présence des deux. Sa garantie centrale se pose au dépôt d'un ordre : la marchandise quitte l'entrepôt du vendeur <strong>dans la même écriture</strong> que celle qui crée l'ordre. Il n'existe aucun instant où la marchandise a disparu sans qu'un ordre ne la porte, et aucun instant où un ordre visible n'est pas adossé à une marchandise déjà mise de côté. Sans elle, un vendeur pourrait vendre ailleurs ce qu'il affiche encore, et l'acheteur découvrirait l'échec après avoir payé, la seule séquence qu'un marché ne peut pas se permettre.</p>
+<p>L'achat en est le miroir, et il contient un petit motif qui mérite un nom :</p>
+<ol>
+<li><strong>Jeter un œil hors verrou, seulement pour savoir qui verrouiller.</strong> L'acheteur a besoin du verrou du vendeur : l'ordre est donc lu une fois sans verrou. Cette lecture n'autorise rien ; elle oriente.</li>
+<li><strong>Verrouiller les deux personnages par identifiant croissant</strong>, pour la même raison d'interblocage que les échanges : A achète à B pendant que B achète à A.</li>
+<li><strong>Relire l'ordre sous les verrous.</strong> Entre l'affichage de la liste et le clic, quelqu'un d'autre a pu acheter le même ordre. C'est cette relecture qui empêche de vendre deux fois la même marchandise, et rien d'autre.</li>
+<li><strong>Tout déplacer en une écriture</strong> : le prix quitte l'acheteur, la marchandise séquestrée rejoint l'acheteur, le prix rejoint le vendeur à cette station, l'ordre est supprimé et une ligne d'historique est ajoutée.</li>
+</ol>
+<p>Un ordre échu n'a besoin d'aucun balayage pour devenir sûr : la requête d'achat filtre sur la date d'expiration, il est donc impossible à acheter dès la seconde où il expire. Le balayage de fond ne fait que rendre les biens à leurs propriétaires, ce qui peut attendre (chapitre <a href="no-db-in-tick.html#patterns">3.4</a>).</p>
+</div>
+<div lang="en">
+<div class="note rule"><p class="note-label">Rule</p><p>Anything read before taking a lock is a hint; everything that decides is re-read after.</p><p>The window between a read and a lock is exactly where concurrent buyers, sellers and cancellations live. Treat the early read as orientation, never as authorization.</p></div>
+</div>
+<div lang="fr">
+<div class="note rule"><p class="note-label">Règle</p><p>Tout ce qui est lu avant de prendre un verrou est un indice ; tout ce qui décide est relu après.</p><p>La fenêtre entre une lecture et un verrou est exactement l'endroit où vivent les acheteurs, vendeurs et annulations concurrents. Traiter la lecture préalable comme une orientation, jamais comme une autorisation.</p></div>
+</div>
+</section>
+
+<section class="sec" id="protocol">
+<div lang="en">
+<h2>The trade table: a protocol against scams</h2>
+<p>A direct trade has a human problem on top of the technical one: a player can try to change their offer at the last moment. The trade table's defence fits in one line of code: <strong>any change to either offer breaks both locks</strong>. Once a player has validated, nothing has moved since they looked, because any movement would have unlocked them. A second step, confirmation, only exists once both sides are locked, which closes the window completely.</p>
+<p>Three smaller decisions complete it. The table lives on the game server rather than the gateway, because a trade requires proximity, hence the same map, hence the same server by construction. Range is re-checked at every gesture, so walking away is the natural way to leave a table. And only what players carry on themselves can be traded, not their ship's holds: a hold's capacity depends on the living hull and could shrink during the trade if someone shoots the ship, and emptying a hold through a trade would bypass the hatch and the tractor beam, which are gameplay. An empty side is legal, and the code says so explicitly, so that nobody "fixes" generosity: the double lock protects against scams, not against gifts.</p>
+</div>
+<div lang="fr">
+<h2>La table d'échange : un protocole contre les arnaques</h2>
+<p>Un échange direct a un problème humain en plus du problème technique : un joueur peut tenter de changer son offre au dernier moment. La défense de la table d'échange tient en une ligne de code : <strong>toute modification de l'une des offres casse les deux verrous</strong>. Une fois qu'un joueur a validé, rien n'a bougé depuis qu'il a regardé, parce que tout mouvement l'aurait déverrouillé. Une seconde étape, la confirmation, n'existe qu'une fois les deux côtés verrouillés, ce qui ferme complètement la fenêtre.</p>
+<p>Trois décisions plus petites la complètent. La table vit sur le serveur de jeu et non sur la gateway, parce qu'un échange exige la proximité, donc la même carte, donc le même serveur par construction. La portée est revérifiée à chaque geste : s'éloigner est la façon naturelle de quitter une table. Et seul ce que les joueurs portent sur eux peut s'échanger, pas les soutes de leur vaisseau : la capacité d'une soute dépend de la coque vivante et pourrait rétrécir pendant l'échange si quelqu'un tire sur le vaisseau, et vider une soute par un échange contournerait l'écoutille et le rayon tracteur, qui sont du gameplay. Un côté vide est légal, et le code le dit explicitement, pour que personne ne « corrige » la générosité : le double verrou protège des arnaques, pas des cadeaux.</p>
+</div>
+</section>
+
+<section class="sec" id="takeaways">
+<div class="takeaways">
+<div lang="en"><h2>Key takeaways</h2><ul>
+<li>Serialize read-modify-write on goods per owner, with the load inside the lock, and document the lock's limits.</li>
+<li>Do all the work in memory and commit once; a refusal then has nothing to undo.</li>
+<li>Take multiple locks in one global order, so deadlocks are impossible rather than rare.</li>
+<li>Escrow goods in the same write that makes an offer visible, and re-read everything under the lock before deciding.</li>
+<li>Design trade protocols so that any change invalidates every prior validation.</li>
+</ul></div>
+<div lang="fr"><h2>À retenir</h2><ul>
+<li>Sérialiser les lectures-modifications-écritures sur les biens par propriétaire, avec le chargement sous le verrou, et documenter les limites du verrou.</li>
+<li>Faire tout le travail en mémoire et valider une fois ; un refus n'a alors rien à annuler.</li>
+<li>Prendre plusieurs verrous dans un ordre global unique, pour que les interblocages soient impossibles plutôt que rares.</li>
+<li>Séquestrer les biens dans la même écriture que celle qui rend une offre visible, et tout relire sous le verrou avant de décider.</li>
+<li>Concevoir les protocoles d'échange pour que toute modification invalide chaque validation antérieure.</li>
+</ul></div>
+</div>
+</section>
+
+</div>
+<div data-chapter-foot></div>
+</article>
+</main>
+<aside class="rail" id="mq-rail"></aside>
+</div>
+<footer class="site-footer" id="mq-footer"></footer>
+<script src="assets/js/site-data.js" defer></script>
+<script src="assets/js/glossary-data.js" defer></script>
+<script src="assets/js/app.js" defer></script>
+<script src="assets/js/widgets.js" defer></script>
+</body>
+</html>

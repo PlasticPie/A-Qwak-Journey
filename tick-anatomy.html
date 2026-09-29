@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="en" data-lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Anatomy of a tick · MoonQwak</title>
+<meta name="description" content="The phases of one 40 ms world step, in order, and why each one sits exactly where it does.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Chakra+Petch:wght@500;600&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="assets/css/site.css">
+<script>(function(){var r=document.documentElement,l,t;try{l=localStorage.getItem("mq-lang");t=localStorage.getItem("mq-theme");}catch(e){}if(l!=="en"&&l!=="fr"){l=(navigator.language||"").toLowerCase().indexOf("fr")===0?"fr":"en";}r.setAttribute("data-lang",l);r.setAttribute("lang",l);if(t==="light"||t==="dark")r.setAttribute("data-theme",t);})();</script>
+</head>
+<body data-page="tick-anatomy">
+<a class="skip-link" href="#main"><span lang="en">Skip to content</span><span lang="fr">Aller au contenu</span></a>
+<header class="site-header" id="mq-header"></header>
+<div class="layout">
+<aside class="sidebar" id="mq-sidebar"></aside>
+<main class="content" id="main">
+<article>
+<header class="chapter-head">
+  <div class="eyebrow" data-auto></div>
+  <h1><span lang="en">Anatomy of a tick</span><span lang="fr">Anatomie d'un tick</span></h1>
+  <p class="dek"><span lang="en">The phases of one 40 ms world step, in order, and why each one sits exactly where it does.</span><span lang="fr">Les phases d'un pas de monde de 40 ms, dans l'ordre, et pourquoi chacune est exactement à sa place.</span></p>
+  <div class="meta-row" data-auto></div>
+</header>
+
+<div class="prose">
+
+<section class="sec" id="order">
+<div lang="en">
+<h2>The order is the design</h2>
+<p>A tick is a pipeline. Each phase reads what the previous ones wrote, so the order of the phases encodes cause and effect: a thruster pushes before the solver moves the ship, the ship moves before a bullet tests whether it hit it, everything moves before the players are told where things are. Put one phase a step too early and the whole server is one tick late for that thing, which players see as a stutter, a ghost, or a hit that did not register.</p>
+<p>MoonQwak's tick has two levels. The <strong>world tick</strong> runs on one thread and is split into nine sections. One of them, "maps", runs each map's own tick, several maps in parallel. The timeline below shows one typical tick with 600 ships on a single map, the heaviest scenario the load tests used.</p>
+</div>
+<div lang="fr">
+<h2>L'ordre, c'est la conception</h2>
+<p>Un tick est un pipeline. Chaque phase lit ce que les précédentes ont écrit, donc l'ordre des phases encode la cause et l'effet : un propulseur pousse avant que le solveur déplace le vaisseau, le vaisseau bouge avant qu'une balle teste si elle l'a touché, tout bouge avant qu'on dise aux joueurs où sont les choses. Placez une phase un cran trop tôt et tout le serveur a un tick de retard sur cette chose, ce que les joueurs voient comme un à-coup, un fantôme, ou un tir qui n'a pas compté.</p>
+<p>Le tick de MoonQwak a deux niveaux. Le <strong>tick du monde</strong> tourne sur un thread et se découpe en neuf sections. L'une d'elles, « cartes », fait tourner le tick propre à chaque carte, plusieurs cartes en parallèle. La frise ci-dessous montre un tick typique avec 600 vaisseaux sur une seule carte, le scénario le plus lourd des bancs de charge.</p>
+</div>
+<div class="lab" data-widget="phases" id="anat">
+<div class="lab-head"><span class="lab-title"><span lang="en">One world tick at 600 ships</span><span lang="fr">Un tick du monde à 600 vaisseaux</span></span><span class="lab-sub"><span lang="en">Hover a segment for what it does. The playhead moves at a quarter of real time.</span><span lang="fr">Survolez un segment pour savoir ce qu'il fait. La tête de lecture avance au quart du temps réel.</span></span></div>
+<script type="application/json">
+{
+  "budget": 40,
+  "aria": { "en": "Timeline of one 40 ms world tick at 600 ships: maps 13.8 ms, snapshot preparation 6 ms, snapshot build 3.9 ms, about 24 ms of work in total; inside the map, tick objects 8.7 ms and physics 2.5 ms", "fr": "Frise d'un tick du monde de 40 ms à 600 vaisseaux : cartes 13,8 ms, préparation des snapshots 6 ms, construction 3,9 ms, environ 24 ms de travail au total ; dans la carte, tick des objets 8,7 ms et physique 2,5 ms" },
+  "lanes": [
+    { "name": { "en": "World thread", "fr": "Thread du monde" }, "segs": [
+      { "s": 0, "d": 0.3, "tone": "muted", "label": { "en": "sweeps", "fr": "balayages" }, "desc": { "en": "Catalog swap, pending map creations (3 ms budget), 1 Hz group vitals, the checkpoint capture once a minute. The writes themselves go to the background thread.", "fr": "Échange de catalogue, créations de cartes en attente (budget de 3 ms), vitals de groupe à 1 Hz, capture du point de sauvegarde une fois par minute. Les écritures partent sur le thread de fond." } },
+      { "s": 0.3, "d": 13.8, "tone": "s1", "label": { "en": "maps", "fr": "cartes" }, "desc": { "en": "Each map's own tick, one map per worker when there are several (lane below). Measured: 13.8 ms at 600 ships.", "fr": "Le tick propre à chaque carte, une carte par ouvrier quand il y en a plusieurs (ligne suivante). Mesuré : 13,8 ms à 600 vaisseaux." } },
+      { "s": 14.1, "d": 0.3, "tone": "muted", "label": { "en": "after maps", "fr": "après cartes" }, "desc": { "en": "Lingering hulls, field and node broadcasts, per-player deadlines (death, channels, trade), viewer count. All together: about 0.3 ms.", "fr": "Coques rémanentes, diffusions de champ et de nœuds, échéances par joueur (mort, canaux, échange), compte des spectateurs. Le tout : environ 0,3 ms." } },
+      { "s": 14.4, "d": 6.0, "tone": "s2", "label": { "en": "snapshot prep", "fr": "prépa snapshots" }, "desc": { "en": "Serialize each object once for this tick. Measured: 6.0 ms at 600. Chapter 4.3.", "fr": "Sérialiser chaque objet une fois pour ce tick. Mesuré : 6,0 ms à 600. Chapitre 4.3." } },
+      { "s": 20.4, "d": 3.9, "tone": "s3", "label": { "en": "build", "fr": "construction" }, "desc": { "en": "One packet per player, by copying prepared blocks, in parallel. Measured: 3.9 ms at 600.", "fr": "Un paquet par joueur, en recopiant les blocs préparés, en parallèle. Mesuré : 3,9 ms à 600." } },
+      { "s": 24.3, "d": 0.2, "tone": "muted", "label": { "en": "stats", "fr": "stats" }, "desc": { "en": "Load statistics for the Monitor; idle-map sweep every 30 ticks.", "fr": "Statistiques de charge pour le Monitor ; balayage des cartes vides tous les 30 ticks." } }
+    ] },
+    { "name": { "en": "Inside one map", "fr": "Dans une carte" }, "segs": [
+      { "s": 0.3, "d": 0.4, "tone": "muted", "label": { "en": "pending", "fr": "en attente" }, "desc": { "en": "Spent bullets aged, gravity field applied, debris drift, deferred body creations and removals. Approximate.", "fr": "Balles usées vieillies, champ de gravité appliqué, dérive des débris, créations et retraits de corps différés. Approximatif." } },
+      { "s": 0.7, "d": 8.7, "tone": "s1", "label": { "en": "tick objects", "fr": "tick des objets" }, "desc": { "en": "Inputs, aim, fire and behaviours of every object on the map. Measured: about 8.7 ms, roughly 14 µs per ship.", "fr": "Entrées, visée, tir et comportements de chaque objet de la carte. Mesuré : environ 8,7 ms, soit à peu près 14 µs par vaisseau." } },
+      { "s": 9.4, "d": 0.8, "tone": "muted", "label": { "en": "pre-step", "fr": "pré-pas" }, "desc": { "en": "Power, fire, shields, shape rebuilds; velocities saved for contact damage. Approximate.", "fr": "Énergie, feu, boucliers, reconstruction de formes ; vitesses sauvegardées pour les dégâts de contact. Approximatif." } },
+      { "s": 10.2, "d": 2.5, "tone": "s4", "label": { "en": "physics", "fr": "physique" }, "desc": { "en": "One Box2D step with 4 sub-steps. Measured: 2.5 ms, after the shape cut of chapter 3.5 (about 15 ms at only 400 ships before it).", "fr": "Un pas Box2D avec 4 sous-pas. Mesuré : 2,5 ms, après la division des formes du chapitre 3.5 (environ 15 ms à seulement 400 vaisseaux avant elle)." } },
+      { "s": 12.7, "d": 1.0, "tone": "muted", "label": { "en": "hits", "fr": "impacts" }, "desc": { "en": "Contact damage, bullets and missiles integrated and swept, hits applied. Approximate.", "fr": "Dégâts de contact, balles et missiles intégrés et balayés, impacts appliqués. Approximatif." } },
+      { "s": 13.7, "d": 0.4, "tone": "accent", "label": { "en": "index", "fr": "index" }, "desc": { "en": "Area-of-interest grid rebuilt last, so snapshots read this tick's positions. Approximate.", "fr": "Grille de zone d'intérêt reconstruite en dernier, pour que les snapshots lisent les positions de ce tick. Approximatif." } }
+    ] },
+    { "name": { "en": "Snapshot thread", "fr": "Thread snapshot" }, "segs": [
+      { "s": 26, "d": 10, "tone": "s2", "label": { "en": "send", "fr": "envoi" }, "desc": { "en": "Its own 25 Hz clock: sends each player's pending packet, sequentially. About 10 ms per 400 sends was measured; drawn for scale.", "fr": "Sa propre horloge à 25 Hz : envoie le paquet en attente de chaque joueur, séquentiellement. Environ 10 ms pour 400 envois ont été mesurés ; dessiné pour l'échelle." } }
+    ] },
+    { "name": { "en": "Background", "fr": "Fond" }, "segs": [
+      { "s": 3, "d": 12, "tone": "muted", "label": { "en": "database writes", "fr": "écritures en base" }, "desc": { "en": "Checkpoints, minute sweeps, the slow half of map transitions: queued by the tick, never waited for. Chapter 3.4.", "fr": "Points de sauvegarde, balayages à la minute, moitié lente des transitions : mis en file par le tick, jamais attendus. Chapitre 3.4." } }
+    ] }
+  ]
+}
+</script>
+</div>
+<div lang="en">
+<p>About 24 ms of work in a 40 ms budget. The "maps", "snapshot prep" and "build" sections, the object tick and the physics step are measured values from the 600-player benches; the small phases are drawn at their approximate share, which is below a millisecond each. The rest of the interval is spent waiting for the next due time.</p>
+</div>
+<div lang="fr">
+<p>Environ 24 ms de travail pour un budget de 40. Les sections « cartes », « prépa snapshots » et « construction », le tick des objets et le pas physique sont des valeurs mesurées aux bancs à 600 joueurs ; les petites phases sont dessinées à leur part approximative, sous la milliseconde chacune. Le reste de l'intervalle se passe à attendre la prochaine échéance.</p>
+</div>
+</section>
+
+<section class="sec" id="world-sections">
+<div lang="en">
+<h2>The world tick, section by section</h2>
+<div class="table-wrap"><table>
+<thead><tr><th>#</th><th>Section</th><th>What it does</th><th>Why it is here</th></tr></thead>
+<tbody>
+<tr><td>1</td><td>Housekeeping</td><td>Swaps hot-reloaded game data, builds maps waiting to be created, sends 1 Hz group vitals, captures the per-minute checkpoint, triggers the minute sweeps.</td><td>No map is moving yet, so swapping a catalog reference or creating physics worlds is safe. Anything touching the database is only <em>queued</em> here.</td></tr>
+<tr><td>2</td><td>Maps</td><td>Each map's own tick (next table). One map per worker when there are several.</td><td>Maps share nothing, which is what makes this the one parallel section of the simulation.</td></tr>
+<tr><td>3</td><td>Lingering hulls</td><td>Removes disconnected hulls whose 20 s are over.</td><td>After every map has ticked: removing an object from a map that another thread is simulating is a race.</td></tr>
+<tr><td>4</td><td>Broadcasts</td><td>Gravity-field changes, resource nodes, boss cast bars, self-destruct countdowns.</td><td>Maps only raise a flag; the send happens here, on one thread. Sending from inside the parallel loop put network writes on arbitrary workers, racing the snapshot thread's own sends.</td></tr>
+<tr><td>5</td><td>Player deadlines</td><td>Crew re-seating, consumables, death countdown, channelled actions, trade range. Sequential.</td><td>They change the world, so they must run <em>before</em> the world is serialized, and they touch other players, so they must not run in parallel.</td></tr>
+<tr><td>6</td><td>Viewers</td><td>Counts players per map.</td><td>The next section needs it to decide whether preparing shared blocks pays off.</td></tr>
+<tr><td>7</td><td>Snapshot prep</td><td>Serializes each object once for this tick.</td><td>Everything has moved and nothing will move again this tick. Chapter <a href="serialize-once.html">4.3</a>.</td></tr>
+<tr><td>8</td><td>Snapshot build</td><td>Builds one packet per player from the prepared blocks, in parallel.</td><td>Read-only by contract. The packets wait for the snapshot thread.</td></tr>
+<tr><td>9</td><td>Stats</td><td>Aggregates load figures for the Monitor, sweeps idle maps every 30 ticks.</td><td>Sequential reads of fields each owner already wrote, so measuring costs nothing.</td></tr>
+</tbody></table></div>
+</div>
+<div lang="fr">
+<h2>Le tick du monde, section par section</h2>
+<div class="table-wrap"><table>
+<thead><tr><th>#</th><th>Section</th><th>Ce qu'elle fait</th><th>Pourquoi elle est là</th></tr></thead>
+<tbody>
+<tr><td>1</td><td>Intendance</td><td>Échange les données de jeu rechargées à chaud, bâtit les cartes en attente de création, envoie les vitals de groupe à 1 Hz, capture le point de sauvegarde de la minute, déclenche les balayages de la minute.</td><td>Aucune carte ne bouge encore : échanger une référence de catalogue ou créer des mondes physiques est sûr. Tout ce qui touche la base est seulement <em>mis en file</em> ici.</td></tr>
+<tr><td>2</td><td>Cartes</td><td>Le tick propre à chaque carte (tableau suivant). Une carte par ouvrier quand il y en a plusieurs.</td><td>Les cartes ne partagent rien, et c'est ce qui en fait la seule section parallèle de la simulation.</td></tr>
+<tr><td>3</td><td>Coques rémanentes</td><td>Retire les coques déconnectées dont les 20 s sont écoulées.</td><td>Après que toutes les cartes ont tické : retirer un objet d'une carte qu'un autre thread simule est une course.</td></tr>
+<tr><td>4</td><td>Diffusions</td><td>Changements du champ de gravité, nœuds de ressources, barres d'incantation de boss, comptes à rebours d'autodestruction.</td><td>Les cartes ne font que lever un drapeau ; l'envoi se fait ici, sur un seul thread. Envoyer depuis la boucle parallèle mettait des écritures réseau sur n'importe quel ouvrier, en course avec les envois du thread snapshot.</td></tr>
+<tr><td>5</td><td>Échéances joueurs</td><td>Ré-assise des équipages, consommables, décompte de mort, actions canalisées, portée d'échange. Séquentiel.</td><td>Elles changent le monde, donc doivent passer <em>avant</em> sa sérialisation, et elles touchent d'autres joueurs, donc ne doivent pas tourner en parallèle.</td></tr>
+<tr><td>6</td><td>Spectateurs</td><td>Compte les joueurs par carte.</td><td>La section suivante en a besoin pour décider si préparer des blocs partagés est rentable.</td></tr>
+<tr><td>7</td><td>Prépa snapshots</td><td>Sérialise chaque objet une fois pour ce tick.</td><td>Tout a bougé et plus rien ne bougera ce tick-ci. Chapitre <a href="serialize-once.html">4.3</a>.</td></tr>
+<tr><td>8</td><td>Construction</td><td>Construit un paquet par joueur à partir des blocs préparés, en parallèle.</td><td>En lecture seule, par contrat. Les paquets attendent le thread snapshot.</td></tr>
+<tr><td>9</td><td>Stats</td><td>Agrège les chiffres de charge pour le Monitor, balaie les cartes vides tous les 30 ticks.</td><td>Des lectures séquentielles de champs que chaque propriétaire a déjà écrits : mesurer ne coûte rien.</td></tr>
+</tbody></table></div>
+</div>
+<div lang="en">
+<div class="note pitfall"><p class="note-label">Pitfall I hit</p><p>The player deadlines used to run inside the parallel snapshot loop. Taking the controls of a ship is a channelled action: when it completes, the pilot sits down and their walking character leaves the map. That happened <em>after</em> the tick's bytes had been frozen, so the client received "you are seated" followed by a snapshot that still showed its character standing on the deck. The client took the character as proof that it was still walking, stopped sending ship inputs, and the ship no longer moved. Moving four calls ten lines up, into a sequential pass before serialization, fixed it.</p></div>
+<div class="note rule"><p class="note-label">Rule</p><p>Anything that changes the world runs before the world is serialized, sequentially; everything after that point only reads.</p><p>A snapshot is a photograph of one instant. A mutation that lands between the photograph and the send makes the client receive two contradictory truths.</p></div>
+</div>
+<div lang="fr">
+<div class="note pitfall"><p class="note-label">Piège rencontré</p><p>Les échéances des joueurs tournaient autrefois dans la boucle parallèle des snapshots. Prendre les commandes d'un vaisseau est une action canalisée : à son terme, le pilote s'assied et son personnage à pied quitte la carte. Cela arrivait <em>après</em> que les octets du tick avaient été figés : le client recevait « vous êtes assis » puis un snapshot qui montrait encore son personnage debout sur le pont. Le client prenait ce personnage pour la preuve qu'il marchait encore, cessait d'envoyer les commandes du vaisseau, et le vaisseau ne bougeait plus. Remonter quatre appels de dix lignes, dans une passe séquentielle avant la sérialisation, l'a corrigé.</p></div>
+<div class="note rule"><p class="note-label">Règle</p><p>Tout ce qui change le monde passe avant sa sérialisation, séquentiellement ; tout ce qui suit ne fait que lire.</p><p>Un snapshot est la photo d'un instant. Une mutation qui tombe entre la photo et l'envoi fait recevoir au client deux vérités contradictoires.</p></div>
+</div>
+</section>
+
+<section class="sec" id="map-phases">
+<div lang="en">
+<h2>Inside one map</h2>
+<p>Each map owns its objects, its Box2D world and its scratch buffers, and returns its timings instead of adding them to shared counters. Nothing is shared between two maps, and that is the invariant to preserve when adding a phase.</p>
+<div class="table-wrap"><table>
+<thead><tr><th>#</th><th>Phase</th><th>Why it is here</th></tr></thead>
+<tbody>
+<tr><td>1</td><td>Age spent bullets</td><td>At the top, so a bullet that died during tick N keeps its final state (with its hit flag) in the snapshots of every tick it lingers. Chapter <a href="snapshots.html">4.2</a>.</td></tr>
+<tr><td>2</td><td>Gravity field</td><td>Before the physics step, so the solver sees the pull as part of this tick's velocity, and before the object tick, so a pilot's thrust composes with the pull instead of a stale velocity.</td></tr>
+<tr><td>3</td><td>Debris drift</td><td>Before the object tick, so a collector scooping debris sees this tick's positions.</td></tr>
+<tr><td>4</td><td>Apply pending</td><td>Body creations and removals queued from other threads (connections, docking, despawns) are applied here, between two physics steps. Chapter <a href="threading.html">3.3</a>.</td></tr>
+<tr><td>5</td><td>Tick objects</td><td>Inputs, aiming, firing and behaviours of every object that belongs to this map. Chapter <a href="entities.html">3.6</a>.</td></tr>
+<tr><td>6</td><td>Pre-step</td><td>Per ship: power, then fire, then shields, then rebuilding dirty collision shapes. A hex that just lost power must not get one more tick of shield recharge. Velocities are saved here for the contact phase.</td></tr>
+<tr><td>7</td><td>Physics step</td><td>One Box2D step of 1/25 s with four sub-steps. Chapter <a href="physics.html">3.5</a>.</td></tr>
+<tr><td>8</td><td>Contact events</td><td>Ramming damage, computed with the velocities saved <em>before</em> the step.</td></tr>
+<tr><td>9</td><td>Bullets and missiles</td><td>After the step, so each bullet's swept segment is tested against the ships' new positions. Hits apply damage; removals are deferred one tick.</td></tr>
+<tr><td>10</td><td>Index rebuild</td><td>Last. The snapshots read this grid; rebuilding it any earlier would show every viewer a world one tick stale. Chapter <a href="aoi.html">4.1</a>.</td></tr>
+</tbody></table></div>
+</div>
+<div lang="fr">
+<h2>Dans une carte</h2>
+<p>Chaque carte possède ses objets, son monde Box2D et ses tampons de travail, et rend ses temps au lieu de les ajouter à des compteurs partagés. Rien n'est partagé entre deux cartes, et c'est l'invariant à préserver quand on ajoute une phase.</p>
+<div class="table-wrap"><table>
+<thead><tr><th>#</th><th>Phase</th><th>Pourquoi elle est là</th></tr></thead>
+<tbody>
+<tr><td>1</td><td>Vieillir les balles usées</td><td>En tête, pour qu'une balle morte au tick N garde son état final (avec son drapeau d'impact) dans les snapshots de chaque tick où elle s'attarde. Chapitre <a href="snapshots.html">4.2</a>.</td></tr>
+<tr><td>2</td><td>Champ de gravité</td><td>Avant le pas physique, pour que le solveur voie l'attraction dans la vitesse de ce tick, et avant le tick des objets, pour que la poussée d'un pilote se compose avec l'attraction plutôt qu'avec une vitesse périmée.</td></tr>
+<tr><td>3</td><td>Dérive des débris</td><td>Avant le tick des objets, pour qu'un collecteur qui ramasse des débris voie les positions de ce tick.</td></tr>
+<tr><td>4</td><td>Appliquer l'attente</td><td>Les créations et retraits de corps mis en file par d'autres threads (connexions, amarrages, disparitions) sont appliqués ici, entre deux pas physiques. Chapitre <a href="threading.html">3.3</a>.</td></tr>
+<tr><td>5</td><td>Tick des objets</td><td>Entrées, visée, tir et comportements de chaque objet qui appartient à cette carte. Chapitre <a href="entities.html">3.6</a>.</td></tr>
+<tr><td>6</td><td>Pré-pas</td><td>Par vaisseau : énergie, puis feu, puis boucliers, puis reconstruction des formes de collision sales. Un hex qui vient de perdre l'énergie ne doit pas gagner un tick de recharge de bouclier. Les vitesses sont sauvegardées ici pour la phase des contacts.</td></tr>
+<tr><td>7</td><td>Pas physique</td><td>Un pas Box2D de 1/25 s avec quatre sous-pas. Chapitre <a href="physics.html">3.5</a>.</td></tr>
+<tr><td>8</td><td>Événements de contact</td><td>Dégâts d'éperonnage, calculés avec les vitesses sauvegardées <em>avant</em> le pas.</td></tr>
+<tr><td>9</td><td>Balles et missiles</td><td>Après le pas, pour que le segment balayé par chaque balle soit testé contre les nouvelles positions des vaisseaux. Les impacts infligent les dégâts ; les retraits sont différés d'un tick.</td></tr>
+<tr><td>10</td><td>Reconstruire l'index</td><td>En dernier. Les snapshots lisent cette grille ; la reconstruire plus tôt montrerait à chaque spectateur un monde en retard d'un tick. Chapitre <a href="aoi.html">4.1</a>.</td></tr>
+</tbody></table></div>
+</div>
+<div lang="en">
+<div class="note pitfall"><p class="note-label">Pitfall I hit</p><p>Box2D reports a contact <em>after</em> the step has resolved it: impulses and damping are already applied. Reading the ships' velocities at that point gives the post-impact speed, not the speed at which they closed in. Ramming damage became erratic: whether the remaining speed still cleared the minimum impact threshold depended on how much the solver had already absorbed, not on how hard the ships actually hit. The fix is phase 6 saving every ship's velocity before the step, and phase 8 reading the saved value.</p></div>
+</div>
+<div lang="fr">
+<div class="note pitfall"><p class="note-label">Piège rencontré</p><p>Box2D signale un contact <em>après</em> que le pas l'a résolu : impulsions et amortissement sont déjà appliqués. Lire la vitesse des vaisseaux à ce moment donne la vitesse après l'impact, pas celle à laquelle ils se sont rapprochés. Les dégâts d'éperonnage devenaient erratiques : que la vitesse restante dépasse encore le seuil minimal d'impact dépendait de ce que le solveur avait déjà absorbé, pas de la violence réelle du choc. La correction : la phase 6 sauvegarde la vitesse de chaque vaisseau avant le pas, et la phase 8 lit la valeur sauvegardée.</p></div>
+</div>
+</section>
+
+<section class="sec" id="one-tick-late">
+<div lang="en">
+<h2>Deferring by one tick, on purpose</h2>
+<p>Some things are deliberately delayed by exactly one tick. A bullet that hits something stops simulating at once, but stays registered in its map until the next tick's "apply pending" phase. That delay is what lets this tick's snapshot carry its final position and its hit flag: remove it immediately and the client never learns where it died, and keeps flying it through the target.</p>
+<p>The same deferral protects Box2D. Creating or destroying a body while another thread steps the world corrupts native memory, so every creation and removal requested from outside the tick is queued and applied in phase 4, where no step is running. Chapter <a href="threading.html">3.3</a> tells the story of the one place that forgot, and it did not end with a managed exception.</p>
+</div>
+<div lang="fr">
+<h2>Différer d'un tick, exprès</h2>
+<p>Certaines choses sont délibérément retardées d'exactement un tick. Une balle qui touche quelque chose cesse aussitôt d'être simulée, mais reste enregistrée dans sa carte jusqu'à la phase « appliquer l'attente » du tick suivant. Ce délai est ce qui permet au snapshot de ce tick de porter sa position finale et son drapeau d'impact : retirez-la immédiatement et le client n'apprend jamais où elle est morte, et continue de la faire voler à travers la cible.</p>
+<p>Le même différé protège Box2D. Créer ou détruire un corps pendant qu'un autre thread fait avancer le monde corrompt la mémoire native : chaque création et chaque retrait demandés hors du tick sont mis en file et appliqués à la phase 4, quand aucun pas ne tourne. Le chapitre <a href="threading.html">3.3</a> raconte l'unique endroit qui l'avait oublié, et ça ne s'est pas terminé par une exception managée.</p>
+</div>
+</section>
+
+<section class="sec" id="timing-phases">
+<div lang="en">
+<h2>Timing the phases honestly</h2>
+<p>Every phase restarts its own stopwatch. It was not always so: the "pre-step" figure used to be read from a stopwatch started at the top of the map tick and never reset, so it silently included the field, the debris, the deferred Box2D work and the whole object tick. The Monitor then showed pre-step as the biggest phase, and I drew conclusions from it.</p>
+<div class="note rule"><p class="note-label">Rule</p><p>A metric that measures more than its name is worse than no metric.</p><p>No metric sends you looking. A wrong one sends you in the wrong direction with confidence.</p></div>
+<p>Two more measuring habits came out of this. The map sums answer "which phase is expensive", but a sum across maps cannot tell one map at 76 ms from two maps at 38, so the worst single map is reported next to it with its id and object count. And nothing inside the parallel map tick writes to the console: <code>Console.WriteLine</code> takes a process-wide lock, and one log line per contact would serialize every map behind standard output, quietly undoing the parallelism it was trying to debug.</p>
+</div>
+<div lang="fr">
+<h2>Chronométrer les phases honnêtement</h2>
+<p>Chaque phase redémarre son propre chronomètre. Ça n'a pas toujours été le cas : le chiffre du « pré-pas » était lu sur un chronomètre démarré en tête du tick de carte et jamais remis à zéro, donc il incluait en silence le champ, les débris, le travail Box2D différé et tout le tick des objets. Le Monitor montrait alors le pré-pas comme la plus grosse phase, et j'en ai tiré des conclusions.</p>
+<div class="note rule"><p class="note-label">Règle</p><p>Une mesure qui mesure plus que son nom est pire que pas de mesure du tout.</p><p>L'absence de mesure pousse à chercher. Une mesure fausse envoie dans la mauvaise direction, avec assurance.</p></div>
+<p>Deux autres habitudes en sont sorties. Les sommes par carte répondent à « quelle phase coûte cher », mais une somme sur les cartes ne distingue pas une carte à 76 ms de deux cartes à 38 : la pire carte seule est donc rapportée à côté, avec son identifiant et son nombre d'objets. Et rien dans le tick parallèle des cartes n'écrit sur la console : <code>Console.WriteLine</code> prend un verrou global au processus, et une ligne de journal par contact sérialiserait toutes les cartes derrière la sortie standard, défaisant en silence le parallélisme qu'elle cherchait à déboguer.</p>
+</div>
+</section>
+
+<section class="sec" id="takeaways">
+<div class="takeaways">
+<div lang="en"><h2>Key takeaways</h2><ul>
+<li>Order the phases by causality: what a phase reads must have been written earlier in the same tick.</li>
+<li>Mutate first, sequentially; serialize once everything has moved; only read afterwards.</li>
+<li>Keep maps independent so they can tick in parallel, and do cross-cutting work (sends, removals) after the parallel section.</li>
+<li>Delay removals by one tick so the last state reaches the clients, and touch the physics engine only between steps.</li>
+<li>Give every phase its own timer, and report the worst map next to the sum.</li>
+</ul></div>
+<div lang="fr"><h2>À retenir</h2><ul>
+<li>Ordonner les phases par causalité : ce qu'une phase lit doit avoir été écrit plus tôt dans le même tick.</li>
+<li>Muter d'abord, séquentiellement ; sérialiser une fois que tout a bougé ; ensuite, seulement lire.</li>
+<li>Garder les cartes indépendantes pour qu'elles tickent en parallèle, et faire le travail transversal (envois, retraits) après la section parallèle.</li>
+<li>Différer les retraits d'un tick pour que le dernier état atteigne les clients, et ne toucher au moteur physique qu'entre deux pas.</li>
+<li>Donner à chaque phase son propre chronomètre, et rapporter la pire carte à côté de la somme.</li>
+</ul></div>
+</div>
+</section>
+
+</div>
+<div data-chapter-foot></div>
+</article>
+</main>
+<aside class="rail" id="mq-rail"></aside>
+</div>
+<footer class="site-footer" id="mq-footer"></footer>
+<script src="assets/js/site-data.js" defer></script>
+<script src="assets/js/glossary-data.js" defer></script>
+<script src="assets/js/app.js" defer></script>
+<script src="assets/js/widgets.js" defer></script>
+</body>
+</html>

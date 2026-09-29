@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="en" data-lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Encrypting the session · MoonQwak</title>
+<meta name="description" content="An X25519 key exchange, HKDF, one AES-GCM key per direction, and a clear list of what it does not protect.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Chakra+Petch:wght@500;600&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="assets/css/site.css">
+<script>(function(){var r=document.documentElement,l,t;try{l=localStorage.getItem("mq-lang");t=localStorage.getItem("mq-theme");}catch(e){}if(l!=="en"&&l!=="fr"){l=(navigator.language||"").toLowerCase().indexOf("fr")===0?"fr":"en";}r.setAttribute("data-lang",l);r.setAttribute("lang",l);if(t==="light"||t==="dark")r.setAttribute("data-theme",t);})();</script>
+</head>
+<body data-page="encryption">
+<a class="skip-link" href="#main"><span lang="en">Skip to content</span><span lang="fr">Aller au contenu</span></a>
+<header class="site-header" id="mq-header"></header>
+<div class="layout">
+<aside class="sidebar" id="mq-sidebar"></aside>
+<main class="content" id="main">
+<article>
+<header class="chapter-head">
+  <div class="eyebrow" data-auto></div>
+  <h1><span lang="en">Encrypting the session</span><span lang="fr">Chiffrer la session</span></h1>
+  <p class="dek"><span lang="en">An X25519 key exchange, HKDF, one AES-GCM key per direction, and a clear list of what it does not protect.</span><span lang="fr">Un échange de clés X25519, HKDF, une clé AES-GCM par sens, et la liste claire de ce que ça ne protège pas.</span></p>
+  <div class="meta-row" data-auto></div>
+</header>
+
+<div class="prose">
+
+<section class="sec" id="goals">
+<div lang="en">
+<h2>What the encryption is for</h2>
+<p>Game traffic carries passwords at login, session tokens, chat, and every action of a player. Anyone on the same network as the player could read or alter it if it travelled in clear. The goals were modest and precise: <strong>confidentiality</strong> (nobody on the path reads the traffic), <strong>integrity</strong> (nobody alters a packet without it being detected), fresh keys for every connection, low CPU cost, and something that also runs inside Unity.</p>
+<div class="note beginner"><p class="note-label">Beginner note</p><p>Encryption protects the traffic between the client and the server. It does not make the client trustworthy: a player controls their own machine and can send anything. That is what server authority is for (chapter <a href="receiving.html">1.5</a>). The two are complementary, and neither replaces the other.</p></div>
+</div>
+<div lang="fr">
+<h2>À quoi sert le chiffrement</h2>
+<p>Le trafic du jeu transporte les mots de passe au login, les jetons de session, le chat et chaque action d'un joueur. N'importe qui sur le même réseau que le joueur pourrait le lire ou le modifier s'il voyageait en clair. Les objectifs étaient modestes et précis : la <strong>confidentialité</strong> (personne sur le chemin ne lit le trafic), l'<strong>intégrité</strong> (personne ne modifie un paquet sans que ce soit détecté), des clés neuves pour chaque connexion, un faible coût CPU, et quelque chose qui tourne aussi dans Unity.</p>
+<div class="note beginner"><p class="note-label">Pour débuter</p><p>Le chiffrement protège le trafic entre le client et le serveur. Il ne rend pas le client digne de confiance : un joueur contrôle sa machine et peut envoyer n'importe quoi. C'est le rôle de l'autorité du serveur (chapitre <a href="receiving.html">1.5</a>). Les deux sont complémentaires, et aucun ne remplace l'autre.</p></div>
+</div>
+</section>
+
+<section class="sec" id="handshake">
+<div lang="en">
+<h2>The handshake</h2>
+<p>As soon as the transport connection opens, each side sends its public key in clear, as the first reliable message. Then both compute the same shared secret, and never send it.</p>
+<ol>
+<li>The client generates a fresh <a class="term" data-term="x25519">X25519</a> key pair for this connection. The server has a long-lived key pair, created on first start and kept in a file.</li>
+<li>Each side sends its public key. Each side combines its own private key with the other's public key and obtains the same 32-byte shared secret: that is the Diffie-Hellman property.</li>
+<li>The shared secret goes through <a class="term" data-term="hkdf">HKDF</a> with SHA-256: an <em>extract</em> step that turns it into a uniform key, then two <em>expand</em> steps with the labels <code>"C2S"</code> and <code>"S2C"</code> that derive two independent 32-byte keys.</li>
+<li>The client encrypts with the client-to-server key and decrypts with the other one; the server does the opposite. From this point on, every packet in both directions is encrypted and authenticated.</li>
+</ol>
+</div>
+<div lang="fr">
+<h2>La poignée de main</h2>
+<p>Dès que la connexion de transport s'ouvre, chaque côté envoie sa clé publique en clair, en premier message fiable. Puis les deux calculent le même secret partagé, sans jamais l'envoyer.</p>
+<ol>
+<li>Le client génère une paire de clés <a class="term" data-term="x25519">X25519</a> neuve pour cette connexion. Le serveur a une paire de clés longue durée, créée au premier démarrage et gardée dans un fichier.</li>
+<li>Chaque côté envoie sa clé publique. Chaque côté combine sa clé privée avec la clé publique de l'autre et obtient le même secret partagé de 32 octets : c'est la propriété de Diffie-Hellman.</li>
+<li>Le secret partagé passe dans <a class="term" data-term="hkdf">HKDF</a> avec SHA-256 : une étape d'<em>extraction</em> qui en fait une clé uniforme, puis deux étapes d'<em>expansion</em> avec les étiquettes <code>"C2S"</code> et <code>"S2C"</code> qui dérivent deux clés indépendantes de 32 octets.</li>
+<li>Le client chiffre avec la clé client-vers-serveur et déchiffre avec l'autre ; le serveur fait l'inverse. À partir de là, chaque paquet dans les deux sens est chiffré et authentifié.</li>
+</ol>
+</div>
+<figure class="fig fig-scroll">
+<svg viewBox="0 0 760 300" role="img" aria-label="Key schedule: both sides exchange public keys, compute the same X25519 shared secret, run HKDF extract, then expand into a client-to-server key and a server-to-client key">
+  <defs><marker id="en-arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="currentColor" opacity="0.6"/></marker></defs>
+  <rect x="20" y="20" width="200" height="56" rx="8" class="dg-hot"/>
+  <text class="dg-text" x="120" y="44" text-anchor="middle" font-weight="700"><tspan lang="en">Client</tspan><tspan lang="fr">Client</tspan></text>
+  <text class="dg-small" x="120" y="62" text-anchor="middle"><tspan lang="en">fresh key pair per connection</tspan><tspan lang="fr">paire neuve à chaque connexion</tspan></text>
+  <rect x="540" y="20" width="200" height="56" rx="8" class="dg-box-2"/>
+  <text class="dg-text" x="640" y="44" text-anchor="middle" font-weight="700"><tspan lang="en">Server</tspan><tspan lang="fr">Serveur</tspan></text>
+  <text class="dg-small" x="640" y="62" text-anchor="middle"><tspan lang="en">long-lived key pair, in a file</tspan><tspan lang="fr">paire longue durée, dans un fichier</tspan></text>
+  <line x1="222" y1="38" x2="536" y2="38" class="dg-line" marker-end="url(#en-arr)"/>
+  <text class="dg-small" x="380" y="32" text-anchor="middle"><tspan lang="en">client public key (clear)</tspan><tspan lang="fr">clé publique client (en clair)</tspan></text>
+  <line x1="538" y1="62" x2="224" y2="62" class="dg-line" marker-end="url(#en-arr)"/>
+  <text class="dg-small" x="380" y="78" text-anchor="middle"><tspan lang="en">server public key (clear)</tspan><tspan lang="fr">clé publique serveur (en clair)</tspan></text>
+  <rect x="250" y="104" width="260" height="40" rx="8" class="dg-box"/>
+  <text class="dg-mono" x="380" y="129" text-anchor="middle">X25519(own private, peer public)</text>
+  <line x1="120" y1="76" x2="252" y2="120" class="dg-line" marker-end="url(#en-arr)"/>
+  <line x1="640" y1="76" x2="508" y2="120" class="dg-line" marker-end="url(#en-arr)"/>
+  <text class="dg-small" x="380" y="160" text-anchor="middle"><tspan lang="en">same 32-byte secret on both sides, never sent</tspan><tspan lang="fr">même secret de 32 octets des deux côtés, jamais envoyé</tspan></text>
+  <rect x="270" y="170" width="220" height="36" rx="8" class="dg-box"/>
+  <text class="dg-mono" x="380" y="193" text-anchor="middle">HKDF-Extract(SHA-256)</text>
+  <line x1="380" y1="144" x2="380" y2="168" class="dg-line" marker-end="url(#en-arr)"/>
+  <rect x="120" y="236" width="220" height="44" rx="8" class="dg-hot"/>
+  <text class="dg-mono" x="230" y="256" text-anchor="middle">Expand("C2S", 32)</text>
+  <text class="dg-small" x="230" y="272" text-anchor="middle"><tspan lang="en">client → server AES-256-GCM</tspan><tspan lang="fr">AES-256-GCM client → serveur</tspan></text>
+  <rect x="420" y="236" width="220" height="44" rx="8" class="dg-hot"/>
+  <text class="dg-mono" x="530" y="256" text-anchor="middle">Expand("S2C", 32)</text>
+  <text class="dg-small" x="530" y="272" text-anchor="middle"><tspan lang="en">server → client AES-256-GCM</tspan><tspan lang="fr">AES-256-GCM serveur → client</tspan></text>
+  <line x1="340" y1="206" x2="252" y2="234" class="dg-line" marker-end="url(#en-arr)"/>
+  <line x1="420" y1="206" x2="508" y2="234" class="dg-line" marker-end="url(#en-arr)"/>
+</svg>
+<figcaption><span lang="en"><strong>The key schedule.</strong> Two public keys cross the network; two direction keys come out, one for each way.</span><span lang="fr"><strong>La dérivation des clés.</strong> Deux clés publiques traversent le réseau ; deux clés de sens en sortent, une pour chaque direction.</span></figcaption>
+</figure>
+<div class="code"><div class="code-head"><span class="file">Network/Peer.cs · deriving the session keys</span></div><pre><code data-lang="cs">internal void HandshakeReceived(byte[] remotePublic, byte[] selfPrivate)
+{
+    var shared = X25519KeyAgreement.Agreement(selfPrivate, remotePublic);
+    var prk = HKDF.Extract(HashAlgorithmName.SHA256, shared);
+    var c2s = HKDF.Expand(HashAlgorithmName.SHA256, prk, 32, Encoding.ASCII.GetBytes("C2S"));
+    var s2c = HKDF.Expand(HashAlgorithmName.SHA256, prk, 32, Encoding.ASCII.GetBytes("S2C"));
+    _c2s = new AesGcm(c2s, tagSizeInBytes: 16);
+    _s2c = new AesGcm(s2c, tagSizeInBytes: 16);
+    Handshaked = true;
+}</code></pre></div>
+</section>
+
+<section class="sec" id="aead">
+<div lang="en">
+<h2>Every packet, authenticated</h2>
+<p>AES-GCM is an <a class="term" data-term="aead">AEAD</a> cipher: it encrypts the data and produces a 16-byte tag that proves the ciphertext was not modified. Decryption checks the tag first; a single altered bit makes the whole packet fail, and it is dropped.</p>
+<p>GCM has one absolute rule: never encrypt two messages with the same key and the same nonce. MoonQwak builds the 12-byte nonce from a 64-bit counter that each peer increments atomically on every send, followed by one byte for the direction. The counter guarantees uniqueness for the life of the connection, and the direction byte keeps the two directions apart even though they already use separate keys. The counter travels in front of the ciphertext as a varint, so the receiver can rebuild the nonce.</p>
+</div>
+<div lang="fr">
+<h2>Chaque paquet, authentifié</h2>
+<p>AES-GCM est un chiffrement <a class="term" data-term="aead">AEAD</a> : il chiffre les données et produit une étiquette (tag) de 16 octets qui prouve que le chiffré n'a pas été modifié. Le déchiffrement vérifie l'étiquette d'abord ; un seul bit modifié fait échouer tout le paquet, qui est jeté.</p>
+<p>GCM a une règle absolue : ne jamais chiffrer deux messages avec la même clé et le même nonce. MoonQwak construit le nonce de 12 octets à partir d'un compteur de 64 bits que chaque pair incrémente de façon atomique à chaque envoi, suivi d'un octet de sens. Le compteur garantit l'unicité pendant toute la vie de la connexion, et l'octet de sens sépare les deux directions alors qu'elles utilisent déjà des clés distinctes. Le compteur voyage devant le chiffré sous forme de varint, pour que le récepteur puisse reconstruire le nonce.</p>
+</div>
+<div data-bytes>
+<div class="bytes">
+  <div class="byte-field" data-en="GCM tag (16 bytes): proves the ciphertext and nonce were not altered. Checked before anything is decrypted." data-fr="Étiquette GCM (16 octets) : prouve que le chiffré et le nonce n'ont pas été modifiés. Vérifiée avant tout déchiffrement."><b>Tag</b><span>16 B</span></div>
+  <div class="byte-field" data-en="Nonce counter (varint): incremented atomically for every packet sent on this connection. The receiver rebuilds the 12-byte nonce as counter (8 bytes) + direction byte + 3 zero bytes." data-fr="Compteur de nonce (varint) : incrémenté de façon atomique pour chaque paquet envoyé sur cette connexion. Le récepteur reconstruit le nonce de 12 octets : compteur (8 octets) + octet de sens + 3 octets à zéro."><b>Nonce</b><span>1–9 B</span></div>
+  <div class="byte-field cipher grow" data-en="Ciphertext: the complete frame from chapter 1.2 (header and payload), encrypted. Same length as the plaintext; GCM adds no padding." data-fr="Chiffré : la trame complète du chapitre 1.2 (en-tête et charge utile), chiffrée. Même longueur que le clair ; GCM n'ajoute aucun remplissage."><b>Ciphertext</b><span>[version · type · rsv · length · payload]</span></div>
+</div>
+<p class="byte-legend"><span lang="en">The datagram on the wire. Overhead per packet: 16 bytes of tag plus 1 to 4 bytes of counter in practice.</span><span lang="fr">Le datagramme sur le fil. Surcoût par paquet : 16 octets d'étiquette plus 1 à 4 octets de compteur en pratique.</span></p>
+</div>
+<div class="code"><div class="code-head"><span class="file">Network/Peer.cs · sending one packet</span></div><pre><code data-lang="cs">public void SendRaw(byte[] plain, int length, DeliveryMethod method)
+{
+    var cipher = ArrayPool&lt;byte&gt;.Shared.Rent(length);
+    var tag = ArrayPool&lt;byte&gt;.Shared.Rent(16);
+    var counter = NextNonce();          // Interlocked.Increment: read it once
+    var nonce = BuildNonce(counter, IsClient ? (byte)1 : (byte)0);
+
+    RequireCipher(IsClient ? _c2s : _s2c)
+        .Encrypt(nonce.AsSpan(0, 12), plain.AsSpan(0, length), cipher.AsSpan(0, length), tag.AsSpan(0, 16));
+
+    lock (_sendLock)                    // two threads may send to the same peer
+    {
+        _writer.Reset();                // one writer per peer, reused
+        _writer.Put(tag.AsSpan(0, 16));
+        VarInt.WriteUVarInt((ulong)counter, _writer);
+        _writer.Put(cipher.AsSpan(0, length));
+        NetPeer.Send(_writer, method);  // LiteNetLib copies the bytes before returning
+    }
+    // rented buffers are returned here
+}</code></pre></div>
+<div lang="en">
+<div class="note pitfall"><p class="note-label">Pitfall I hit</p><p>Sending reused one writer per peer to avoid allocating a new one for every packet. The same peer is legitimately sent to from two threads at once: the snapshot thread sends the tick's state while the network thread answers a request. Without the lock, the two payloads interleave in the shared writer and produce one corrupt datagram, which fails its tag check on the other side. The lock is uncontended almost all the time and costs a few nanoseconds.</p></div>
+</div>
+<div lang="fr">
+<div class="note pitfall"><p class="note-label">Piège rencontré</p><p>L'envoi réutilise un seul writer par pair pour ne pas en allouer un neuf à chaque paquet. Or le même pair reçoit légitimement des envois de deux threads à la fois : le thread des snapshots envoie l'état du tick pendant que le thread réseau répond à une requête. Sans le verrou, les deux charges utiles s'entrelacent dans le writer partagé et produisent un datagramme corrompu, qui échoue à la vérification de son étiquette de l'autre côté. Le verrou n'est presque jamais contendu et coûte quelques nanosecondes.</p></div>
+</div>
+</section>
+
+<section class="sec" id="unity">
+<div lang="en">
+<h2>Unity and a hand-written AES-GCM</h2>
+<p>The server runs on .NET 10 and uses the platform's <code>AesGcm</code> class. The Unity client targets an older API surface (netstandard 2.1) where that class does not exist. The shared network library therefore compiles two ways: with the real implementation on the server, and with a small polyfill on the client: AES in counter mode starting from counter 2, the GHASH polynomial, a constant-time tag comparison, and HKDF on top of HMAC-SHA256.</p>
+<div class="note tradeoff"><p class="note-label">Trade-off</p><p>Hand-written cryptography is a risk surface. The construction follows the GCM specification and interoperates with the server's standard implementation on every packet, which catches most mistakes, but interoperability is not a security review. It is the first thing to replace with a vetted library if the client platform allows it. The server logs once at startup which implementation it is running, so there is never a doubt about which side uses what.</p></div>
+</div>
+<div lang="fr">
+<h2>Unity et un AES-GCM écrit à la main</h2>
+<p>Le serveur tourne sur .NET 10 et utilise la classe <code>AesGcm</code> de la plateforme. Le client Unity cible une surface d'API plus ancienne (netstandard 2.1) où cette classe n'existe pas. La bibliothèque réseau partagée se compile donc de deux façons : avec la vraie implémentation côté serveur, et avec un petit polyfill côté client : AES en mode compteur à partir du compteur 2, le polynôme GHASH, une comparaison d'étiquette en temps constant, et HKDF au-dessus de HMAC-SHA256.</p>
+<div class="note tradeoff"><p class="note-label">Compromis</p><p>La cryptographie écrite à la main est une surface de risque. La construction suit la spécification de GCM et interopère avec l'implémentation standard du serveur à chaque paquet, ce qui attrape la plupart des erreurs, mais l'interopérabilité n'est pas un audit de sécurité. C'est la première chose à remplacer par une bibliothèque éprouvée si la plateforme du client le permet. Le serveur écrit une fois au démarrage quelle implémentation il utilise : on ne doute jamais de qui utilise quoi.</p></div>
+</div>
+<div lang="en">
+<div class="note measured"><p class="note-label">Measured</p><p>That startup line used to be printed on every handshake, on both sides. With 500 bots opening two connections each, it produced 2,000 identical synchronous console writes on the network thread, during the one phase where that thread is busiest. It now prints once per process.</p></div>
+</div>
+<div lang="fr">
+<div class="note measured"><p class="note-label">Mesuré</p><p>Cette ligne de démarrage était autrefois écrite à chaque poignée de main, des deux côtés. Avec 500 robots ouvrant deux connexions chacun, ça faisait 2 000 écritures console identiques et synchrones sur le thread réseau, pendant la seule phase où ce thread est le plus occupé. Elle ne s'écrit plus qu'une fois par processus.</p></div>
+</div>
+</section>
+
+<section class="sec" id="limits">
+<div lang="en">
+<h2>What this does not protect</h2>
+<p>A security layer is only useful if its limits are written down. These are the current ones:</p>
+<ul>
+<li><strong>The server is not authenticated.</strong> The client accepts whatever public key arrives first. That defeats passive eavesdropping, but an attacker placed on the network path could run one handshake with the client and another with the server and relay between them. The standard fixes are to ship the server's public key inside the client build and refuse any other ("pinning"), or to sign the handshake with a long-term key the client knows. Both are small changes; neither is in place yet.</li>
+<li><strong>Replays are not rejected at this layer.</strong> The receiver rebuilds the nonce from the counter in the packet and does not remember which counters it has already seen. A hardened version keeps a sliding window of recent counters and drops anything older or repeated, as DTLS and QUIC do.</li>
+<li><strong>The transport's connection key is not a secret.</strong> LiteNetLib's connection key is a constant string. It filters stray connections from other programs; it authenticates nothing.</li>
+<li><strong>Game servers authenticate to the gateway differently.</strong> They sign their announcement with an RSA key (chapter <a href="gateway.html">2.1</a>), which is a separate trust relationship from the client's.</li>
+</ul>
+</div>
+<div lang="fr">
+<h2>Ce que ça ne protège pas</h2>
+<p>Une couche de sécurité n'est utile que si ses limites sont écrites. Voici celles d'aujourd'hui :</p>
+<ul>
+<li><strong>Le serveur n'est pas authentifié.</strong> Le client accepte la première clé publique qui arrive. Ça déjoue l'écoute passive, mais un attaquant placé sur le chemin réseau pourrait faire une poignée de main avec le client, une autre avec le serveur, et relayer entre les deux. Les corrections habituelles sont d'embarquer la clé publique du serveur dans le build du client et de refuser toute autre (l'« épinglage »), ou de signer la poignée de main avec une clé longue durée que le client connaît. Les deux sont de petits changements ; aucun n'est encore en place.</li>
+<li><strong>Les rejeux ne sont pas refusés à cette couche.</strong> Le récepteur reconstruit le nonce à partir du compteur présent dans le paquet et ne se souvient pas des compteurs déjà vus. Une version durcie garde une fenêtre glissante des compteurs récents et jette tout ce qui est plus ancien ou répété, comme le font DTLS et QUIC.</li>
+<li><strong>La clé de connexion du transport n'est pas un secret.</strong> La clé de connexion de LiteNetLib est une chaîne constante. Elle filtre les connexions égarées d'autres programmes ; elle n'authentifie rien.</li>
+<li><strong>Les serveurs de jeu s'authentifient autrement auprès de la gateway.</strong> Ils signent leur annonce avec une clé RSA (chapitre <a href="gateway.html">2.1</a>), une relation de confiance distincte de celle du client.</li>
+</ul>
+</div>
+<div lang="en">
+<div class="note rule"><p class="note-label">Rule</p><p>Write down what your security layer does not protect, next to what it does.</p><p>A list of limits turns vague unease into a backlog of small, specific fixes, and it stops anyone from assuming a guarantee the code never made.</p></div>
+</div>
+<div lang="fr">
+<div class="note rule"><p class="note-label">Règle</p><p>Écrire ce que votre couche de sécurité ne protège pas, à côté de ce qu'elle protège.</p><p>Une liste de limites transforme un malaise vague en une liste de petites corrections précises, et empêche quiconque de supposer une garantie que le code n'a jamais donnée.</p></div>
+</div>
+</section>
+
+<section class="sec" id="takeaways">
+<div class="takeaways">
+<div lang="en"><h2>Key takeaways</h2><ul>
+<li>An X25519 exchange plus HKDF gives each connection fresh keys without sending any secret over the network.</li>
+<li>Use one key per direction and a nonce that can never repeat under the same key; a per-peer atomic counter does that.</li>
+<li>AEAD tags make tampering detectable: a modified packet fails as a whole and is dropped.</li>
+<li>Reusing send buffers is worth it, but a buffer shared by threads needs a lock.</li>
+<li>List the limits: server authentication and replay windows are the next steps here.</li>
+</ul></div>
+<div lang="fr"><h2>À retenir</h2><ul>
+<li>Un échange X25519 suivi de HKDF donne à chaque connexion des clés neuves sans envoyer aucun secret sur le réseau.</li>
+<li>Utiliser une clé par sens et un nonce qui ne peut jamais se répéter sous la même clé ; un compteur atomique par pair le fait.</li>
+<li>Les étiquettes AEAD rendent toute altération détectable : un paquet modifié échoue en bloc et est jeté.</li>
+<li>Réutiliser les tampons d'envoi en vaut la peine, mais un tampon partagé entre threads demande un verrou.</li>
+<li>Lister les limites : l'authentification du serveur et une fenêtre anti-rejeu sont les prochaines étapes ici.</li>
+</ul></div>
+</div>
+</section>
+
+</div>
+<div data-chapter-foot></div>
+</article>
+</main>
+<aside class="rail" id="mq-rail"></aside>
+</div>
+<footer class="site-footer" id="mq-footer"></footer>
+<script src="assets/js/site-data.js" defer></script>
+<script src="assets/js/glossary-data.js" defer></script>
+<script src="assets/js/app.js" defer></script>
+<script src="assets/js/widgets.js" defer></script>
+</body>
+</html>

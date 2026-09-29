@@ -1,0 +1,279 @@
+<!doctype html>
+<html lang="en" data-lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>The bench journal · MoonQwak</title>
+<meta name="description" content="Load tests from 100 to 800 players on a single map: what each one showed, what changed, and what it cost to find out.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Chakra+Petch:wght@500;600&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="assets/css/site.css">
+<script>(function(){var r=document.documentElement,l,t;try{l=localStorage.getItem("mq-lang");t=localStorage.getItem("mq-theme");}catch(e){}if(l!=="en"&&l!=="fr"){l=(navigator.language||"").toLowerCase().indexOf("fr")===0?"fr":"en";}r.setAttribute("data-lang",l);r.setAttribute("lang",l);if(t==="light"||t==="dark")r.setAttribute("data-theme",t);})();</script>
+</head>
+<body data-page="bench-journal">
+<a class="skip-link" href="#main"><span lang="en">Skip to content</span><span lang="fr">Aller au contenu</span></a>
+<header class="site-header" id="mq-header"></header>
+<div class="layout">
+<aside class="sidebar" id="mq-sidebar"></aside>
+<main class="content" id="main">
+<article>
+<header class="chapter-head">
+  <div class="eyebrow" data-auto></div>
+  <h1><span lang="en">The bench journal</span><span lang="fr">Le journal des bancs d'essai</span></h1>
+  <p class="dek"><span lang="en">Load tests from 100 to 800 players on a single map: what each one showed, what changed, and what it cost to find out.</span><span lang="fr">Des bancs de charge de 100 à 800 joueurs sur une seule carte : ce que chacun a montré, ce qui a changé, et ce que ça a coûté de le trouver.</span></p>
+  <div class="meta-row" data-auto></div>
+</header>
+
+<div class="prose">
+
+<section class="sec" id="why">
+<div lang="en">
+<h2>Why keep a journal</h2>
+<p>Every load test of this project got a written entry: what it showed, what was changed because of it, and what it cost to understand. Read in order, the entries tell a story that no single one does. Most of the benches did not find a slow function; they found a <em>misreading</em>, an instrument that answered a different question than the one asked, or a bench that was measuring itself. The fixes are in the other chapters. This one keeps the path, because the path is the part that transfers to another project.</p>
+<p>A few things to keep in mind while reading:</p>
+<ul>
+<li>Benches ran on a development PC, with the bots, the gateway, the game server and often the Unity editor on the same machine. That is exactly why the machine kept appearing in the results.</li>
+<li>The tick rate moved from 20 to 25 Hz during the series, so the budget went from 50 to 40 ms. Budgets are given as they were at the time.</li>
+<li>Most benches used one confined map and invulnerable bots, to measure density on a stable population (chapter <a href="load-testing.html#plateau">10.3</a>).</li>
+</ul>
+</div>
+<div lang="fr">
+<h2>Pourquoi tenir un journal</h2>
+<p>Chaque test de charge de ce projet a eu son entrée écrite : ce qu'il a montré, ce qui a été changé à cause de lui, et ce que ça a coûté de le comprendre. Lues dans l'ordre, les entrées racontent une histoire qu'aucune ne raconte seule. La plupart des bancs n'ont pas trouvé une fonction lente ; ils ont trouvé une <em>erreur de lecture</em>, un instrument qui répondait à une autre question que celle posée, ou un banc qui se mesurait lui-même. Les corrections sont dans les autres chapitres. Celui-ci garde le chemin, parce que le chemin est la partie qui se transpose à un autre projet.</p>
+<p>Quelques points à garder en tête en lisant :</p>
+<ul>
+<li>Les bancs ont tourné sur un PC de développement, avec les bots, la gateway, le serveur de jeu et souvent l'éditeur Unity sur la même machine. C'est exactement pourquoi la machine revenait sans cesse dans les résultats.</li>
+<li>La cadence du tick est passée de 20 à 25 Hz au cours de la série, donc le budget de 50 à 40 ms. Les budgets sont donnés tels qu'ils étaient à l'époque.</li>
+<li>La plupart des bancs utilisaient une seule carte confinée et des bots invulnérables, pour mesurer la densité sur une population stable (chapitre <a href="load-testing.html#plateau">10.3</a>).</li>
+</ul>
+</div>
+</section>
+
+<section class="sec" id="first-contact">
+<div lang="en">
+<h2>First contact: 20 to 533 players</h2>
+<p>Before the numbered series, the first benches established what the problem even was.</p>
+</div>
+<div lang="fr">
+<h2>Premier contact : de 20 à 533 joueurs</h2>
+<p>Avant la série numérotée, les premiers bancs ont établi quel était seulement le problème.</p>
+</div>
+<ol class="timeline">
+<li><span class="tl-tag">20</span><div><h3><span lang="en">The bench measured ships passing each other</span><span lang="fr">Le banc mesurait des vaisseaux qui se croisent</span></h3><p><span lang="en">27 bullets at the peak, zero debris. A new character is born with a single hex and no weapon, so the bots never fired: the combat path, the one under suspicion, was not measured at all. Bots now get a real five-hex combat hull, with a weapon class that consumes energy instead of ammunition, so they can fire forever without anyone restocking them.</span><span lang="fr">27 balles au pic, zéro débris. Un nouveau personnage naît avec un seul hex et aucune arme : les bots ne tiraient jamais, et le chemin du combat, celui qu'on soupçonnait, n'était pas mesuré du tout. Les bots reçoivent maintenant une vraie coque de combat de cinq hex, avec une classe d'arme qui consomme de l'énergie au lieu de munitions, pour tirer indéfiniment sans que personne ne les réapprovisionne.</span></p></div></li>
+<li><span class="tl-tag">100</span><div><h3><span lang="en">The CPU was not the wall; the outbound traffic was</span><span lang="fr">Le CPU n'était pas le mur ; le trafic sortant, si</span></h3><p><span lang="en">The sum of the worst phases was about 14 ms of 40. The serialize-once cache was the only item whose yield <em>grew</em> with load: ×16.6 at 21 peers, ×44.6 at 100 (103 blocks prepared, 4,597 copied; chapter <a href="serialize-once.html">4.3</a>). But outbound traffic was 4.2 MB/s, 340 kbit/s per player: each snapshot carried 173 objects, and at 3,703 bytes it was cut into three IP fragments, the loss of any one losing all three. The bench also found two hard-coded caps that nothing had exercised in months of testing with three connections: the gateway silently rejected the 11th player, and the game server the 101st, who was the developer coming in with the real client to watch.</span><span lang="fr">La somme des pires phases faisait environ 14 ms sur 40. Le cache de sérialisation unique était le seul poste dont le rendement <em>grandissait</em> avec la charge : ×16,6 à 21 pairs, ×44,6 à 100 (103 blocs préparés, 4 597 recopiés ; chapitre <a href="serialize-once.html">4.3</a>). Mais le sortant faisait 4,2 Mo/s, 340 kbit/s par joueur : chaque snapshot portait 173 objets, et à 3 703 octets il était coupé en trois fragments IP, la perte de l'un faisant perdre les trois. Le banc a aussi trouvé deux plafonds écrits en dur que rien n'avait sollicités en des mois de tests à trois connexions : la gateway rejetait en silence le 11e joueur, et le serveur de jeu le 101e, qui était le développeur venu regarder avec le vrai client.</span></p></div></li>
+<li><span class="tl-tag">201</span><div><h3><span lang="en">Density, not headcount</span><span lang="fr">La densité, pas le nombre</span></h3><p><span lang="en">The same 201 players, first spread over a large map, then packed in a circle of radius 60: 168 objects per snapshot and 3.7 MB/s, against 457 objects and 27.3 MB/s. The tick did not move (40.8 and 40.5 ms). The non-linearity lives in density, and the whole problem was in what the server <em>tells</em>, never in what it simulates. This led to the freshness budget (chapter <a href="freshness-budget.html">4.5</a>), whose first version hid a units bug: 118 hull sends per viewer per tick where the theory promised 64. Three wrong hypotheses, a recompile for each, one night; three counters inside the loop would have answered in one run.</span><span lang="fr">Les mêmes 201 joueurs, d'abord répartis sur une grande carte, puis tassés dans un cercle de rayon 60 : 168 objets par snapshot et 3,7 Mo/s, contre 457 objets et 27,3 Mo/s. Le tick n'a pas bougé (40,8 et 40,5 ms). La non-linéarité vit dans la densité, et tout le problème était dans ce que le serveur <em>raconte</em>, jamais dans ce qu'il simule. Cela a mené au budget de fraîcheur (chapitre <a href="freshness-budget.html">4.5</a>), dont la première version cachait un bug d'unités : 118 envois de coques par spectateur et par tick là où la théorie en promettait 64. Trois hypothèses fausses, une recompilation chacune, une nuit ; trois compteurs dans la boucle auraient répondu en un seul banc.</span></p></div></li>
+<li><span class="tl-tag">533</span><div><h3><span lang="en">Out of CPU to tell, not to simulate</span><span lang="fr">À court de CPU pour raconter, pas pour simuler</span></h3><p><span lang="en">Snapshot build took 322 ms of a 377 ms tick, while simulation cost 0.05 ms per object: 530 hulls, 493 objects per snapshot, each player receiving 93 % of the world 25 times per second. A distance-based cadence was tried first and made everything flicker, because a snapshot is a membership list: omitting an object says it left. It was abandoned for the budget, which bounds the cost instead of making it proportional.</span><span lang="fr">La construction des snapshots prenait 322 ms d'un tick de 377, alors que la simulation coûtait 0,05 ms par objet : 530 coques, 493 objets par snapshot, chaque joueur recevant 93 % du monde 25 fois par seconde. Une cadence selon la distance a d'abord été essayée et a tout fait clignoter, parce qu'un snapshot est une liste d'appartenance : omettre un objet dit qu'il est parti. Elle a été abandonnée au profit du budget, qui borne le coût au lieu de le rendre proportionnel.</span></p></div></li>
+</ol>
+<div lang="en">
+<div class="table-wrap"><table>
+<thead><tr><th>201 players</th><th>Objects per snapshot</th><th>Tick</th><th>Outbound</th><th>Per player</th></tr></thead>
+<tbody>
+<tr><td>Spread over the map</td><td>168</td><td>40.8 ms</td><td>3.7 MB/s</td><td>147 kbit/s</td></tr>
+<tr><td>Packed in one fight</td><td>457</td><td>40.5 ms</td><td>27.3 MB/s</td><td>1.09 Mbit/s</td></tr>
+</tbody></table></div>
+</div>
+<div lang="fr">
+<div class="table-wrap"><table>
+<thead><tr><th>201 joueurs</th><th>Objets par snapshot</th><th>Tick</th><th>Sortant</th><th>Par joueur</th></tr></thead>
+<tbody>
+<tr><td>Répartis sur la carte</td><td>168</td><td>40,8 ms</td><td>3,7 Mo/s</td><td>147 kbit/s</td></tr>
+<tr><td>Tassés dans un combat</td><td>457</td><td>40,5 ms</td><td>27,3 Mo/s</td><td>1,09 Mbit/s</td></tr>
+</tbody></table></div>
+</div>
+</section>
+
+<section class="sec" id="machine">
+<div lang="en">
+<h2>Benches 1 to 5: is it the machine?</h2>
+<p>The numbered series ran 400 bots on one confined map. Its first five entries are about one question: when the tick is late, is the server slow, or is it not getting the CPU?</p>
+</div>
+<div lang="fr">
+<h2>Bancs 1 à 5 : est-ce la machine ?</h2>
+<p>La série numérotée faisait tourner 400 bots sur une carte confinée. Ses cinq premières entrées portent sur une seule question : quand le tick est en retard, le serveur est-il lent, ou n'obtient-il pas le CPU ?</p>
+</div>
+<ol class="timeline">
+<li><span class="tl-tag">#1</span><div><h3><span lang="en">239 ms worst tick, for 28 ms of work</span><span lang="fr">239 ms de pire tick, pour 28 ms de travail</span></h3><p><span lang="en">Not a contradiction but the answer: the headline number is the interval between two wake-ups, and everything missing between interval and work is a late wake-up. On the same PC, 400 bots were 400 to 800 network threads waking constantly and preempting the server. The bench process now runs below normal priority.</span><span lang="fr">Pas une contradiction mais la réponse : le chiffre en tête est l'intervalle entre deux réveils, et tout ce qui manque entre l'intervalle et le travail est un réveil en retard. Sur le même PC, 400 bots faisaient 400 à 800 threads réseau qui se réveillaient sans arrêt et préemptaient le serveur. Le processus du banc tourne maintenant en priorité sous la normale.</span></p></div></li>
+<li><span class="tl-tag">#2</span><div><h3><span lang="en">738 ms of wall-clock work, 78 ms of CPU</span><span lang="fr">738 ms de travail mural, 78 ms de CPU</span></h3><p><span lang="en">The tick was waiting, and the eight measured phases explained only 40 ms of it. The tick was split into named sections, each with wall and CPU time and a verdict (chapter <a href="observability.html#wall-vs-cpu">10.1</a>).</span><span lang="fr">Le tick attendait, et les huit phases mesurées n'en expliquaient que 40 ms. Le tick a été découpé en sections nommées, chacune avec temps mural, temps CPU et un verdict (chapitre <a href="observability.html#wall-vs-cpu">10.1</a>).</span></p></div></li>
+<li><span class="tl-tag">#3</span><div><h3><span lang="en">A clean run</span><span lang="fr">Un banc propre</span></h3><p><span lang="en">Worst tick 53.7 ms, no stall: the stall was intermittent. It showed something else: the object phase took 40 ms for 404 hulls on one map, 0.1 ms per object, and a map ticks on one thread.</span><span lang="fr">Pire tick 53,7 ms, aucun décrochage : le décrochage était intermittent. Le banc montrait autre chose : la phase des objets prenait 40 ms pour 404 coques sur une carte, 0,1 ms par objet, et une carte tique sur un seul thread.</span></p></div></li>
+<li><span class="tl-tag">#4</span><div><h3><span lang="en">The tick waited for the thread pool</span><span lang="fr">Le tick attendait le pool de threads</span></h3><p><span lang="en">"Snapshot build 601.6 ms wall, 0.0 ms CPU; 385 snapshots built by 2 threads." The tick thread did the whole loop alone, then waited for pool workers of normal priority that the OS was not scheduling behind hundreds of bot threads. The tick ran at the highest priority, but its parallel loops depended on threads that did not. Fix: dedicated tick workers, whose join only waits for workers that actually started (chapter <a href="threading.html">3.3</a>).</span><span lang="fr">« Construction des snapshots 601,6 ms de mur, 0,0 ms de CPU ; 385 snapshots bâtis par 2 threads. » Le thread de tick faisait toute la boucle seul, puis attendait des ouvriers du pool de priorité normale que l'OS n'ordonnançait pas, derrière des centaines de threads de bots. Le tick tournait en priorité la plus haute, mais ses boucles parallèles dépendaient de threads qui ne l'étaient pas. Correction : des ouvriers de tick dédiés, dont la jointure n'attend que ceux qui ont réellement démarré (chapitre <a href="threading.html">3.3</a>).</span></p></div></li>
+<li><span class="tl-tag">#5</span><div><h3><span lang="en">Worst tick 778 → 164 ms, and the same disease one floor down</span><span lang="fr">Pire tick de 778 à 164 ms, et la même maladie un étage plus bas</span></h3><p><span lang="en">Snapshot build went from 600 to 20 ms at worst. What remained was in the two phases calling the physics engine, at 0.2 cores: Box2D's default task system also split work onto the thread pool. It now runs on the tick workers too.</span><span lang="fr">La construction des snapshots est passée de 600 à 20 ms au pire. Ce qui restait se trouvait dans les deux phases qui appellent le moteur physique, à 0,2 cœur : le système de tâches par défaut de Box2D découpait lui aussi le travail sur le pool de threads. Il tourne maintenant sur les ouvriers du tick, lui aussi.</span></p></div></li>
+</ol>
+</section>
+
+<section class="sec" id="computation">
+<div lang="en">
+<h2>Benches 6 to 10: is it computation?</h2>
+<p>With the scheduling fixed, the remaining cost was real computation, and the profiler started naming suspects. Not all of them were guilty.</p>
+</div>
+<div lang="fr">
+<h2>Bancs 6 à 10 : est-ce du calcul ?</h2>
+<p>L'ordonnancement réglé, le coût restant était du vrai calcul, et le profileur s'est mis à nommer des suspects. Tous n'étaient pas coupables.</p>
+</div>
+<ol class="timeline">
+<li><span class="tl-tag">#6</span><div><h3><span lang="en">Firing cost 35 to 55 µs per hull</span><span lang="fr">Le tir coûtait de 35 à 55 µs par coque</span></h3><p><span lang="en">Worst tick 68.7 ms at 5.9 cores, no more stalls. Firing was 60 to 80 % of the per-hull cost, because each weapon queried the game-data catalog a dozen times per tick through a generic JSON object (strings allocated, a projectile spec rebuilt by reflection on every call). The hot catalogs now build a flat cache at load time (chapter <a href="data-and-catalogs.html">6.3</a>). A real bug surfaced on the way: the check that a turret is aligned before firing had been lost in an earlier change, so every weapon off cooldown fired straight ahead, whatever the angle to its target.</span><span lang="fr">Pire tick 68,7 ms à 5,9 cœurs, plus aucun décrochage. Le tir faisait 60 à 80 % du coût par coque, parce que chaque arme interrogeait le catalogue de données une douzaine de fois par tick à travers un objet JSON générique (des chaînes allouées, une spécification de projectile reconstruite par réflexion à chaque appel). Les catalogues chauds construisent maintenant un cache plat au chargement (chapitre <a href="data-and-catalogs.html">6.3</a>). Un vrai bug est apparu en chemin : la vérification qu'une tourelle est alignée avant de tirer avait disparu lors d'un changement antérieur, et chaque arme hors recharge tirait droit devant, quel que soit l'angle vers sa cible.</span></p></div></li>
+<li><span class="tl-tag">#7</span><div><h3><span lang="en">22 ms in a step that costs nothing</span><span lang="fr">22 ms dans une étape qui ne coûte rien</span></h3><p><span lang="en">Firing dropped from 11 to 3.1 ms, the worst tick to 57.9 ms. But the profiler blamed "layout", which does nothing when no layout is pending. The world thread had lost its core: there were one more high-priority thread than cores. New rule: never more ready high-priority threads than cores, workers at cores minus two, and the world thread alone at the highest priority.</span><span lang="fr">Le tir est tombé de 11 à 3,1 ms, le pire tick à 57,9 ms. Mais le profileur accusait « layout », qui ne fait rien quand aucune configuration n'attend. Le thread du monde avait perdu son cœur : il y avait un thread prioritaire de plus que de cœurs. Nouvelle règle : jamais plus de threads prioritaires prêts que de cœurs, des ouvriers au nombre de cœurs moins deux, et le thread du monde seul à la priorité la plus haute.</span></p></div></li>
+<li><span class="tl-tag">#8</span><div><h3><span lang="en">The profiler blamed an innocent, again</span><span lang="fr">Le profileur accusait un innocent, encore</span></h3><p><span lang="en">Layout fell from 22.3 to 0.1 ms. Now "pilot input" took 18.5 ms, uniformly, in code bounded by a microsecond per hull. The worst tick of the report had 13 peers and 6 objects: it was the connection storm of 400 bots, and the hole landed on whatever step was running. Twice in a row the profiler had named an innocent, so each step now reports its share of the thread's CPU next to its share of wall time. A real gain came along: power totals recomputed per tick were cached (1.7 ms down to 0.3).</span><span lang="fr">Layout est tombé de 22,3 à 0,1 ms. Maintenant « entrée pilote » prenait 18,5 ms, uniformément, dans du code borné par une microseconde par coque. Le pire tick du rapport comptait 13 pairs et 6 objets : c'était la tempête de connexion des 400 bots, et le trou tombait sur l'étape en cours à ce moment-là. Deux fois de suite, le profileur avait nommé un innocent : chaque étape rapporte maintenant sa part du CPU du thread à côté de sa part du temps mural. Un vrai gain est venu avec : les totaux d'énergie recalculés à chaque tick ont été mis en cache (de 1,7 à 0,3 ms).</span></p></div></li>
+<li><span class="tl-tag">#9</span><div><h3><span lang="en">Read after the ramp, the object phase was solved</span><span lang="fr">Lu après la rampe, la phase des objets était réglée</span></h3><p><span lang="en">About 11 µs per hull, against 74 at bench 6. What remained was physics: 15.9 ms at <em>best</em>, 20.9 at worst, while the whole process used 0.9 of a core. A floor, not a peak, and something sequential. A counter was added to see whether the physics engine ever handed work to the host.</span><span lang="fr">Environ 11 µs par coque, contre 74 au banc 6. Ce qui restait, c'était la physique : 15,9 ms <em>au mieux</em>, 20,9 au pire, pendant que tout le processus utilisait 0,9 cœur. Un plancher, pas un pic, et quelque chose de séquentiel. Un compteur a été ajouté pour voir si le moteur physique confiait jamais du travail à l'hôte.</span></p></div></li>
+<li><span class="tl-tag">#10</span><div><h3><span lang="en">A counter that never prints is data</span><span lang="fr">Un compteur qui ne s'imprime jamais est une donnée</span></h3><p><span lang="en">Zero lines in 38 seconds: Box2D had never called the task system, which had been decorative since it was written. The world definition did not declare any worker count. The object phase also named two "monsters": 8.2 ms for one NPC's brain, 6.5 ms for one station's defence, both scanning every hull of the map instead of querying the spatial index.</span><span lang="fr">Zéro ligne en 38 secondes : Box2D n'avait jamais appelé le système de tâches, décoratif depuis son écriture. La définition du monde ne déclarait aucun nombre d'ouvriers. La phase des objets nommait aussi deux « monstres » : 8,2 ms pour le cerveau d'un seul PNJ, 6,5 ms pour la défense d'une seule station, tous deux parcourant chaque coque de la carte au lieu d'interroger l'index spatial.</span></p></div></li>
+</ol>
+</section>
+
+<section class="sec" id="instruments">
+<div lang="en">
+<h2>Benches 11 to 16: are the instruments lying?</h2>
+<p>The middle of the series is mostly about instruments, and it contains the most expensive misreading of the project.</p>
+</div>
+<div lang="fr">
+<h2>Bancs 11 à 16 : les instruments mentent-ils ?</h2>
+<p>Le milieu de la série porte surtout sur les instruments, et il contient l'erreur de lecture la plus coûteuse du projet.</p>
+</div>
+<ol class="timeline">
+<li><span class="tl-tag win">#11</span><div><h3><span lang="en">The server holds, and ten benches had read only accidents</span><span lang="fr">Le serveur tient, et dix bancs n'avaient lu que des accidents</span></h3><p><span lang="en">The worst tick of the session was 1.2 ms of work and 49.3 ms of late wake-up. At 406 hulls, 660 bullets, 400 peers and 8 MB/s out, the tick did about 30 ms of work in 40 and only overflowed when the machine took its core. The 400-player bench passed. And the lesson: the object profile printed only above 20 ms, and in steady state that phase takes 3 to 10 ms. Every line read in ten benches came from abnormal ticks, the connection ramp. The two "monsters" of bench 10 cost 71 and 92 µs in steady state. A periodic photo was added (chapter <a href="observability.html#photos">10.1</a>).</span><span lang="fr">Le pire tick de la session faisait 1,2 ms de travail et 49,3 ms de réveil en retard. À 406 coques, 660 balles, 400 pairs et 8 Mo/s sortants, le tick faisait environ 30 ms de travail sur 40 et ne débordait que quand la machine lui prenait son cœur. Le banc à 400 joueurs passait. Et la leçon : le profil des objets ne s'imprimait qu'au-dessus de 20 ms, et en régime cette phase prend 3 à 10 ms. Chaque ligne lue en dix bancs venait de ticks anormaux, la rampe de connexion. Les deux « monstres » du banc 10 coûtent 71 et 92 µs en régime. Une photo périodique a été ajoutée (chapitre <a href="observability.html#photos">10.1</a>).</span></p></div></li>
+<li><span class="tl-tag">#12</span><div><h3><span lang="en">The photo was swallowed by a second filter</span><span lang="fr">La photo était avalée par un second filtre</span></h3><p><span lang="en">One line in the whole bench. The new periodic trigger fired, but the report function kept its own "stay silent under 20 ms" test: two guards for one decision, and the second won. The physics engine was still silent despite 20 declared workers; its native library turned out to export a per-phase profile and counters, which a probe now reads.</span><span lang="fr">Une seule ligne de tout le banc. Le nouveau déclencheur périodique s'armait, mais la fonction de rapport gardait son propre test « se taire sous 20 ms » : deux gardes pour une même décision, et c'était la seconde qui gagnait. Le moteur physique restait muet malgré 20 ouvriers déclarés ; sa bibliothèque native exportait en fait un profil par phase et des compteurs, qu'une sonde lit désormais.</span></p></div></li>
+<li><span class="tl-tag">#13</span><div><h3><span lang="en">Steady state, finally measured</span><span lang="fr">Le régime, enfin mesuré</span></h3><p><span lang="en">13 to 26 µs per hull, spread over many small steps: the object phase was not the wall. Physics was, and remarkably stable: 15.8 / 18.6 / 20.4 ms. The worst tick (63.3 ms) was now real computation: 46.9 ms of CPU, no late wake-up. The probe first failed (the runtime refused to call that property by reflection) and was rewritten as a direct call, using names read from the binding's metadata rather than guessed. The metadata also corrected the previous bench: the "missing setter" for the task callbacks was a property returning a reference, which is written <em>through</em>.</span><span lang="fr">13 à 26 µs par coque, répartis sur beaucoup de petites étapes : la phase des objets n'était pas le mur. La physique l'était, et remarquablement stable : 15,8 / 18,6 / 20,4 ms. Le pire tick (63,3 ms) était désormais du vrai calcul : 46,9 ms de CPU, aucun réveil en retard. La sonde a d'abord échoué (le runtime refusait d'appeler cette propriété par réflexion) et a été réécrite en appel direct, avec des noms lus dans les métadonnées du binding plutôt que devinés. Les métadonnées ont aussi corrigé le banc précédent : le « setter manquant » des rappels de tâches était une propriété qui rend une référence, dans laquelle on écrit <em>à travers</em> elle.</span></p></div></li>
+<li><span class="tl-tag">#14</span><div><h3><span lang="en">The wall was geometry: 16,688 shapes for 390 contacts</span><span lang="fr">Le mur était la géométrie : 16 688 formes pour 390 contacts</span></h3><p><span lang="en">The probe spoke. The broad-phase took 11 of the 15 ms of a physics step; the solver did almost nothing. Each hull was described three times (walls, weapon envelope, filled hexagons), about 41 shapes per hull. At boot, 1,572 shapes cost 0.1 ms per step; in steady state, 16,688 cost 15.1 ms: ten times the shapes, 150 times the time. Hence the "bare hull" (chapter <a href="physics.html">3.5</a>).</span><span lang="fr">La sonde a parlé. La broad-phase prenait 11 des 15 ms d'un pas de physique ; le solveur ne faisait presque rien. Chaque coque était décrite trois fois (murs, enveloppe des armes, hexagones pleins), environ 41 formes par coque. Au démarrage, 1 572 formes coûtaient 0,1 ms par pas ; en régime, 16 688 en coûtaient 15,1 : dix fois plus de formes, 150 fois plus de temps. D'où la « coque nue » (chapitre <a href="physics.html">3.5</a>).</span></p></div></li>
+<li><span class="tl-tag win">#15</span><div><h3><span lang="en">The bare hull held</span><span lang="fr">La coque nue a tenu</span></h3><p><span lang="en">Shapes 16,688 → 2,156; broad-phase 10.9 → 1.0 ms; physics phase 19.2 → 3.4 ms, while contacts doubled. The next question: the monitor showed a world tick of 41.68 ms on average, and the phases explained 34. A photo of all the tick's sections was added to find the missing 8 ms; its slow-tick threshold (100 ms) had never fired either, since the worst tick was 54.6.</span><span lang="fr">Formes de 16 688 à 2 156 ; broad-phase de 10,9 à 1,0 ms ; phase physique de 19,2 à 3,4 ms, pendant que les contacts doublaient. Question suivante : le moniteur affichait un tick du monde de 41,68 ms en moyenne, et les phases en expliquaient 34. Une photo de toutes les sections du tick a été ajoutée pour trouver les 8 ms manquantes ; son seuil de tick lent (100 ms) ne s'était jamais déclenché non plus, le pire tick faisant 54,6.</span></p></div></li>
+<li><span class="tl-tag">#16</span><div><h3><span lang="en">There was no hole</span><span lang="fr">Il n'y avait pas de trou</span></h3><p><span lang="en">The sections added up to 18 to 23 ms of work in 40; the six sections nobody watched cost 0.3 ms together. The 41.68 was the interval between tick starts, which sits at 40 by construction. Before looking for a gap between two numbers, check that they measure the same thing. The same bench showed the CPU column of the new photo was noise (297 = 19 × 15.625, one scheduler quantum per thread), fixed with per-thread cycles. And the hull census proudly reported "0 damaged hulls", which was a tautology: bots were invulnerable, so no hex could die.</span><span lang="fr">Les sections totalisaient 18 à 23 ms de travail sur 40 ; les six sections que personne ne regardait coûtaient 0,3 ms à elles toutes. Les 41,68 étaient l'intervalle entre deux débuts de tick, qui vaut 40 par construction. Avant de chercher un écart entre deux nombres, vérifier qu'ils mesurent la même chose. Le même banc a montré que la colonne CPU de la nouvelle photo était du bruit (297 = 19 × 15,625, un quantum d'ordonnanceur par thread), corrigée par les cycles par thread. Et le recensement des coques annonçait fièrement « 0 coque abîmée », ce qui était une tautologie : les bots étaient invulnérables, aucun hex ne pouvait mourir.</span></p></div></li>
+</ol>
+</section>
+
+<section class="sec" id="scaling">
+<div lang="en">
+<h2>Benches 17 to 19: 600, then 800</h2>
+<p>With the server at half its budget at 400, the only honest next step was to raise the population.</p>
+</div>
+<div lang="fr">
+<h2>Bancs 17 à 19 : 600, puis 800</h2>
+<p>Le serveur étant à la moitié de son budget à 400, la seule suite honnête était d'augmenter la population.</p>
+</div>
+<figure class="fig">
+<div data-chart>
+<script type="application/json">
+{
+  "type": "bar",
+  "cats": { "en": ["Whole tick", "Maps\n(simulation)", "Snapshot\nprepare", "Snapshot\nbuild"], "fr": ["Tick entier", "Cartes\n(simulation)", "Snapshots\npréparation", "Snapshots\nconstruction"] },
+  "series": [
+    { "name": { "en": "400 hulls (bench 16)", "fr": "400 coques (banc 16)" }, "values": [20.6, 13.5, 4.3, 2.3] },
+    { "name": { "en": "600 hulls (bench 17)", "fr": "600 coques (banc 17)" }, "values": [24.2, 13.8, 6.0, 3.9] }
+  ],
+  "unit": "ms",
+  "decimals": 1,
+  "unitLabel": { "en": "work per tick, ms (periodic photos)", "fr": "travail par tick, ms (photos périodiques)" },
+  "aria": { "en": "Tick sections at 400 and 600 hulls: whole tick 20.6 to 24.2 ms, maps 13.5 to 13.8 ms, snapshot preparation 4.3 to 6.0 ms, snapshot build 2.3 to 3.9 ms", "fr": "Sections du tick à 400 et 600 coques : tick entier de 20,6 à 24,2 ms, cartes de 13,5 à 13,8 ms, préparation des snapshots de 4,3 à 6,0 ms, construction de 2,3 à 3,9 ms" }
+}
+</script>
+</div>
+<figcaption><span lang="en"><strong>1.49 times the population, 1.17 times the work.</strong> The simulation of the map is flat (×1.02); only the per-viewer snapshot work grows, roughly linearly.</span><span lang="fr"><strong>1,49 fois la population, 1,17 fois le travail.</strong> La simulation de la carte est plate (×1,02) ; seul le travail des snapshots par spectateur grandit, à peu près linéairement.</span></figcaption>
+</figure>
+<ol class="timeline">
+<li><span class="tl-tag">#17</span><div><h3><span lang="en">600 hulls cost what 400 did, in simulation</span><span lang="fr">600 coques coûtaient ce que coûtaient 400, en simulation</span></h3><p><span lang="en">The first reading announced snapshot build "super-linear, ×2.39". It was wrong: it compared the monitor's averages, which are averages of per-second worst cases. Over the same seconds, the monitor's "mean" was about twice the typical tick. Monitor for accidents, photos for costs. The network was decomposed to the last byte: 95 % of a snapshot was the irreducible base of hulls, 22 bytes each, and the arithmetic predicted the link within 2 % (chapter <a href="bandwidth.html">4.6</a>).</span><span lang="fr">La première lecture annonçait une construction des snapshots « super-linéaire, ×2,39 ». C'était faux : elle comparait les moyennes du moniteur, qui sont des moyennes de pires cas par seconde. Sur les mêmes secondes, la « moyenne » du moniteur valait environ le double du tick typique. Le moniteur pour les accidents, les photos pour les coûts. Le réseau a été décomposé jusqu'au dernier octet : 95 % d'un snapshot était le socle irréductible des coques, 22 octets chacune, et l'arithmétique prédisait le lien à 2 % près (chapitre <a href="bandwidth.html">4.6</a>).</span></p></div></li>
+<li><span class="tl-tag">#18</span><div><h3><span lang="en">The cliff, not the cadence</span><span lang="fr">La falaise, pas la cadence</span></h3><p><span lang="en">Tightening the budget made the game unplayable: hulls on the sides froze visibly. Falling out of a two-ring budget does not lower the cadence, it drops to the heartbeat, from 12.5 Hz to 0.5 Hz, a factor of 25. A third ring (25 → 12.5 → 6.25 Hz → heartbeat) at the same total cost made the same scene playable and cut the outbound traffic from 14.5 to 12.2 MB/s. The physics-threading effort was closed for good: a step now cost 2.5 ms, and in a general melee all hulls form one or two islands, which a parallel solver could not split anyway.</span><span lang="fr">Resserrer le budget a rendu le jeu injouable : les coques sur les côtés gelaient visiblement. Sortir d'un budget à deux anneaux ne baisse pas la cadence, cela fait tomber au battement, de 12,5 Hz à 0,5 Hz, un facteur 25. Un troisième anneau (25 → 12,5 → 6,25 Hz → battement) au même coût total a rendu la même scène jouable et fait passer le sortant de 14,5 à 12,2 Mo/s. Le chantier du threading de la physique a été clos pour de bon : un pas coûtait désormais 2,5 ms, et dans une mêlée générale toutes les coques forment un ou deux îlots, qu'un solveur parallèle ne pourrait de toute façon pas découper.</span></p></div></li>
+<li><span class="tl-tag">#19</span><div><h3><span lang="en">1,000 requested, ~780 held, and performance did not give way</span><span lang="fr">1 000 demandés, ~780 tenus, et ce n'est pas la performance qui a cédé</span></h3><p><span lang="en">The bench stopped on an exception: "Collection was modified", in a fallback path of snapshot building that runs once per <em>viewer</em>, in parallel. Two viewers of the same unprepared hull at the same instant were enough; improbable at 40 players, a certainty per minute at 700. Three comments in the code asserted the invariant that was being violated. The population was the revealer, not the cause (chapter <a href="serialize-once.html">4.3</a>). Meanwhile the tick held: 38 ms of work for 800 peers, no GC pause. What gave way was around it: the machine (87 % of the interval spent outside the tick), the real send rate (15.4 Hz average instead of 25), and the outbound traffic, 15.1 MB/s at peak for one map. The first real hosting limit was the network, not the CPU, which put a sensible target near 500 players per map.</span><span lang="fr">Le banc s'est arrêté sur une exception : « Collection was modified », dans un chemin de repli de la construction des snapshots qui s'exécute une fois par <em>spectateur</em>, en parallèle. Deux spectateurs d'une même coque non préparée au même instant suffisaient ; improbable à 40 joueurs, une certitude par minute à 700. Trois commentaires du code affirmaient l'invariant qui était violé. La population était le révélateur, pas la cause (chapitre <a href="serialize-once.html">4.3</a>). Pendant ce temps, le tick tenait : 38 ms de travail pour 800 pairs, aucune pause du GC. Ce qui a cédé était autour : la machine (87 % de l'intervalle passé hors du tick), la cadence réelle d'envoi (15,4 Hz en moyenne au lieu de 25), et le sortant, 15,1 Mo/s au pic pour une seule carte. La première vraie limite d'hébergement était le réseau, pas le CPU, ce qui plaçait une cible raisonnable autour de 500 joueurs par carte.</span></p></div></li>
+</ol>
+<div lang="en">
+<div class="stats">
+<div class="stat"><div class="v">802</div><div class="k">peers at peak, one map</div></div>
+<div class="stat"><div class="v">38<small>ms</small></div><div class="k">work in the worst tick</div></div>
+<div class="stat"><div class="v">15.1<small>MB/s</small></div><div class="k">outbound at peak</div></div>
+<div class="stat"><div class="v">15.4<small>Hz</small></div><div class="k">average real send rate</div></div>
+</div>
+</div>
+<div lang="fr">
+<div class="stats">
+<div class="stat"><div class="v">802</div><div class="k">pairs au pic, une carte</div></div>
+<div class="stat"><div class="v">38<small>ms</small></div><div class="k">de travail dans le pire tick</div></div>
+<div class="stat"><div class="v">15,1<small>Mo/s</small></div><div class="k">sortants au pic</div></div>
+<div class="stat"><div class="v">15,4<small>Hz</small></div><div class="k">cadence réelle moyenne d'envoi</div></div>
+</div>
+</div>
+</section>
+
+<section class="sec" id="many-maps">
+<div lang="en">
+<h2>After the series: many maps</h2>
+<p>A per-map limit is only a game limit if there is one map. The next benches spread players over the world, and the problems moved from the tick to everything around it.</p>
+<ul>
+<li><strong>700 bots, 433 loaded maps, 373 occupied</strong>: 1.6 players per map. Four servers were filled, each near its map limit, not because 700 players are expensive but because they were scattered over a third of the world. That bench measured the cost of empty worlds, and led to the hubs described in chapter <a href="load-testing.html#plateau">10.3</a>.</li>
+<li><strong>2,500 players</strong>: a wave of map changes created about fifty maps in ninety seconds. The tick rate fell to 3.6 per second while the CPU sat at 25 %: waiting, not computing. Loading a map made seven database round trips <em>on the tick thread</em>. Loading is now split into reading (off the tick, one database context) and placing (on the tick, microseconds).</li>
+<li><strong>The same wave, one layer up</strong>: 2,505 sessions fell to 923 while the world kept its 25 ticks per second. Each map request blocked the thread of the gateway link, which also carries chat, groups and session kicks, for as long as the map took to load. A head-of-line block that no tick counter can show, because it is not in the tick. Map requests are now queued and served by a few bounded workers.</li>
+</ul>
+</div>
+<div lang="fr">
+<h2>Après la série : beaucoup de cartes</h2>
+<p>Une limite par carte n'est une limite de jeu que s'il n'y a qu'une carte. Les bancs suivants ont réparti les joueurs sur le monde, et les problèmes sont passés du tick à tout ce qui l'entoure.</p>
+<ul>
+<li><strong>700 bots, 433 cartes chargées, 373 occupées</strong> : 1,6 joueur par carte. Quatre serveurs remplis, chacun près de sa limite de cartes, non parce que 700 joueurs coûtent cher mais parce qu'ils étaient éparpillés sur un tiers du monde. Ce banc mesurait le coût de mondes vides, et a mené aux pôles décrits au chapitre <a href="load-testing.html#plateau">10.3</a>.</li>
+<li><strong>2 500 joueurs</strong> : une vague de changements de carte a créé une cinquantaine de cartes en quatre-vingt-dix secondes. La cadence est tombée à 3,6 ticks par seconde pendant que le CPU restait à 25 % : de l'attente, pas du calcul. Charger une carte faisait sept allers-retours en base <em>sur le thread de tick</em>. Le chargement est maintenant séparé en lecture (hors du tick, un seul contexte de base) et pose (sur le tick, en microsecondes).</li>
+<li><strong>La même vague, une couche plus haut</strong> : 2 505 sessions sont tombées à 923 pendant que le monde gardait ses 25 ticks par seconde. Chaque demande de carte bloquait le thread du lien avec la gateway, qui porte aussi le chat, les groupes et les éjections de session, le temps que la carte se charge. Un blocage de tête de file qu'aucun compteur de tick ne peut montrer, parce qu'il n'est pas dans le tick. Les demandes de carte sont maintenant mises en file et servies par quelques ouvriers bornés.</li>
+</ul>
+</div>
+</section>
+
+<section class="sec" id="lessons">
+<div lang="en">
+<h2>What the journal teaches</h2>
+<p>Read end to end, the entries repeat a handful of lessons, each learned more than once:</p>
+<ul>
+<li><strong>The machine is part of the measurement.</strong> Benches 1, 4, 7, 8, 11 and 19 were all, partly or entirely, the machine. Check late wake-ups and CPU shares before optimizing anything.</li>
+<li><strong>Read after the ramp.</strong> The connection storm produced every "monster" of the first ten benches.</li>
+<li><strong>Instruments have to be tested too.</strong> A threshold that never fires, a second filter that swallows a photo, a CPU column at quantum granularity, an interval read as work: each hid the answer for one or more benches.</li>
+<li><strong>A counter that stays at zero is information</strong>, but only if you know it can say something else (bench 10), and a zero that cannot be anything else is not a measurement (bench 16).</li>
+<li><strong>Read the library's own counters before theorizing about it.</strong> Two diagnoses built on guesses about the physics binding were wrong; the engine had been exporting its profile all along.</li>
+<li><strong>Solve problems from the cheaper end.</strong> Threading the physics was never needed: dividing the shapes by eight made it cheap enough.</li>
+<li><strong>Scale reveals, it rarely causes.</strong> The race of bench 19 existed from the start; 700 viewers made it certain.</li>
+</ul>
+<div class="note rule"><p class="note-label">Rule</p><p>Write down every bench, including the ones that found nothing and the conclusions that turned out wrong.</p><p>The wrong turns are where the method gets better; a journal of only the successes teaches nothing about how to look.</p></div>
+</div>
+<div lang="fr">
+<h2>Ce que le journal enseigne</h2>
+<p>Lues de bout en bout, les entrées répètent une poignée de leçons, chacune apprise plus d'une fois :</p>
+<ul>
+<li><strong>La machine fait partie de la mesure.</strong> Les bancs 1, 4, 7, 8, 11 et 19 étaient tous, en partie ou en totalité, la machine. Vérifier les réveils en retard et les parts de CPU avant d'optimiser quoi que ce soit.</li>
+<li><strong>Lire après la rampe.</strong> La tempête de connexion a produit tous les « monstres » des dix premiers bancs.</li>
+<li><strong>Les instruments doivent être testés, eux aussi.</strong> Un seuil qui ne se déclenche jamais, un second filtre qui avale une photo, une colonne CPU à la granularité du quantum, un intervalle lu comme du travail : chacun a caché la réponse pendant un banc ou plus.</li>
+<li><strong>Un compteur qui reste à zéro est une information</strong>, mais seulement si l'on sait qu'il peut dire autre chose (banc 10), et un zéro qui ne peut rien être d'autre n'est pas une mesure (banc 16).</li>
+<li><strong>Lire les compteurs de la bibliothèque avant de théoriser sur elle.</strong> Deux diagnostics bâtis sur des suppositions à propos du binding physique étaient faux ; le moteur exportait son profil depuis le début.</li>
+<li><strong>Résoudre les problèmes par le bout le moins cher.</strong> Paralléliser la physique n'a jamais été nécessaire : diviser les formes par huit l'a rendue assez bon marché.</li>
+<li><strong>L'échelle révèle, elle cause rarement.</strong> La course du banc 19 existait depuis le début ; 700 spectateurs l'ont rendue certaine.</li>
+</ul>
+<div class="note rule"><p class="note-label">Règle</p><p>Écrire chaque banc, y compris ceux qui n'ont rien trouvé et les conclusions qui se sont révélées fausses.</p><p>Les fausses pistes sont là où la méthode s'améliore ; un journal des seuls succès n'apprend rien sur la façon de chercher.</p></div>
+</div>
+</section>
+
+<section class="sec" id="takeaways">
+<div class="takeaways">
+<div lang="en"><h2>Key takeaways</h2><ul>
+<li>At 100 players the wall was outbound traffic, not CPU; density, not headcount, drives the cost.</li>
+<li>The first five benches were mostly the machine: priorities, the thread pool, late wake-ups.</li>
+<li>Profilers name innocents when threads are preempted; compare wall and CPU shares, and read after the ramp.</li>
+<li>The physics wall was geometry: 16,688 shapes became 2,156, and threading became unnecessary.</li>
+<li>At 600 the simulation was flat and only per-viewer work grew; at 800 the limit was the network and the machine.</li>
+<li>With many maps, the problems moved around the tick: database latency on map loads, and a blocked gateway link.</li>
+<li>Keep the journal: the misreadings teach more than the fixes.</li>
+</ul></div>
+<div lang="fr"><h2>À retenir</h2><ul>
+<li>À 100 joueurs, le mur était le trafic sortant, pas le CPU ; c'est la densité, pas le nombre, qui fait le coût.</li>
+<li>Les cinq premiers bancs étaient surtout la machine : priorités, pool de threads, réveils en retard.</li>
+<li>Les profileurs désignent des innocents quand des threads sont préemptés ; comparer les parts murales et CPU, et lire après la rampe.</li>
+<li>Le mur physique était la géométrie : 16 688 formes sont devenues 2 156, et le threading est devenu inutile.</li>
+<li>À 600, la simulation était plate et seul le travail par spectateur grandissait ; à 800, la limite était le réseau et la machine.</li>
+<li>Avec beaucoup de cartes, les problèmes sont passés autour du tick : latence de la base au chargement des cartes, et lien gateway bloqué.</li>
+<li>Tenir le journal : les erreurs de lecture enseignent plus que les corrections.</li>
+</ul></div>
+</div>
+</section>
+
+</div>
+<div data-chapter-foot></div>
+</article>
+</main>
+<aside class="rail" id="mq-rail"></aside>
+</div>
+<footer class="site-footer" id="mq-footer"></footer>
+<script src="assets/js/site-data.js" defer></script>
+<script src="assets/js/glossary-data.js" defer></script>
+<script src="assets/js/app.js" defer></script>
+<script src="assets/js/widgets.js" defer></script>
+</body>
+</html>

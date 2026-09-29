@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="en" data-lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Snapshots: state and events · MoonQwak</title>
+<meta name="description" content="What a snapshot means, why absence stopped meaning 'gone', and how bullets, missiles and debris each live differently.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Chakra+Petch:wght@500;600&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="assets/css/site.css">
+<script>(function(){var r=document.documentElement,l,t;try{l=localStorage.getItem("mq-lang");t=localStorage.getItem("mq-theme");}catch(e){}if(l!=="en"&&l!=="fr"){l=(navigator.language||"").toLowerCase().indexOf("fr")===0?"fr":"en";}r.setAttribute("data-lang",l);r.setAttribute("lang",l);if(t==="light"||t==="dark")r.setAttribute("data-theme",t);})();</script>
+</head>
+<body data-page="snapshots">
+<a class="skip-link" href="#main"><span lang="en">Skip to content</span><span lang="fr">Aller au contenu</span></a>
+<header class="site-header" id="mq-header"></header>
+<div class="layout">
+<aside class="sidebar" id="mq-sidebar"></aside>
+<main class="content" id="main">
+<article>
+<header class="chapter-head">
+  <div class="eyebrow" data-auto></div>
+  <h1><span lang="en">Snapshots: state and events</span><span lang="fr">Snapshots : état et événements</span></h1>
+  <p class="dek"><span lang="en">What a snapshot means, why absence stopped meaning 'gone', and how bullets, missiles and debris each live differently.</span><span lang="fr">Ce que veut dire un snapshot, pourquoi l'absence a cessé de vouloir dire « parti », et comment balles, missiles et débris vivent chacun à leur façon.</span></p>
+  <div class="meta-row" data-auto></div>
+</header>
+
+<div class="prose">
+
+<section class="sec" id="what">
+<div lang="en">
+<h2>A photograph, not a conversation</h2>
+<p>Every tick, each player receives a <strong>snapshot</strong>: a description of the part of the world they care about, as it stands at that tick. The key property of a well-designed snapshot is that it is <em>idempotent full state</em>: applying it twice changes nothing, and applying only the latest one is enough. Losing or skipping a snapshot costs one frame of freshness, never correctness, because the next one repairs everything.</p>
+<div class="note beginner"><p class="note-label">Beginner note</p><p>Compare "the ship is at (40, 12)" with "the ship moved 3 units right". The first is <em>state</em>: you can receive it late, twice, or after skipping ten others, and you still end up correct. The second is an <em>event</em>: miss one and you are wrong forever. A replication design is mostly the art of expressing as much as possible as state, and handling the few real events (a bullet hitting, an object leaving) with explicit care.</p></div>
+<p>A MoonQwak snapshot has three parts:</p>
+</div>
+<div lang="fr">
+<h2>Une photo, pas une conversation</h2>
+<p>À chaque tick, chaque joueur reçoit un <strong>snapshot</strong> : une description de la partie du monde qui le concerne, telle qu'elle est à ce tick. La propriété clé d'un snapshot bien conçu est d'être un <em>état complet idempotent</em> : l'appliquer deux fois ne change rien, et appliquer seulement le dernier suffit. Perdre ou sauter un snapshot coûte une image de fraîcheur, jamais la justesse, parce que le suivant répare tout.</p>
+<div class="note beginner"><p class="note-label">Pour débuter</p><p>Comparez « le vaisseau est en (40, 12) » et « le vaisseau s'est déplacé de 3 unités vers la droite ». Le premier est un <em>état</em> : on peut le recevoir en retard, deux fois, ou après en avoir sauté dix, et on finit juste. Le second est un <em>événement</em> : en manquer un, et on a tort pour toujours. Une conception de réplication est surtout l'art d'exprimer le plus de choses possible comme de l'état, et de traiter les quelques vrais événements (une balle qui touche, un objet qui s'en va) avec un soin explicite.</p></div>
+<p>Un snapshot MoonQwak a trois parties :</p>
+</div>
+<div data-bytes>
+<div class="bytes">
+  <div class="byte-field" data-en="The world tick number, as a varint. Lets the client order snapshots and place them on its interpolation timeline." data-fr="Le numéro du tick du monde, en varint. Permet au client d'ordonner les snapshots et de les placer sur sa frise d'interpolation."><b>Tick</b><span>varint</span></div>
+  <div class="byte-field" data-en="Two bits: is there a self ship block, is there a self character block." data-fr="Deux bits : y a-t-il un bloc « ma coque », y a-t-il un bloc « mon personnage »."><b>Flags</b><span>1 B</span></div>
+  <div class="byte-field" data-en="The player's own ship and/or character, in an exact, richer format: precise values of every hex, ammunition, power. Sent every tick, outside any budget." data-fr="La coque et/ou le personnage du joueur, dans un format exact et plus riche : valeurs précises de chaque hex, munitions, énergie. Envoyé à chaque tick, hors de tout budget."><b>Self</b><span>id · type · exact state</span></div>
+  <div class="byte-field" data-en="How many other objects follow." data-fr="Combien d'autres objets suivent."><b>Count</b><span>varint</span></div>
+  <div class="byte-field grow" data-en="Each other object: id (varint), type (1 byte), then its compact block. Ships: a flag byte, then only the blocks that apply this tick." data-fr="Chaque autre objet : identifiant (varint), type (1 octet), puis son bloc compact. Vaisseaux : un octet de drapeaux, puis seulement les blocs qui s'appliquent à ce tick."><b>Others</b><span>id · type · block …</span></div>
+</div>
+<p class="byte-legend"><span lang="en">Hover or focus a field to see what it carries.</span><span lang="fr">Survolez ou sélectionnez un champ pour voir ce qu'il porte.</span></p>
+</div>
+<div lang="en">
+<p>The asymmetry is deliberate. Your own ship matters more than anyone else's: you steer it, read its gauges, and your client predicts it (chapter <a href="prediction.html">5.3</a>). It goes out every tick in an exact format. Everyone else's ships go out in a compact, quantized format, and only as often as the freshness budget allows (chapter <a href="freshness-budget.html">4.5</a>).</p>
+</div>
+<div lang="fr">
+<p>L'asymétrie est voulue. Votre propre vaisseau compte plus que celui des autres : vous le pilotez, vous lisez ses jauges, et votre client le prédit (chapitre <a href="prediction.html">5.3</a>). Il part à chaque tick dans un format exact. Les vaisseaux des autres partent dans un format compact et quantifié, et seulement aussi souvent que le permet le budget de fraîcheur (chapitre <a href="freshness-budget.html">4.5</a>).</p>
+</div>
+</section>
+
+<section class="sec" id="discover">
+<div lang="en">
+<h2>Describe once, update often</h2>
+<p>A ship's layout (its hexes, parts, colours, owner) is large and almost never changes. It would be absurd to repeat it 25 times a second. So a snapshot carries only an id, a type and the changing state; when the client meets an id it does not know, it asks for its description with a <code>Discover</code> request, and the server answers with the full layout once. Ships, stations and characters work this way.</p>
+<p>Other types skip that round trip entirely, because their state already carries a catalog id and the client resolves everything else from shared game data: bullets carry their weapon spec, asteroids their family and tier, debris its item. A second request would only add latency to an object that may live for one second.</p>
+</div>
+<div lang="fr">
+<h2>Décrire une fois, mettre à jour souvent</h2>
+<p>La disposition d'un vaisseau (ses hex, ses pièces, ses couleurs, son propriétaire) est grosse et ne change presque jamais. La répéter 25 fois par seconde serait absurde. Un snapshot ne porte donc qu'un identifiant, un type et l'état qui change ; quand le client rencontre un identifiant inconnu, il demande sa description par une requête <code>Discover</code>, et le serveur répond une fois avec la disposition complète. Vaisseaux, stations et personnages fonctionnent ainsi.</p>
+<p>Les autres types sautent entièrement cet aller-retour, parce que leur état porte déjà un identifiant de catalogue et que le client résout tout le reste à partir des données de jeu partagées : les balles portent la spécification de leur arme, les astéroïdes leur famille et leur palier, les débris leur objet. Une seconde requête ne ferait qu'ajouter de la latence à un objet qui vit peut-être une seconde.</p>
+</div>
+</section>
+
+<section class="sec" id="absence">
+<div lang="en">
+<h2>Absence stopped meaning "gone"</h2>
+<p>The original client destroyed any known object that was absent from the latest snapshot. That was correct as long as the server sent everything, every tick, and it was precisely what <em>forced</em> the server to send everything, every tick. As long as "not sent" means "gone", you can never not send: the model forbids any cadence, any delta, any bandwidth saving by construction. A first attempt at distance-based cadence made everything flicker, because skipping an object one tick in three told the client "gone, back, gone" eight times a second.</p>
+<p>The client now destroys an object only when it has not been seen for a <strong>grace period</strong> of 5 seconds, measured in real time. The server may skip an object for as many ticks as it likes, provided it sends it again before the grace expires, which is what the heartbeat of chapter <a href="freshness-budget.html">4.5</a> guarantees. This model is self-healing: there is no destruction message to lose, so nothing needs acknowledging or retransmitting.</p>
+<div class="note pitfall"><p class="note-label">Pitfall I hit</p><p>The first grace was 1.5 seconds against a server heartbeat of 20 snapshot ticks, nominally 0.8 s. Under load the server produced fewer than 25 snapshots per second, its 20 ticks stretched to 1.5 then 2 real seconds, and slipped past the client's grace: objects were destroyed, then re-sent at the next heartbeat, and everything blinked. Two lessons in one bug: both ends of a contract must speak the same <em>unit</em> (both are now in real milliseconds), and a safety margin of the same order as the noise it must absorb is not a margin.</p></div>
+<div class="note rule"><p class="note-label">Rule</p><p>Any constant whose comment has to name a tick rate is in the wrong unit.</p><p>"20 ticks (~0.8 s at 25 Hz)" silently becomes 1.6 s the day the rate halves, or the day the server cannot keep up. Durations that matter to a human, or to the other end of the wire, belong in seconds.</p></div>
+</div>
+<div lang="fr">
+<h2>L'absence a cessé de vouloir dire « parti »</h2>
+<p>Le client d'origine détruisait tout objet connu absent du dernier snapshot. C'était correct tant que le serveur envoyait tout, à chaque tick, et c'était précisément ce qui <em>obligeait</em> le serveur à tout envoyer, à chaque tick. Tant que « pas envoyé » veut dire « parti », on ne peut jamais ne pas envoyer : ce modèle interdit par construction toute cadence, tout delta, toute économie de bande passante. Une première tentative de cadence selon la distance a fait clignoter tout le monde, parce que sauter un objet un tick sur trois disait au client « parti, revenu, parti » huit fois par seconde.</p>
+<p>Le client ne détruit maintenant un objet que s'il ne l'a pas vu depuis un <strong>délai de grâce</strong> de 5 secondes, mesuré en temps réel. Le serveur peut sauter un objet autant de ticks qu'il veut, à condition de le renvoyer avant la fin de la grâce, ce que garantit le battement du chapitre <a href="freshness-budget.html">4.5</a>. Ce modèle se répare tout seul : il n'y a aucun message de destruction à perdre, donc rien à acquitter ni à retransmettre.</p>
+<div class="note pitfall"><p class="note-label">Piège rencontré</p><p>La première grâce était de 1,5 seconde contre un battement serveur de 20 ticks de snapshot, soit 0,8 s en théorie. Sous charge, le serveur produisait moins de 25 snapshots par seconde, ses 20 ticks s'étiraient à 1,5 puis 2 secondes réelles, et passaient derrière la grâce du client : les objets étaient détruits, puis renvoyés au battement suivant, et tout clignotait. Deux leçons dans un seul bug : les deux bouts d'un contrat doivent parler la même <em>unité</em> (les deux sont maintenant en millisecondes réelles), et une marge de sécurité du même ordre que le bruit qu'elle doit absorber n'est pas une marge.</p></div>
+<div class="note rule"><p class="note-label">Règle</p><p>Toute constante dont le commentaire doit nommer une cadence est dans la mauvaise unité.</p><p>« 20 ticks (~0,8 s à 25 Hz) » devient en silence 1,6 s le jour où la cadence est divisée par deux, ou le jour où le serveur ne suit plus. Les durées qui comptent pour un humain, ou pour l'autre bout du fil, s'écrivent en secondes.</p></div>
+</div>
+</section>
+
+<section class="sec" id="gone">
+<div lang="en">
+<h2>"Gone" as an acceleration, not a guarantee</h2>
+<p>Grace-based destruction had a visible cost: it also applied to things that had just died. A ship exploded and its wreck stayed there for five seconds, frozen and intact. The scene lied. The answer was an explicit <code>ObjectsGone</code> message, and the way it was designed is the interesting part: it does not <em>replace</em> the grace, it <em>accelerates</em> it.</p>
+<ul>
+<li>In the normal case, the message makes the object disappear immediately.</li>
+<li>If the message is lost, the prolonged absence removes the object five seconds later, exactly as before. So the message needs no reliability, no acknowledgement, no retransmission, and a lost one leaves no ghost.</li>
+<li>It is repeated for three ticks anyway, because that is almost free and covers an isolated loss.</li>
+<li>It carries ids only, no cause. Why an object left (death, docking, a jump) does not change what the client does with it, and a cause field would invite someone to trigger an effect from it, which would be wrong one time in three. Explosions are played from the hexes dying, not from this message.</li>
+</ul>
+</div>
+<div lang="fr">
+<h2>« Parti » comme accélération, pas comme garantie</h2>
+<p>La destruction par grâce avait un coût visible : elle s'appliquait aussi à ce qui venait de mourir. Un vaisseau explosait et son épave restait là cinq secondes, figée et intacte. La scène mentait. La réponse a été un message <code>ObjectsGone</code> explicite, et c'est sa conception qui est intéressante : il ne <em>remplace</em> pas la grâce, il l'<em>accélère</em>.</p>
+<ul>
+<li>Dans le cas normal, le message fait disparaître l'objet immédiatement.</li>
+<li>Si le message se perd, l'absence prolongée retire l'objet cinq secondes plus tard, exactement comme avant. Le message n'a donc besoin d'aucune fiabilité, d'aucun acquittement, d'aucune retransmission, et un message perdu ne laisse aucun fantôme.</li>
+<li>Il est quand même répété trois ticks, parce que c'est presque gratuit et que ça couvre une perte isolée.</li>
+<li>Il porte des identifiants seulement, pas de cause. Pourquoi un objet est parti (mort, amarrage, saut) ne change pas ce que le client en fait, et un champ de cause inviterait quelqu'un à en déclencher un effet, qui serait faux une fois sur trois. Les explosions se jouent sur la mort des hex, pas sur ce message.</li>
+</ul>
+</div>
+<figure class="fig fig-scroll">
+<svg viewBox="0 0 760 200" role="img" aria-label="Timeline of a departure: the object leaves the map at tick N; the ObjectsGone message is sent after the snapshot on ticks N, N+1 and N+2; the client removes the object at the first message it receives; if all three are lost, the object is removed when the five-second grace expires">
+  <defs><marker id="sn-arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="currentColor" opacity="0.7"/></marker></defs>
+  <line x1="40" y1="70" x2="720" y2="70" class="dg-line"/>
+  <text class="dg-small" x="40" y="30"><tspan lang="en">server, snapshot thread</tspan><tspan lang="fr">serveur, thread snapshot</tspan></text>
+  <g class="dg-hot"><rect x="80" y="56" width="70" height="28" rx="5"/><rect x="160" y="56" width="70" height="28" rx="5"/><rect x="240" y="56" width="70" height="28" rx="5"/></g>
+  <text class="dg-small dg-mono" x="115" y="75" text-anchor="middle">gone ×1</text>
+  <text class="dg-small dg-mono" x="195" y="75" text-anchor="middle">gone ×2</text>
+  <text class="dg-small dg-mono" x="275" y="75" text-anchor="middle">gone ×3</text>
+  <text class="dg-small" x="195" y="104" text-anchor="middle"><tspan lang="en">ticks N, N+1, N+2 · after the snapshot</tspan><tspan lang="fr">ticks N, N+1, N+2 · après le snapshot</tspan></text>
+  <line x1="40" y1="150" x2="720" y2="150" class="dg-line"/>
+  <text class="dg-small" x="40" y="136"><tspan lang="en">client</tspan><tspan lang="fr">client</tspan></text>
+  <line x1="120" y1="86" x2="140" y2="144" class="dg-line" marker-end="url(#sn-arr)"/>
+  <circle cx="142" cy="150" r="6" class="dg-accent"/>
+  <text class="dg-small" x="152" y="176"><tspan lang="en">normal case: removed at once</tspan><tspan lang="fr">cas normal : retiré aussitôt</tspan></text>
+  <rect x="140" y="143" width="560" height="14" rx="3" class="dg-box" style="opacity:0.55"/>
+  <circle cx="700" cy="150" r="6" class="dg-crit"/>
+  <text class="dg-small" x="700" y="176" text-anchor="end"><tspan lang="en">all three lost: removed when the 5 s grace expires</tspan><tspan lang="fr">les trois perdus : retiré à la fin de la grâce de 5 s</tspan></text>
+</svg>
+<figcaption><span lang="en"><strong>The message makes departures fast; the grace makes them certain.</strong> Neither needs the other to be reliable, which is why the combination needs no acknowledgement.</span><span lang="fr"><strong>Le message rend les départs rapides ; la grâce les rend certains.</strong> Aucun des deux n'a besoin que l'autre soit fiable, et c'est pourquoi l'ensemble se passe d'acquittement.</span></figcaption>
+</figure>
+<div lang="en">
+<p>Two ordering details, both found because they only break with several players:</p>
+<ul>
+<li><strong>Collected once per map, not once per player.</strong> Reading the departures decrements their "repeat three times" counter. Done inside the per-player loop, a map with three viewers used up its three repeats in a single tick: the first player served got the announcement, the other two got nothing. The kind of bug that never shows in a solo test.</li>
+<li><strong>Sent after the snapshot, never before.</strong> The snapshot being sent was built at the previous world tick and may still contain the object. Announce the departure first, and the client destroys the object and then recreates it from the older snapshot: a blink manufactured by the send order. In this order, the announcement always has the last word.</li>
+</ul>
+</div>
+<div lang="fr">
+<p>Deux détails d'ordre, trouvés parce qu'ils ne cassent qu'à plusieurs joueurs :</p>
+<ul>
+<li><strong>Collectés une fois par carte, pas une fois par joueur.</strong> Lire les départs décrémente leur compteur « répéter trois fois ». Fait dans la boucle par joueur, une carte à trois spectateurs épuisait ses trois répétitions en un seul tick : le premier joueur servi recevait l'annonce, les deux autres rien. Le genre de bug qui ne se voit jamais en test solo.</li>
+<li><strong>Envoyés après le snapshot, jamais avant.</strong> Le snapshot qu'on envoie a été bâti au tick du monde précédent et peut encore contenir l'objet. Annoncez le départ d'abord, et le client détruit l'objet puis le recrée depuis le snapshot plus ancien : un clignotement fabriqué par l'ordre d'envoi. Dans cet ordre-ci, l'annonce a toujours le dernier mot.</li>
+</ul>
+</div>
+</section>
+
+<section class="sec" id="lifetimes">
+<div lang="en">
+<h2>Each kind of object lives differently</h2>
+<p>A single replication rule for everything would be wrong for almost everything. The table is the result of asking, for each type, what the client actually needs and when:</p>
+<div class="table-wrap"><table>
+<thead><tr><th>Object</th><th>What goes on the wire</th><th>Why</th></tr></thead>
+<tbody>
+<tr><td>Other ships, stations, characters</td><td>Full compact state, at a rate set by distance (25 to 6.25 Hz), plus a 2 s heartbeat</td><td>Their motion depends on players' choices; nothing but the server knows it.</td></tr>
+<tr><td>Bullets</td><td>Twice per viewer: on first sight (spawn state) and when it hits (final position + hit flag)</td><td>Constant velocity: the client dead-reckons the flight exactly, and computes range expiry itself from shared specs.</td></tr>
+<tr><td>Missiles</td><td>Full state every tick</td><td>Rare enough to afford it, and a guided path curves unpredictably.</td></tr>
+<tr><td>Debris</td><td>On first sight, on a 1 s heartbeat, and on despawn; every tick while under a tractor beam</td><td>Drift is determined by shared rules; the heartbeat rescues a lost spawn and corrects float drift.</td></tr>
+<tr><td>Asteroids</td><td>Live state within view; a map-wide registry for the far view</td><td>A miner needs live depletion up close; everyone else only needs to know where the rocks are.</td></tr>
+</tbody></table></div>
+<p>The bullet row is the result of a measured problem. At 1,000 bullets per shot, re-sending every live bullet's unchanged state in every snapshot cost bytes, server serialization and client parsing in proportion to "live bullets × snapshot rate", and produced 100 ms spikes in the client's network update. Now each bullet reaches a given viewer exactly twice, and a bullet that simply runs out of range needs no message at all.</p>
+</div>
+<div lang="fr">
+<h2>Chaque sorte d'objet vit à sa façon</h2>
+<p>Une seule règle de réplication pour tout serait fausse pour presque tout. Le tableau est le résultat de la question posée pour chaque type : de quoi le client a-t-il vraiment besoin, et quand ?</p>
+<div class="table-wrap"><table>
+<thead><tr><th>Objet</th><th>Ce qui part sur le fil</th><th>Pourquoi</th></tr></thead>
+<tbody>
+<tr><td>Vaisseaux des autres, stations, personnages</td><td>L'état compact complet, à une cadence fixée par la distance (25 à 6,25 Hz), plus un battement de 2 s</td><td>Leur mouvement dépend des choix des joueurs ; seul le serveur le connaît.</td></tr>
+<tr><td>Balles</td><td>Deux fois par spectateur : à la première vue (état de départ) et à l'impact (position finale + drapeau d'impact)</td><td>Vitesse constante : le client extrapole le vol exactement, et calcule lui-même l'expiration en bout de portée à partir des spécifications partagées.</td></tr>
+<tr><td>Missiles</td><td>L'état complet à chaque tick</td><td>Assez rares pour se le permettre, et une trajectoire guidée se courbe de façon imprévisible.</td></tr>
+<tr><td>Débris</td><td>À la première vue, sur un battement de 1 s, et à la disparition ; à chaque tick sous un rayon tracteur</td><td>La dérive est déterminée par des règles partagées ; le battement rattrape une apparition perdue et corrige la dérive des flottants.</td></tr>
+<tr><td>Astéroïdes</td><td>L'état vivant à portée de vue ; un registre à l'échelle de la carte pour la vue lointaine</td><td>Un mineur a besoin de l'épuisement en direct de près ; les autres n'ont besoin que de savoir où sont les rochers.</td></tr>
+</tbody></table></div>
+<p>La ligne des balles est le résultat d'un problème mesuré. À 1 000 balles par tir, renvoyer dans chaque snapshot l'état inchangé de chaque balle vivante coûtait octets, sérialisation serveur et analyse client en proportion de « balles vivantes × cadence des snapshots », et produisait des pics de 100 ms dans la mise à jour réseau du client. Aujourd'hui, chaque balle atteint un spectateur donné exactement deux fois, et une balle qui arrive simplement en bout de portée n'a besoin d'aucun message.</p>
+</div>
+<div lang="en">
+<div class="note pitfall"><p class="note-label">Pitfall I hit</p><p>A bullet's hit is the one real <em>event</em> in its life, and it was announced in exactly one snapshot. Two things can make a viewer miss one particular tick's content: the server skips building a player's snapshot while the previous one is still waiting to be sent (see below), and the freshness budget does not serve every viewer every tick. Either way, the client never learned the bullet died and kept flying it past the target, through a station hull. A spent bullet now stays registered, frozen, for enough world ticks to span three snapshots, so its final state is repeated and any single miss is invisible.</p></div>
+</div>
+<div lang="fr">
+<div class="note pitfall"><p class="note-label">Piège rencontré</p><p>L'impact d'une balle est le seul vrai <em>événement</em> de sa vie, et il était annoncé dans exactement un snapshot. Deux choses peuvent faire manquer à un spectateur le contenu d'un tick précis : le serveur saute la construction du snapshot d'un joueur tant que le précédent attend encore d'être envoyé (voir plus bas), et le budget de fraîcheur ne sert pas chaque spectateur à chaque tick. Dans les deux cas, le client n'apprenait jamais que la balle était morte et continuait de la faire voler au-delà de la cible, à travers une coque de station. Une balle usée reste maintenant enregistrée, figée, assez de ticks du monde pour couvrir trois snapshots : son état final est répété, et un manqué isolé devient invisible.</p></div>
+</div>
+<div lang="en">
+<div class="note rule"><p class="note-label">Rule</p><p>Make every event self-healing: repeat it, or back it with a state that will eventually say the same thing.</p><p>Bullet hits are repeated for three snapshots, departures are repeated and backed by the grace, debris spawns are backed by a heartbeat. Nothing important lives in a single packet.</p></div>
+</div>
+<div lang="fr">
+<div class="note rule"><p class="note-label">Règle</p><p>Rendre chaque événement auto-réparateur : le répéter, ou l'adosser à un état qui finira par dire la même chose.</p><p>Les impacts de balles sont répétés sur trois snapshots, les départs sont répétés et adossés à la grâce, les apparitions de débris sont adossées à un battement. Rien d'important ne vit dans un seul paquet.</p></div>
+</div>
+</section>
+
+<section class="sec" id="handoff">
+<div lang="en">
+<h2>From the world thread to the wire</h2>
+<p>Snapshots are built by the world thread and sent by the snapshot thread, two independent clocks (chapter <a href="tick-loop.html#two-loops">3.1</a>). Each player holds at most one pending snapshot, and three small decisions make that handoff safe:</p>
+<ul>
+<li><strong>Skip rather than overwrite.</strong> If a second world tick arrives before the previous snapshot was sent, the builder skips that player for this tick instead of overwriting the pending one. The pending snapshot always goes out; the player sees one tick of extra latency rather than a silent hole.</li>
+<li><strong>Claim exclusively.</strong> The sender takes the pending snapshot with an atomic exchange, so even if two send passes ever overlapped, exactly one would send it and return its buffer to the pool. A buffer returned twice to a pool is corruption that someone else pays for later, in an unrelated packet.</li>
+<li><strong>Keep only the newest on the client.</strong> The network thread only stores a reference to the latest snapshot and schedules one main-thread callback; if a newer one arrives first, it simply replaces the reference. A client that falls behind skips stale photographs instead of processing a backlog (chapter <a href="client-architecture.html">5.1</a>).</li>
+</ul>
+</div>
+<div lang="fr">
+<h2>Du thread du monde jusqu'au fil</h2>
+<p>Les snapshots sont construits par le thread du monde et envoyés par le thread snapshot, deux horloges indépendantes (chapitre <a href="tick-loop.html#two-loops">3.1</a>). Chaque joueur a au plus un snapshot en attente, et trois petites décisions rendent ce passage sûr :</p>
+<ul>
+<li><strong>Sauter plutôt qu'écraser.</strong> Si un second tick du monde arrive avant l'envoi du snapshot précédent, le constructeur saute ce joueur pour ce tick au lieu d'écraser celui en attente. Le snapshot en attente part toujours ; le joueur voit un tick de latence en plus plutôt qu'un trou silencieux.</li>
+<li><strong>Réclamer en exclusivité.</strong> L'expéditeur prend le snapshot en attente par un échange atomique : même si deux passes d'envoi se chevauchaient un jour, une seule l'enverrait et rendrait son tampon à la réserve. Un tampon rendu deux fois à une réserve est une corruption que quelqu'un d'autre paie plus tard, dans un paquet sans rapport.</li>
+<li><strong>Ne garder que le plus récent côté client.</strong> Le thread réseau ne stocke qu'une référence vers le dernier snapshot et planifie un seul rappel sur le thread principal ; si un plus récent arrive d'abord, il remplace simplement la référence. Un client qui prend du retard saute les photos périmées au lieu de traiter un arriéré (chapitre <a href="client-architecture.html">5.1</a>).</li>
+</ul>
+</div>
+<div lang="en">
+<div class="note project"><p class="note-label">In MoonQwak</p><p>Snapshots currently travel on the same reliable, ordered channel as everything else (chapter <a href="transport.html">1.1</a>). The design never relies on it: every rule in this chapter would work unchanged on an unreliable channel, which keeps that switch open for the day head-of-line blocking costs more than the bandwidth it saves.</p></div>
+</div>
+<div lang="fr">
+<div class="note project"><p class="note-label">Dans MoonQwak</p><p>Les snapshots voyagent aujourd'hui sur le même canal fiable et ordonné que tout le reste (chapitre <a href="transport.html">1.1</a>). La conception ne compte jamais dessus : chaque règle de ce chapitre marcherait sans changement sur un canal non fiable, ce qui garde cette bascule ouverte pour le jour où le blocage en tête de file coûtera plus que la bande passante qu'il économise.</p></div>
+</div>
+</section>
+
+<section class="sec" id="takeaways">
+<div class="takeaways">
+<div lang="en"><h2>Key takeaways</h2><ul>
+<li>Design snapshots as idempotent full state: any one of them, alone, must be enough.</li>
+<li>Describe large, stable things once on request, and send only changing state every tick.</li>
+<li>Destroy by grace, not by absence, or you can never stop sending; keep durations in real time on both ends.</li>
+<li>Treat explicit "gone" messages as accelerations backed by the grace, and send them after the snapshot.</li>
+<li>Give each object type the replication its behaviour calls for, and repeat every real event until a miss is invisible.</li>
+</ul></div>
+<div lang="fr"><h2>À retenir</h2><ul>
+<li>Concevoir les snapshots comme un état complet idempotent : n'importe lequel, seul, doit suffire.</li>
+<li>Décrire les choses grosses et stables une fois, à la demande, et n'envoyer à chaque tick que l'état qui change.</li>
+<li>Détruire par grâce et non par absence, sinon on ne peut jamais cesser d'envoyer ; garder les durées en temps réel aux deux bouts.</li>
+<li>Traiter les messages « parti » explicites comme des accélérations adossées à la grâce, et les envoyer après le snapshot.</li>
+<li>Donner à chaque type d'objet la réplication que son comportement demande, et répéter chaque vrai événement jusqu'à ce qu'un manqué soit invisible.</li>
+</ul></div>
+</div>
+</section>
+
+</div>
+<div data-chapter-foot></div>
+</article>
+</main>
+<aside class="rail" id="mq-rail"></aside>
+</div>
+<footer class="site-footer" id="mq-footer"></footer>
+<script src="assets/js/site-data.js" defer></script>
+<script src="assets/js/glossary-data.js" defer></script>
+<script src="assets/js/app.js" defer></script>
+<script src="assets/js/widgets.js" defer></script>
+</body>
+</html>

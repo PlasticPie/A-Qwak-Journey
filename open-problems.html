@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="en" data-lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Known gaps and next steps · MoonQwak</title>
+<meta name="description" content="What is not solved yet, why it is acceptable for now, and what I would do next.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Chakra+Petch:wght@500;600&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="assets/css/site.css">
+<script>(function(){var r=document.documentElement,l,t;try{l=localStorage.getItem("mq-lang");t=localStorage.getItem("mq-theme");}catch(e){}if(l!=="en"&&l!=="fr"){l=(navigator.language||"").toLowerCase().indexOf("fr")===0?"fr":"en";}r.setAttribute("data-lang",l);r.setAttribute("lang",l);if(t==="light"||t==="dark")r.setAttribute("data-theme",t);})();</script>
+</head>
+<body data-page="open-problems">
+<a class="skip-link" href="#main"><span lang="en">Skip to content</span><span lang="fr">Aller au contenu</span></a>
+<header class="site-header" id="mq-header"></header>
+<div class="layout">
+<aside class="sidebar" id="mq-sidebar"></aside>
+<main class="content" id="main">
+<article>
+<header class="chapter-head">
+  <div class="eyebrow" data-auto></div>
+  <h1><span lang="en">Known gaps and next steps</span><span lang="fr">Limites connues et prochaines étapes</span></h1>
+  <p class="dek"><span lang="en">What is not solved yet, why it is acceptable for now, and what I would do next.</span><span lang="fr">Ce qui n'est pas encore résolu, pourquoi c'est acceptable pour l'instant, et ce que je ferais ensuite.</span></p>
+  <div class="meta-row" data-auto></div>
+</header>
+
+<div class="prose">
+
+<section class="sec" id="how">
+<div lang="en">
+<h2>How to read this list</h2>
+<p>Every system in this site has limits, and pretending otherwise would make the rest less credible. Each gap below comes with three things: why it is acceptable <em>today</em>, what would make it urgent, and what I would do about it. The second one matters most. A gap without a trigger is a worry; a gap with a trigger is a plan. Where possible, the trigger is a number that an instrument already measures, so the decision will not rest on an impression.</p>
+<div class="table-wrap"><table>
+<thead><tr><th>Gap</th><th>Becomes urgent when</th></tr></thead>
+<tbody>
+<tr><td>Ship movement is not predicted</td><td>Players with high latency find piloting sluggish</td></tr>
+<tr><td>The first snapshot of an arriving player is large</td><td>Arrivals over lossy links wait for the heartbeat</td></tr>
+<tr><td>No explicit "left your view" message</td><td>The heartbeat's share of the traffic matters</td></tr>
+<tr><td>Snapshot preparation and interest use two object sets</td><td>The fallback counter stops being zero</td></tr>
+<tr><td>Outbound traffic per map</td><td>A map needs more than about 500 players</td></tr>
+<tr><td>Object ticks are sequential within a map</td><td>A map needs more than about 1,000 hulls</td></tr>
+<tr><td>Damaged hulls keep their full collision geometry</td><td>A bench with mortal bots shows shapes climbing</td></tr>
+<tr><td>Schema migrations are applied by hand</td><td>A world holds data that must survive a release</td></tr>
+<tr><td>The gateway is a single point of failure</td><td>Uptime matters more than restart simplicity</td></tr>
+<tr><td>Updates are verified, not authenticated</td><td>The update channel is opened to the public</td></tr>
+</tbody></table></div>
+</div>
+<div lang="fr">
+<h2>Comment lire cette liste</h2>
+<p>Chaque système de ce site a des limites, et prétendre le contraire rendrait le reste moins crédible. Chaque limite ci-dessous vient avec trois choses : pourquoi elle est acceptable <em>aujourd'hui</em>, ce qui la rendrait urgente, et ce que je ferais. La deuxième compte le plus. Une limite sans déclencheur est une inquiétude ; une limite avec un déclencheur est un plan. Quand c'est possible, le déclencheur est un nombre qu'un instrument mesure déjà, pour que la décision ne repose pas sur une impression.</p>
+<div class="table-wrap"><table>
+<thead><tr><th>Limite</th><th>Devient urgente quand</th></tr></thead>
+<tbody>
+<tr><td>Le mouvement du vaisseau n'est pas prédit</td><td>Des joueurs à forte latence trouvent le pilotage mou</td></tr>
+<tr><td>Le premier snapshot d'un arrivant est gros</td><td>Les arrivées sur des liens avec pertes attendent le battement</td></tr>
+<tr><td>Pas de message explicite « sorti de ta vue »</td><td>La part du battement dans le trafic compte</td></tr>
+<tr><td>La préparation des snapshots et l'intérêt utilisent deux ensembles d'objets</td><td>Le compteur de replis cesse d'être à zéro</td></tr>
+<tr><td>Le trafic sortant par carte</td><td>Une carte doit porter plus d'environ 500 joueurs</td></tr>
+<tr><td>Le tick des objets est séquentiel dans une carte</td><td>Une carte doit porter plus d'environ 1 000 coques</td></tr>
+<tr><td>Les coques abîmées gardent toute leur géométrie de collision</td><td>Un banc avec des bots mortels montre les formes qui grimpent</td></tr>
+<tr><td>Les migrations du schéma s'appliquent à la main</td><td>Un monde contient des données qui doivent survivre à une version</td></tr>
+<tr><td>La gateway est un point unique de défaillance</td><td>La disponibilité compte plus que la simplicité des redémarrages</td></tr>
+<tr><td>Les mises à jour sont vérifiées, pas authentifiées</td><td>Le canal de mise à jour est ouvert au public</td></tr>
+</tbody></table></div>
+</div>
+</section>
+
+<section class="sec" id="network">
+<div lang="en">
+<h2>Network and replication</h2>
+<h3>Ship movement is not predicted</h3>
+<p>The walking character is fully predicted; the ship is not (chapter <a href="prediction.html">5.3</a>). A ship is a rigid body colliding with other players' ships in the server's physics world, and predicting it faithfully means the client must run a physics simulation that agrees with the server's. The options are all projects in their own right: run Unity's physics on the server instead of Box2D; replace Unity's physics on the client with the server's engine; write one custom physics engine for both sides and integrate it into Unity with good performance; or use an engine that makes a shared simulation easy, or write one. <strong>Why it can wait:</strong> everything around the motion answers instantly (thrusters, gauges, cooldowns), ships have inertia that hides part of the delay, and the smoothing of chapter <a href="interpolation.html">5.2</a> keeps motion fluid. <strong>For now:</strong> keep it simple, and revisit when piloting at high latency is the thing players notice most.</p>
+<h3>The first snapshot of an arriving player is large</h3>
+<p>A steady-state snapshot fits in one packet. The first one after arriving on a crowded map does not: the bench at 600 players saw 15,687 bytes, about eleven UDP fragments, and losing any one of them loses the whole datagram; the player then waits for the heartbeat. <strong>Why it can wait:</strong> it happens once per arrival, behind a loading screen. <strong>Next:</strong> split snapshots at roughly 1,200 bytes, or deliver the arrival state progressively, nearest first, over the first few ticks.</p>
+<h3>No explicit "left your view" message</h3>
+<p>Objects outside the freshness budget are kept alive by a heartbeat that costs about 21 bytes to say one bit: "still here" (chapter <a href="freshness-budget.html">4.5</a>). The server already detects when an object leaves a player's view, in its purge loop, and simply throws the information away. With an explicit despawn, the client's grace period could grow to 30 seconds and the heartbeat drop to 10, leaving the budget as the only real term. <strong>Why it can wait:</strong> it changes the wire format on both sides, with the client mirror and the wire tests, for a gain that is real but moderate. <strong>Next:</strong> a wire-format change, best grouped with the next protocol version bump.</p>
+<h3>Two sets of objects in the snapshot path</h3>
+<p>Snapshot preparation walks the map's objects; snapshots read the published interest index. Between the two runs a sequential phase that can remove objects from the map. An object removed there is still in the index but has no prepared block, which forces a fallback serialization for every viewer. That was the root of the race at 780 players (chapter <a href="serialize-once.html">4.3</a>). <strong>What was done:</strong> the fallback is now pure, so the race is impossible, and a counter reports every fallback. <strong>Why the cause can wait:</strong> the counter says whether it matters, and it is expected at zero. It is probably also why a destroyed ship sometimes lingers about two seconds on screen. <strong>Next:</strong> make preparation and interest read the same set.</p>
+</div>
+<div lang="fr">
+<h2>Réseau et réplication</h2>
+<h3>Le mouvement du vaisseau n'est pas prédit</h3>
+<p>Le personnage à pied est entièrement prédit ; le vaisseau ne l'est pas (chapitre <a href="prediction.html">5.3</a>). Un vaisseau est un corps rigide qui entre en collision avec les vaisseaux des autres joueurs dans le monde physique du serveur, et le prédire fidèlement veut dire que le client doit faire tourner une simulation physique d'accord avec celle du serveur. Les options sont toutes des chantiers à part entière : faire tourner la physique d'Unity sur le serveur au lieu de Box2D ; remplacer la physique d'Unity côté client par le moteur du serveur ; écrire un moteur physique maison pour les deux côtés et l'intégrer à Unity avec de bonnes performances ; ou utiliser un moteur qui rend une simulation partagée facile, voire en écrire un. <strong>Pourquoi ça peut attendre :</strong> tout ce qui entoure le mouvement répond instantanément (propulseurs, jauges, recharges), les vaisseaux ont une inertie qui masque une partie du délai, et le lissage du chapitre <a href="interpolation.html">5.2</a> garde le mouvement fluide. <strong>Pour l'instant :</strong> rester simple, et y revenir quand le pilotage à forte latence deviendra ce que les joueurs remarquent le plus.</p>
+<h3>Le premier snapshot d'un arrivant est gros</h3>
+<p>Un snapshot en régime tient dans un paquet. Le premier après l'arrivée sur une carte peuplée, non : le banc à 600 joueurs a vu 15 687 octets, environ onze fragments UDP, et perdre l'un d'eux fait perdre tout le datagramme ; le joueur attend alors le battement. <strong>Pourquoi ça peut attendre :</strong> cela arrive une fois par arrivée, derrière un écran de chargement. <strong>Ensuite :</strong> découper les snapshots vers 1 200 octets, ou livrer l'état d'arrivée progressivement, du plus proche au plus lointain, sur les premiers ticks.</p>
+<h3>Pas de message explicite « sorti de ta vue »</h3>
+<p>Les objets hors du budget de fraîcheur sont maintenus en vie par un battement qui coûte environ 21 octets pour dire un bit : « toujours là » (chapitre <a href="freshness-budget.html">4.5</a>). Le serveur détecte déjà qu'un objet quitte la vue d'un joueur, dans sa boucle de purge, et jette simplement l'information. Avec un retrait explicite, la période de grâce du client pourrait monter à 30 secondes et le battement descendre à 10, laissant le budget comme seul vrai terme. <strong>Pourquoi ça peut attendre :</strong> cela change le format réseau des deux côtés, avec le miroir client et les tests réseau, pour un gain réel mais modéré. <strong>Ensuite :</strong> un changement de format réseau, à grouper avec la prochaine montée de version du protocole.</p>
+<h3>Deux ensembles d'objets sur le chemin des snapshots</h3>
+<p>La préparation des snapshots parcourt les objets de la carte ; les snapshots lisent l'index d'intérêt publié. Entre les deux tourne une phase séquentielle qui peut retirer des objets de la carte. Un objet retiré à ce moment-là est encore dans l'index mais n'a pas de bloc préparé, ce qui force une sérialisation de repli pour chaque spectateur. C'était la racine de la course à 780 joueurs (chapitre <a href="serialize-once.html">4.3</a>). <strong>Ce qui a été fait :</strong> le repli est désormais pur, la course est impossible, et un compteur rapporte chaque repli. <strong>Pourquoi la cause peut attendre :</strong> le compteur dit si elle compte, et il est attendu à zéro. C'est probablement aussi pourquoi un vaisseau détruit reste parfois environ deux secondes à l'écran. <strong>Ensuite :</strong> faire lire le même ensemble à la préparation et à l'intérêt.</p>
+</div>
+</section>
+
+<section class="sec" id="scale">
+<div lang="en">
+<h2>Scale</h2>
+<h3>Outbound traffic per map</h3>
+<p>At 800 players on one map, the tick held (38 ms of work) but the outbound traffic reached 15.1 MB/s at peak, for a single map: the first real hosting limit is the network, not the CPU (chapter <a href="bench-journal.html#scaling">10.4</a>). Around 500 players per map, the peak falls near 9 MB/s, and one machine can host several busy maps instead of one crowded one. <strong>Why it can wait:</strong> players spread over many maps, and a per-map limit is only a game limit if there is one map.</p>
+<p><strong>What would change that:</strong> a single map that genuinely needs more players, which would call for <em>duplicating</em> a map across servers, with rules for keeping groups together. The decision is left to data: the monitor's occupancy report shows how many maps carry how many players. A long tail between 1 and 15 with a peak around 40 is a healthy population; an isolated spike at 300 would be a map no fleet balancing can save.</p>
+<div class="note pitfall"><p class="note-label">Pitfall I hit</p><p>One occupancy reading showed a map with 312 players. 305 of them were ghosts: bots of previous benches, still recorded at their last persisted position, all at their faction's capital. We nearly concluded that maps had to be duplicable. The report now filters by the start time of the oldest live server (nothing piloted before it belongs to this measurement), a bound derived from the fleet's real state that cannot be forgotten or silently go stale. It still prints how many ghosts it discarded: filtering silently would hide that the database is dirty.</p></div>
+<h3>Object ticks are sequential within a map</h3>
+<p>Maps tick in parallel, but the objects of one map tick one after another. Hull ticks write their physics body, spawn bullets into shared simulation, pull disputed debris and damage other hulls, so they cannot simply run in parallel. <strong>Why it can wait:</strong> from 400 to 600 hulls, the simulation of a map stayed flat (×1.02), and the object phase costs about a quarter of the tick. <strong>Next, past about 1,000 hulls per map:</strong> think in parallel, act sequentially. Decisions (AI, aiming) computed in parallel on a frozen view of the world, then applied in order on the tick thread, using the tick workers and per-map scratch buffers that already exist.</p>
+<h3>Damaged hulls keep their full geometry</h3>
+<p>The bare hull divided physics shapes by eight, but only for intact hulls with nobody walking nearby (chapter <a href="physics.html">3.5</a>). A damaged hull keeps its full description, about 41 shapes. Every bench so far used invulnerable bots, so the "damaged" count was zero by construction: the benches measured the <em>best</em> case. <strong>Next:</strong> a different experiment, with mortal bots and a population allowed to melt, reading the hull census as hexes die. If damaged hulls climb with the shape count, merging the hull and weapon-envelope shapes becomes the next physics task.</p>
+</div>
+<div lang="fr">
+<h2>L'échelle</h2>
+<h3>Le trafic sortant par carte</h3>
+<p>À 800 joueurs sur une carte, le tick a tenu (38 ms de travail) mais le trafic sortant a atteint 15,1 Mo/s au pic, pour une seule carte : la première vraie limite d'hébergement est le réseau, pas le CPU (chapitre <a href="bench-journal.html#scaling">10.4</a>). Autour de 500 joueurs par carte, le pic retombe vers 9 Mo/s, et une machine peut héberger plusieurs cartes animées au lieu d'une seule bondée. <strong>Pourquoi ça peut attendre :</strong> les joueurs se répartissent sur de nombreuses cartes, et une limite par carte n'est une limite de jeu que s'il n'y a qu'une carte.</p>
+<p><strong>Ce qui changerait la donne :</strong> une carte unique qui a réellement besoin de plus de joueurs, ce qui demanderait de <em>dupliquer</em> une carte sur plusieurs serveurs, avec des règles pour garder les groupes ensemble. La décision est laissée aux données : le rapport d'occupation du moniteur montre combien de cartes portent combien de joueurs. Une longue traîne entre 1 et 15 avec un sommet vers 40 est une population saine ; un pic isolé à 300 serait une carte qu'aucun équilibrage de parc ne sauve.</p>
+<div class="note pitfall"><p class="note-label">Piège rencontré</p><p>Un relevé d'occupation a montré une carte à 312 joueurs. 305 d'entre eux étaient des fantômes : des bots de bancs précédents, toujours enregistrés à leur dernière position persistée, tous à la capitale de leur faction. On a failli en conclure que les cartes devaient pouvoir être dupliquées. Le rapport filtre maintenant par l'heure de démarrage du plus ancien serveur vivant (rien de ce qui a été piloté avant lui n'appartient à cette mesure), une borne tirée de l'état réel du parc qui ne peut ni être oubliée ni devenir fausse en silence. Il affiche quand même combien de fantômes il a écartés : filtrer en silence cacherait que la base est sale.</p></div>
+<h3>Le tick des objets est séquentiel dans une carte</h3>
+<p>Les cartes tiquent en parallèle, mais les objets d'une carte tiquent l'un après l'autre. Le tick d'une coque écrit son corps physique, fait apparaître des balles dans la simulation partagée, aspire des débris disputés et inflige des dégâts à d'autres coques : il ne peut pas simplement tourner en parallèle. <strong>Pourquoi ça peut attendre :</strong> de 400 à 600 coques, la simulation d'une carte est restée plate (×1,02), et la phase des objets coûte environ un quart du tick. <strong>Ensuite, au-delà d'environ 1 000 coques par carte :</strong> penser en parallèle, agir en séquentiel. Les décisions (IA, visée) calculées en parallèle sur une vue figée du monde, puis appliquées dans l'ordre sur le thread de tick, avec les ouvriers du tick et les tampons par carte qui existent déjà.</p>
+<h3>Les coques abîmées gardent toute leur géométrie</h3>
+<p>La coque nue a divisé les formes physiques par huit, mais seulement pour les coques intactes près desquelles personne ne marche (chapitre <a href="physics.html">3.5</a>). Une coque abîmée garde sa description complète, environ 41 formes. Tous les bancs jusqu'ici utilisaient des bots invulnérables : le compte d'« abîmées » était nul par construction, et les bancs mesuraient le <em>meilleur</em> cas. <strong>Ensuite :</strong> une autre expérience, avec des bots mortels et une population qu'on laisse fondre, en lisant le recensement des coques pendant que les hex meurent. Si les coques abîmées grimpent avec le nombre de formes, fusionner les formes de la coque et de l'enveloppe des armes devient le prochain chantier physique.</p>
+</div>
+</section>
+
+<section class="sec" id="data">
+<div lang="en">
+<h2>Data and persistence</h2>
+<h3>Schema migrations are applied by hand</h3>
+<p>The data project carries a full history of schema migrations, about seventy of them, applied manually with the command-line tools. At runtime, the servers only make sure a schema exists: the factory that creates database contexts builds the schema from the model when the database is empty, and it does so on every context it creates; a comment in the code marks the migration step as still to do. <strong>Why it can wait:</strong> during development, worlds are wiped and re-seeded freely (chapter <a href="data-and-catalogs.html">6.3</a>), and whoever changes the schema applies its migration. <strong>What makes it urgent:</strong> the first world whose data must survive releases deployed by someone else. The two mechanisms also do not mix well: a database created directly from the model has no migration history, so later migrations cannot simply be applied to it. <strong>Next:</strong> apply pending migrations once, at startup, from one process, under the same inter-process lock as seeding, and take the schema check out of the path that creates every database context.</p>
+<h3>Deferring hull damage writes</h3>
+<p>The rule for what may live in memory and be written later is clear: a write can be deferred if no transaction re-reads it to decide (chapter <a href="persistence.html">6.1</a>). Hull damage passes that test and is still written as it happens, on the hottest path of the server. <strong>Why it can wait:</strong> the deferred-write pattern exists twice already (ammunition, session position), written by hand. <strong>Next:</strong> write it a third time by hand for hull damage, and only then extract a common abstraction. Two occurrences do not yet show the right one; three do.</p>
+<h3>One lock per character</h3>
+<p>Every economic operation of a player is serialized by one lock per character (chapter <a href="transactions.html">6.2</a>), including operations that would not conflict, such as reading mail while a purchase settles. <strong>Why it can wait:</strong> a coarse, obvious lock is better than a fine, wrong one, and the lock protects correctness, which is the one thing that must never break. <strong>What makes it urgent:</strong> a very active player whose actions start queueing. <strong>Next:</strong> finer locks per container, or optimistic version columns, introduced where a measurement shows contention.</p>
+<h3>Database connections per operation</h3>
+<p>Each economic operation opens its own short-lived database context: no shared state between threads, which is the right default. Under many simultaneous traders, the connection pool becomes a contended resource, and the symptom will be latency on screens, not an error. <strong>Next:</strong> not an optimization, an instrument first: an "active database connections" counter in the monitor.</p>
+</div>
+<div lang="fr">
+<h2>Données et persistance</h2>
+<h3>Les migrations du schéma s'appliquent à la main</h3>
+<p>Le projet de données porte un historique complet de migrations du schéma, environ soixante-dix, appliquées à la main avec les outils en ligne de commande. À l'exécution, les serveurs ne font que s'assurer qu'un schéma existe : la fabrique qui crée les contextes de base construit le schéma à partir du modèle quand la base est vide, et elle le fait à chaque contexte qu'elle crée ; un commentaire du code marque l'étape de migration comme restant à faire. <strong>Pourquoi ça peut attendre :</strong> pendant le développement, les mondes sont effacés et ré-amorcés librement (chapitre <a href="data-and-catalogs.html">6.3</a>), et celui qui change le schéma applique sa migration. <strong>Ce qui le rend urgent :</strong> le premier monde dont les données doivent survivre à des versions déployées par quelqu'un d'autre. Les deux mécanismes se marient d'ailleurs mal : une base créée directement à partir du modèle n'a pas d'historique de migrations, et les migrations suivantes ne peuvent pas simplement s'y appliquer. <strong>Ensuite :</strong> appliquer les migrations en attente une seule fois, au démarrage, depuis un seul processus, sous le même verrou entre processus que l'amorçage, et sortir la vérification du schéma du chemin qui crée chaque contexte de base.</p>
+<h3>Différer les écritures de dégâts de coque</h3>
+<p>La règle de ce qui peut vivre en mémoire et s'écrire plus tard est claire : une écriture peut être différée si aucune transaction ne la relit pour décider (chapitre <a href="persistence.html">6.1</a>). Les dégâts de coque passent ce test et sont pourtant écrits au fil de l'eau, sur le chemin le plus chaud du serveur. <strong>Pourquoi ça peut attendre :</strong> le patron d'écriture différée existe déjà deux fois (munitions, position de session), écrit à la main. <strong>Ensuite :</strong> l'écrire une troisième fois à la main pour les dégâts de coque, et seulement alors extraire une abstraction commune. Deux occurrences ne montrent pas encore la bonne ; trois, oui.</p>
+<h3>Un verrou par personnage</h3>
+<p>Chaque opération économique d'un joueur est sérialisée par un verrou par personnage (chapitre <a href="transactions.html">6.2</a>), y compris des opérations qui ne se gêneraient pas, comme lire son courrier pendant qu'un achat se règle. <strong>Pourquoi ça peut attendre :</strong> un verrou grossier et évident vaut mieux qu'un verrou fin et faux, et le verrou protège la correction, la seule chose qui ne doit jamais casser. <strong>Ce qui le rend urgent :</strong> un joueur très actif dont les actions commencent à faire la queue. <strong>Ensuite :</strong> des verrous plus fins par conteneur, ou des colonnes de version optimistes, introduits là où une mesure montre de la contention.</p>
+<h3>Les connexions à la base par opération</h3>
+<p>Chaque opération économique ouvre son propre contexte de base à vie courte : pas d'état partagé entre threads, ce qui est le bon défaut. Avec beaucoup de marchands simultanés, le pool de connexions devient une ressource disputée, et le symptôme sera de la latence sur les écrans, pas une erreur. <strong>Ensuite :</strong> pas une optimisation, d'abord un instrument : un compteur « connexions actives à la base » dans le moniteur.</p>
+</div>
+</section>
+
+<section class="sec" id="operations">
+<div lang="en">
+<h2>Operations</h2>
+<h3>The gateway is a single point of failure</h3>
+<p>The gateway holds live state (sessions, groups) and there is one of it. Its restart behaviour has never been tested. <strong>Why it can wait:</strong> in development, a restart of everything is cheap. <strong>Next:</strong> not persistence, which would fight the transient nature of groups and sessions, but a <em>re-sync</em>: after a gateway restart, each game server re-announces its live sessions, and the gateway rebuilds its view from the servers that actually hold the players.</p>
+<h3>Kick, wait, close</h3>
+<p>When the server disconnects a player with a reason, it sends the message and closes the connection after a fixed 300 ms delay. That delay is an admission that the transport has no "flush, then close" operation. <strong>Next:</strong> if a second case needs it, look for a flush primitive in the transport library rather than adding another delay.</p>
+<h3>Updates are verified, not authenticated</h3>
+<p>Hashes guarantee integrity; nothing yet guarantees who published (chapter <a href="updater.html#trust">8.1</a>). The format is ready: signing the small pointer file authenticates the whole chain. <strong>What makes it urgent:</strong> opening the update channel beyond friends. Binary deltas between objects are also prepared, and waiting for the number that justifies them: the new bytes per build that the publishing console already prints.</p>
+<h3>The world simulation's loose ends</h3>
+<p>Two small ones, both written in chapter <a href="world-sim.html">9.1</a>: replaying a tick relies on the database returning rows in primary-key order, which an explicit ordering would turn into a guarantee; and a failed flush of the facts ledger drops its batch instead of retrying it, which is tolerable for facts that only nudge an hourly aggregate but should be a decision rather than an accident.</p>
+</div>
+<div lang="fr">
+<h2>L'exploitation</h2>
+<h3>La gateway est un point unique de défaillance</h3>
+<p>La gateway détient un état vivant (sessions, groupes) et il n'y en a qu'une. Son comportement au redémarrage n'a jamais été testé. <strong>Pourquoi ça peut attendre :</strong> en développement, redémarrer tout coûte peu. <strong>Ensuite :</strong> pas de la persistance, qui irait contre la nature transitoire des groupes et des sessions, mais une <em>resynchronisation</em> : après un redémarrage de la gateway, chaque serveur de jeu ré-annonce ses sessions vivantes, et la gateway reconstruit sa vue à partir des serveurs qui détiennent réellement les joueurs.</p>
+<h3>Éjecter, attendre, fermer</h3>
+<p>Quand le serveur déconnecte un joueur avec une raison, il envoie le message puis ferme la connexion après un délai fixe de 300 ms. Ce délai est l'aveu que le transport n'a pas d'opération « vider, puis fermer ». <strong>Ensuite :</strong> si un second cas en a besoin, chercher une primitive de vidage dans la bibliothèque de transport plutôt qu'ajouter un autre délai.</p>
+<h3>Les mises à jour sont vérifiées, pas authentifiées</h3>
+<p>Les hachages garantissent l'intégrité ; rien ne garantit encore qui a publié (chapitre <a href="updater.html#trust">8.1</a>). Le format est prêt : signer le petit fichier pointeur authentifie toute la chaîne. <strong>Ce qui le rend urgent :</strong> ouvrir le canal de mise à jour au-delà des amis. Les deltas binaires entre objets sont aussi préparés, et attendent le nombre qui les justifiera : les octets neufs par version, que la console de publication affiche déjà.</p>
+<h3>Les fils qui dépassent de la simulation du monde</h3>
+<p>Deux petits, tous deux écrits au chapitre <a href="world-sim.html">9.1</a> : rejouer un tick compte sur le fait que la base renvoie les lignes dans l'ordre de la clé primaire, ce qu'un ordre explicite transformerait en garantie ; et un vidage raté du registre des faits abandonne son lot au lieu de le réessayer, ce qui est tolérable pour des faits qui ne font qu'infléchir un agrégat horaire, mais devrait être une décision plutôt qu'un accident.</p>
+</div>
+</section>
+
+<section class="sec" id="method">
+<div lang="en">
+<h2>What I would do next, in order</h2>
+<ol>
+<li><strong>Bench with the machine out of the picture.</strong> Bots on another computer, so that late wake-ups stop polluting every result. Several benches ended with "the machine, not the server"; the next ones should not have to.</li>
+<li><strong>Bench the damage path.</strong> Mortal bots, a melting population, and the hull census read as hexes die. It is the one regime no bench has measured.</li>
+<li><strong>Many maps, not one bigger map.</strong> The question is no longer "how many players per map" but "how many maps per server before the world tick overflows", and that is a measurement, not a prediction.</li>
+<li><strong>Migrations before any world that must persist.</strong> Everything else on this page can wait for a trigger; this one has a date.</li>
+</ol>
+<div class="note rule"><p class="note-label">Rule</p><p>Give every known gap a trigger, and make the trigger a number an instrument already measures.</p><p>That turns a list of worries into a list of decisions waiting for their data.</p></div>
+</div>
+<div lang="fr">
+<h2>Ce que je ferais ensuite, dans l'ordre</h2>
+<ol>
+<li><strong>Des bancs sans la machine dans l'équation.</strong> Les bots sur un autre ordinateur, pour que les réveils en retard cessent de polluer chaque résultat. Plusieurs bancs se sont terminés par « la machine, pas le serveur » ; les suivants ne devraient plus avoir à le dire.</li>
+<li><strong>Un banc du chemin des dégâts.</strong> Des bots mortels, une population qui fond, et le recensement des coques lu pendant que les hex meurent. C'est le seul régime qu'aucun banc n'a mesuré.</li>
+<li><strong>Beaucoup de cartes, pas une carte plus grosse.</strong> La question n'est plus « combien de joueurs par carte » mais « combien de cartes par serveur avant que le tick du monde déborde », et c'est une mesure, pas une prédiction.</li>
+<li><strong>Les migrations avant tout monde qui doit durer.</strong> Tout le reste de cette page peut attendre un déclencheur ; celle-ci a une date.</li>
+</ol>
+<div class="note rule"><p class="note-label">Règle</p><p>Donner à chaque limite connue un déclencheur, et faire de ce déclencheur un nombre qu'un instrument mesure déjà.</p><p>Cela transforme une liste d'inquiétudes en une liste de décisions qui attendent leurs données.</p></div>
+</div>
+</section>
+
+<section class="sec" id="takeaways">
+<div class="takeaways">
+<div lang="en"><h2>Key takeaways</h2><ul>
+<li>List known gaps openly, each with why it can wait, what makes it urgent, and what you would do.</li>
+<li>Prefer triggers that existing instruments already measure: fallback counters, occupancy histograms, connection counts.</li>
+<li>Make symptoms impossible first, then decide on causes with data.</li>
+<li>Let per-map limits drive a many-maps design before considering map duplication.</li>
+<li>Measure the regimes no bench has covered yet, starting with the damage path.</li>
+</ul></div>
+<div lang="fr"><h2>À retenir</h2><ul>
+<li>Lister ouvertement les limites connues, chacune avec pourquoi elle peut attendre, ce qui la rend urgente, et ce qu'on ferait.</li>
+<li>Préférer des déclencheurs que les instruments existants mesurent déjà : compteurs de replis, histogrammes d'occupation, nombre de connexions.</li>
+<li>Rendre les symptômes impossibles d'abord, puis décider des causes avec des données.</li>
+<li>Laisser les limites par carte orienter vers une conception à beaucoup de cartes avant d'envisager la duplication de cartes.</li>
+<li>Mesurer les régimes qu'aucun banc n'a encore couverts, à commencer par le chemin des dégâts.</li>
+</ul></div>
+</div>
+</section>
+
+</div>
+<div data-chapter-foot></div>
+</article>
+</main>
+<aside class="rail" id="mq-rail"></aside>
+</div>
+<footer class="site-footer" id="mq-footer"></footer>
+<script src="assets/js/site-data.js" defer></script>
+<script src="assets/js/glossary-data.js" defer></script>
+<script src="assets/js/app.js" defer></script>
+<script src="assets/js/widgets.js" defer></script>
+</body>
+</html>

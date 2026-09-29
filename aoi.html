@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="en" data-lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Area of interest · MoonQwak</title>
+<meta name="description" content="A flat grid instead of a quadtree, radius queries, cell sizing, and an index rebuilt and published every tick.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Chakra+Petch:wght@500;600&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="assets/css/site.css">
+<script>(function(){var r=document.documentElement,l,t;try{l=localStorage.getItem("mq-lang");t=localStorage.getItem("mq-theme");}catch(e){}if(l!=="en"&&l!=="fr"){l=(navigator.language||"").toLowerCase().indexOf("fr")===0?"fr":"en";}r.setAttribute("data-lang",l);r.setAttribute("lang",l);if(t==="light"||t==="dark")r.setAttribute("data-theme",t);})();</script>
+</head>
+<body data-page="aoi">
+<a class="skip-link" href="#main"><span lang="en">Skip to content</span><span lang="fr">Aller au contenu</span></a>
+<header class="site-header" id="mq-header"></header>
+<div class="layout">
+<aside class="sidebar" id="mq-sidebar"></aside>
+<main class="content" id="main">
+<article>
+<header class="chapter-head">
+  <div class="eyebrow" data-auto></div>
+  <h1><span lang="en">Area of interest</span><span lang="fr">La zone d'intérêt</span></h1>
+  <p class="dek"><span lang="en">A flat grid instead of a quadtree, radius queries, cell sizing, and an index rebuilt and published every tick.</span><span lang="fr">Une grille plate plutôt qu'un quadtree, des requêtes par rayon, le dimensionnement des cellules, et un index reconstruit et publié à chaque tick.</span></p>
+  <div class="meta-row" data-auto></div>
+</header>
+
+<div class="prose">
+
+<section class="sec" id="why">
+<div lang="en">
+<h2>Nobody needs the whole map</h2>
+<p>A player cannot see a ship on the far side of the map, so there is no reason to tell them about it. The <strong>area of interest</strong> (AoI) is the set of objects a player should be told about this tick. Computing it is the first step of every snapshot, it runs once per player per tick, and it decides both the server's CPU cost and the bandwidth: send everything to everyone and the cost grows with the square of the population.</p>
+<div class="note beginner"><p class="note-label">Beginner note</p><p>Two questions hide behind "area of interest", and mixing them up is the classic mistake. <em>What can this player see?</em> is a design question, answered by a distance. <em>How do I find the objects within that distance quickly?</em> is a data-structure question, answered by a spatial index. MoonQwak's index went wrong precisely because one number answered both.</p></div>
+<p>Before changing anything, I wrote the plan down and separated two kinds of optimization, a distinction that has served well beyond this chapter:</p>
+<ul>
+<li><strong>Constants</strong>: a computation twice too slow, an avoidable allocation. They can be measured when they hurt, fixed locally, and waiting costs nothing.</li>
+<li><strong>Shapes</strong>: O(actors × objects), a global lock on a parallel path, a collection that mixes three hundred bullets with four ships. They set into the architecture, code starts to depend on them, and changing them later costs ten times more.</li>
+</ul>
+<p>For shapes, "it is not expensive today" is not a reason to wait: a cost that is invisible with three objects and one bullet says nothing about a battle with forty players.</p>
+</div>
+<div lang="fr">
+<h2>Personne n'a besoin de toute la carte</h2>
+<p>Un joueur ne peut pas voir un vaisseau à l'autre bout de la carte : il n'y a aucune raison de lui en parler. La <strong>zone d'intérêt</strong> (AoI) est l'ensemble des objets dont un joueur doit être informé à ce tick. La calculer est la première étape de chaque snapshot, elle tourne une fois par joueur et par tick, et elle décide à la fois du coût CPU du serveur et de la bande passante : envoyez tout à tout le monde et le coût grandit avec le carré de la population.</p>
+<div class="note beginner"><p class="note-label">Pour débuter</p><p>Deux questions se cachent derrière « zone d'intérêt », et les confondre est l'erreur classique. <em>Que peut voir ce joueur ?</em> est une question de conception, qui se répond par une distance. <em>Comment trouver vite les objets à cette distance ?</em> est une question de structure de données, qui se répond par un index spatial. L'index de MoonQwak a déraillé précisément parce qu'un seul nombre répondait aux deux.</p></div>
+<p>Avant de toucher à quoi que ce soit, j'ai écrit le plan et séparé deux natures d'optimisation, une distinction qui a servi bien au-delà de ce chapitre :</p>
+<ul>
+<li><strong>Les constantes</strong> : un calcul deux fois trop lent, une allocation évitable. Elles se mesurent quand elles font mal, se corrigent localement, et attendre ne coûte rien.</li>
+<li><strong>Les formes</strong> : O(acteurs × objets), un verrou global sur un chemin parallèle, une collection qui mélange trois cents balles et quatre vaisseaux. Elles se coulent dans l'architecture, du code finit par en dépendre, et les changer plus tard coûte dix fois plus.</li>
+</ul>
+<p>Pour les formes, « ce n'est pas cher aujourd'hui » n'est pas une raison d'attendre : un coût invisible avec trois objets et une balle ne dit rien d'une bataille à quarante joueurs.</p>
+</div>
+</section>
+
+<section class="sec" id="grid">
+<div lang="en">
+<h2>A flat grid, not a quadtree</h2>
+<p>The index is a uniform grid: each object is filed into the square cell that contains its position, and a query visits the cells around a point. Quadtrees and other adaptive trees are the textbook answer, and the plan explicitly rejected them for three reasons that hold for most action MMOs:</p>
+<ul>
+<li><strong>Everything moves.</strong> A tree would have to be rebalanced every tick; a grid is simply refilled.</li>
+<li><strong>Memory layout.</strong> A tree query chases pointers; a grid query reads a handful of buckets.</li>
+<li><strong>The world is small per map.</strong> Each map is its own index, so the grid never has to cover a whole continent.</li>
+</ul>
+<p>The first version was the classic MMO grid: cells as large as the view distance, and a player sees the 3×3 block of cells around their own. It is cheap, and it has a flaw you can see in the lab below: the reach depends on where you stand inside your cell. Standing at a cell's edge, you see almost two cells further on one side than on the other, so two ships side by side can disagree about who is visible.</p>
+</div>
+<div lang="fr">
+<h2>Une grille plate, pas un quadtree</h2>
+<p>L'index est une grille uniforme : chaque objet est rangé dans la cellule carrée qui contient sa position, et une requête visite les cellules autour d'un point. Les quadtrees et autres arbres adaptatifs sont la réponse des manuels, et le plan les a explicitement écartés pour trois raisons qui valent pour la plupart des MMO d'action :</p>
+<ul>
+<li><strong>Tout bouge.</strong> Un arbre devrait être rééquilibré à chaque tick ; une grille est simplement re-remplie.</li>
+<li><strong>La disposition mémoire.</strong> Une requête dans un arbre suit des pointeurs ; une requête dans une grille lit une poignée de seaux.</li>
+<li><strong>Le monde est petit par carte.</strong> Chaque carte a son propre index : la grille n'a jamais à couvrir un continent.</li>
+</ul>
+<p>La première version était la grille classique des MMO : des cellules aussi grandes que la distance de vue, et un joueur voit le bloc 3×3 de cellules autour de la sienne. C'est bon marché, avec un défaut visible dans le labo ci-dessous : la portée dépend de l'endroit où l'on se tient dans sa cellule. Au bord d'une cellule, on voit presque deux cellules plus loin d'un côté que de l'autre, et deux vaisseaux côte à côte peuvent être en désaccord sur qui est visible.</p>
+</div>
+<div data-widget="aoi"></div>
+<div lang="en">
+<p>The fix is to separate the two questions. The <strong>view radius</strong> is a design value; the <strong>cell size</strong> is a query-cost knob. Every caller asks for the radius it actually needs, the query walks the square of cells that covers that radius, and an exact distance test turns the square into a circle. The same index then serves a player's view (120 units), a weapon's search for the nearest target, or a cargo scoop that only cares about the next two units.</p>
+</div>
+<div lang="fr">
+<p>La correction consiste à séparer les deux questions. Le <strong>rayon de vue</strong> est une valeur de conception ; la <strong>taille de cellule</strong> est un bouton de coût de requête. Chaque appelant demande le rayon dont il a vraiment besoin, la requête parcourt le carré de cellules qui couvre ce rayon, et un test de distance exact transforme le carré en cercle. Le même index sert alors la vue d'un joueur (120 unités), la recherche de la cible la plus proche d'une arme, ou une écope à minerai qui ne s'intéresse qu'aux deux unités suivantes.</p>
+</div>
+<div class="code"><div class="code-head"><span class="file">GameServer/Interest/ZoneIndex.cs · simplified</span></div><pre><code data-lang="cs">public void Query&lt;T&gt;(Vector2 centre, double radius, List&lt;T&gt; results) where T : class
+{
+    results.Clear();                                     // caller-owned list: no allocation
+    var r2 = radius * radius;
+    var reach = (long)Math.Ceiling(radius / _cellSize);  // cells to walk in each direction
+    var (cx, cy) = ToCell(centre.X, centre.Y);
+
+    for (var dx = -reach; dx &lt;= reach; dx++)
+    for (var dy = -reach; dy &lt;= reach; dy++)
+    {
+        if (!_cells.TryGetValue((cx + dx, cy + dy), out var bucket)) continue;
+        foreach (var obj in bucket)
+        {
+            if (obj is not T typed) continue;
+            if ((obj.Position - centre).LengthSquared() &lt;= r2)  // the square becomes a circle
+                results.Add(typed);
+        }
+    }
+}</code></pre></div>
+</section>
+
+<section class="sec" id="cell-size">
+<div lang="en">
+<h2>Sizing the cells: the lookup is the expensive part</h2>
+<p>The naive instinct says "smaller cells, tighter queries, better". The arithmetic says otherwise. A query scans (2·⌈radius / cell⌉ + 1)² cells. Each scanned cell costs a dictionary lookup, about 20 ns; each object inside costs a squared-distance test, about 2 ns. Shrinking the cells trades one lookup for a handful of distance tests, and the lookup is ten times the price.</p>
+<div class="table-wrap"><table>
+<thead><tr><th>View radius</th><th>Cell size</th><th>Cells scanned per query</th></tr></thead>
+<tbody>
+<tr><td>75</td><td>12.5</td><td>13 × 13 = 169</td></tr>
+<tr><td>75</td><td>25</td><td>7 × 7 = 49</td></tr>
+<tr><td>75</td><td>75</td><td>3 × 3 = 9 (but each cell holds a large share of the map)</td></tr>
+<tr><td><strong>120</strong></td><td><strong>40</strong></td><td><strong>7 × 7 = 49</strong> (today)</td></tr>
+<tr><td>120</td><td>25</td><td>11 × 11 = 121, for exactly the same result</td></tr>
+</tbody></table></div>
+<p>The rule of thumb that came out of it: <strong>cell ≈ view radius / 3</strong>, and the two numbers move together or not at all. When the view radius went up and the cell size stayed behind, every query silently went from 7×7 to 11×11 cells, two and a half times the work for an identical result. The configuration file now carries that warning next to both values.</p>
+</div>
+<div lang="fr">
+<h2>Dimensionner les cellules : c'est la recherche qui coûte</h2>
+<p>L'instinct naïf dit « des cellules plus petites, des requêtes plus serrées, c'est mieux ». L'arithmétique dit autre chose. Une requête balaie (2·⌈rayon / cellule⌉ + 1)² cellules. Chaque cellule balayée coûte une recherche dans un dictionnaire, environ 20 ns ; chaque objet dedans coûte un test de distance au carré, environ 2 ns. Réduire les cellules échange une recherche contre une poignée de tests de distance, et la recherche coûte dix fois plus.</p>
+<div class="table-wrap"><table>
+<thead><tr><th>Rayon de vue</th><th>Taille de cellule</th><th>Cellules balayées par requête</th></tr></thead>
+<tbody>
+<tr><td>75</td><td>12,5</td><td>13 × 13 = 169</td></tr>
+<tr><td>75</td><td>25</td><td>7 × 7 = 49</td></tr>
+<tr><td>75</td><td>75</td><td>3 × 3 = 9 (mais chaque cellule contient une grosse part de la carte)</td></tr>
+<tr><td><strong>120</strong></td><td><strong>40</strong></td><td><strong>7 × 7 = 49</strong> (aujourd'hui)</td></tr>
+<tr><td>120</td><td>25</td><td>11 × 11 = 121, pour exactement le même résultat</td></tr>
+</tbody></table></div>
+<p>La règle empirique qui en est sortie : <strong>cellule ≈ rayon de vue / 3</strong>, et les deux nombres bougent ensemble ou pas du tout. Quand le rayon de vue a augmenté et que la cellule est restée en arrière, chaque requête est passée en silence de 7×7 à 11×11 cellules, deux fois et demie le travail pour un résultat identique. Le fichier de configuration porte maintenant cet avertissement à côté des deux valeurs.</p>
+</div>
+</section>
+
+<section class="sec" id="view-radius">
+<div lang="en">
+<h2>Choosing the view radius from the camera</h2>
+<p>The view radius went 75, 112.5, 168.75, back to 75, and finally 120, and the story is a lesson in method more than in networking. It went up because objects "popped" into view; it went back down because I decided the popping was a display artefact; then I finally computed it. If the interest boundary falls <em>inside</em> the screen, objects appear in the middle of the field of view, and no fade or grace period can fix that, because the problem is not how abruptly they appear but where.</p>
+</div>
+<div lang="fr">
+<h2>Choisir le rayon de vue à partir de la caméra</h2>
+<p>Le rayon de vue est passé par 75, 112,5, 168,75, retour à 75, et enfin 120, et l'histoire est une leçon de méthode plus que de réseau. Il est monté parce que des objets « apparaissaient » brusquement ; il est redescendu parce que j'ai décidé que c'était un artefact d'affichage ; puis je l'ai enfin calculé. Si la frontière d'intérêt tombe <em>à l'intérieur</em> de l'écran, les objets apparaissent en plein champ, et aucun fondu ni délai de grâce ne répare ça, parce que le problème n'est pas la brutalité de l'apparition mais l'endroit où elle se produit.</p>
+</div>
+<div class="code"><div class="code-head"><span class="file">physics_config.json · the arithmetic, kept next to the value</span></div><pre><code data-lang="txt">half-diagonal visible = orthographicSize × √(1 + aspect²)
+max zoom 50, 1920×1080  →  50 × 2.04 = 102 units in the corners
+ViewRadius = 120        →  ~18 % margin for camera look-ahead and recentring</code></pre></div>
+<div lang="en">
+<p>The cost was accepted knowingly: the visible area grows with the square of the radius, so 120 against 75 is 2.56 times more objects per player. That is exactly what the next chapters (delta rules, the freshness budget) exist to absorb, and the new radius is what turned them from comfort into necessity.</p>
+<div class="note rule"><p class="note-label">Rule</p><p>Derive a tuning value from the thing it serves, and write the derivation next to it.</p><p>The 112.5 reached by feel was almost right; what was missing was a criterion. Two symmetric mistakes (tuning by feel, then dismissing a correct observation because it had not been formalized) cost more than the computation.</p></div>
+</div>
+<div lang="fr">
+<p>Le coût a été accepté en connaissance de cause : la surface vue grandit avec le carré du rayon, donc 120 contre 75, c'est 2,56 fois plus d'objets par joueur. C'est exactement ce que les chapitres suivants (règles de delta, budget de fraîcheur) existent pour absorber, et c'est le nouveau rayon qui les a fait passer du confort à la nécessité.</p>
+<div class="note rule"><p class="note-label">Règle</p><p>Déduire une valeur de réglage de la chose qu'elle sert, et écrire la déduction à côté.</p><p>Le 112,5 atteint à tâtons était presque juste ; ce qui manquait, c'était un critère. Deux erreurs symétriques (régler à la sensation, puis écarter une observation juste faute de l'avoir formalisée) ont coûté plus cher que le calcul.</p></div>
+</div>
+</section>
+
+<section class="sec" id="rebuild">
+<div lang="en">
+<h2>Rebuilt every tick, published by reference</h2>
+<p>The first index was maintained incrementally: a side dictionary remembered each object's current cell, and every movement moved the object from its old bucket to its new one. It had two problems. The bookkeeping produced a ghost-object bug (a disposed ship still answering queries because its old cell was never cleaned). And every read held a global lock, on a query that runs once per player per tick in a parallel loop. The lock never showed in a CPU profile, because a lock costs cores waiting, not cycles burned.</p>
+<p>The replacement rebuilds the whole index once per tick, from the map's object table, as the <strong>last</strong> phase of the map tick, after everything has moved and before any snapshot reads it. It is O(objects), on a pass the tick was already making (three separate re-indexing loops disappeared with it). Two details make it free in steady state:</p>
+<ul>
+<li><strong>Double buffering.</strong> Two sets of buckets alternate: the tick fills the spare one, publishes it, and keeps the old one as the next spare. The bucket lists are reused, so a steady tick allocates nothing but the small index object.</li>
+<li><strong>Clearing what was used, not what exists.</strong> Buckets are never removed (a kept bucket is a reusable list), so over a session the dictionary accumulates an entry for every cell anything ever visited. Clearing by walking every entry would make the rebuild scale with the map's <em>area</em>. Each buffer remembers which cells it filled, and only those are cleared.</li>
+</ul>
+<p>Publication is a single reference assignment, atomic in .NET: readers see the whole previous index or the whole new one, never half of one, so no reader ever takes a lock (chapter <a href="threading.html#handoffs">3.3</a>). Readers follow two rules: capture the index into a local once per query, and never keep it past the current tick, because its buckets are recycled two rebuilds later and a stale index would quietly return nothing instead of failing loudly.</p>
+</div>
+<div lang="fr">
+<h2>Reconstruit à chaque tick, publié par référence</h2>
+<p>Le premier index était tenu de façon incrémentale : un dictionnaire annexe retenait la cellule courante de chaque objet, et chaque mouvement déplaçait l'objet de son ancien seau vers le nouveau. Il avait deux problèmes. La comptabilité a produit un bug d'objet fantôme (un vaisseau libéré qui répondait encore aux requêtes parce que son ancienne cellule n'avait jamais été nettoyée). Et chaque lecture tenait un verrou global, sur une requête qui tourne une fois par joueur et par tick dans une boucle parallèle. Le verrou n'apparaissait dans aucun profil CPU, parce qu'un verrou coûte des cœurs qui attendent, pas des cycles brûlés.</p>
+<p>Le remplaçant reconstruit tout l'index une fois par tick, depuis la table d'objets de la carte, comme <strong>dernière</strong> phase du tick de carte, après que tout a bougé et avant qu'un snapshot ne le lise. C'est O(objets), sur un passage que le tick faisait déjà (trois boucles de ré-indexation séparées ont disparu avec lui). Deux détails le rendent gratuit en régime :</p>
+<ul>
+<li><strong>Le double tampon.</strong> Deux jeux de seaux alternent : le tick remplit celui de réserve, le publie, et garde l'ancien comme prochaine réserve. Les listes des seaux sont réutilisées : un tick en régime n'alloue que le petit objet index.</li>
+<li><strong>Vider ce qui a servi, pas ce qui existe.</strong> Les seaux ne sont jamais retirés (un seau gardé est une liste réutilisable) : au fil d'une session, le dictionnaire accumule une entrée pour chaque cellule jamais visitée. Vider en parcourant toutes les entrées ferait croître la reconstruction avec la <em>surface</em> de la carte. Chaque tampon retient les cellules qu'il a remplies, et seules celles-là sont vidées.</li>
+</ul>
+<p>La publication est une seule affectation de référence, atomique en .NET : les lecteurs voient tout l'ancien index ou tout le nouveau, jamais une moitié, et aucun lecteur ne prend de verrou (chapitre <a href="threading.html#handoffs">3.3</a>). Les lecteurs suivent deux règles : capturer l'index dans une locale une fois par requête, et ne jamais le garder au-delà du tick courant, parce que ses seaux sont recyclés deux reconstructions plus tard et qu'un index périmé rendrait du vide en silence au lieu d'échouer bruyamment.</p>
+</div>
+<div lang="en">
+<div class="note tradeoff"><p class="note-label">Trade-off</p><p>Not everything goes through the grid. Debris (tens of pieces per map) is scanned linearly, and only by ships whose scoop or tractor is active: a spatial index for tens of anything is complexity with no customer, and re-indexing drifting debris every tick would cost more than scanning it. The typed lists of chapter <a href="entities.html#ticking">3.6</a> (all hulls, all characters) answer most of the remaining narrow questions without any index at all.</p></div>
+</div>
+<div lang="fr">
+<div class="note tradeoff"><p class="note-label">Compromis</p><p>Tout ne passe pas par la grille. Les débris (quelques dizaines par carte) sont parcourus linéairement, et seulement par les vaisseaux dont l'écope ou le tracteur est actif : un index spatial pour quelques dizaines de choses, c'est de la complexité sans client, et ré-indexer à chaque tick des débris qui dérivent coûterait plus que les parcourir. Les listes typées du chapitre <a href="entities.html#ticking">3.6</a> (toutes les coques, tous les personnages) répondent à la plupart des questions étroites restantes sans aucun index.</p></div>
+</div>
+</section>
+
+<section class="sec" id="two-radii">
+<div lang="en">
+<h2>Different objects, different radii</h2>
+<p>Once view distance is a parameter rather than a property of the grid, it can differ by object type. Bullets are the clearest case. After the freshness budget capped the cost of ships, bullets dominated the snapshot: about 270 of the 375 objects per snapshot in a 200-player melee. A bullet 100 units away is a pixel crossing the screen in half a second; nobody reads it and nobody dodges it. The one that matters is the one coming at you, and it is close by definition, since weapon ranges in the catalog are around 60 to 70 units.</p>
+<p>Bullets therefore have their own view radius of 50 against 120 for hulls: 17 % of the area, and weapon range still covered. The edges need no special case: a bullet outside the radius is simply "not yet sent", so if it comes closer it goes out as a new bullet at the right moment; if it leaves after being sent, the server forgets its id and the client lets it expire on its own timer.</p>
+</div>
+<div lang="fr">
+<h2>Des objets différents, des rayons différents</h2>
+<p>Une fois que la distance de vue est un paramètre et non une propriété de la grille, elle peut varier selon le type d'objet. Les balles sont le cas le plus net. Après que le budget de fraîcheur a plafonné le coût des vaisseaux, ce sont les balles qui dominaient le snapshot : environ 270 des 375 objets par snapshot dans une mêlée à 200 joueurs. Une balle à 100 unités est un pixel qui traverse l'écran en une demi-seconde ; personne ne la lit et personne ne l'esquive. Celle qui compte est celle qui vient vers vous, et elle est proche par définition, puisque la portée des armes du catalogue tourne autour de 60 à 70 unités.</p>
+<p>Les balles ont donc leur propre rayon de vue, 50 contre 120 pour les coques : 17 % de la surface, et la portée des armes toujours couverte. Les bords n'exigent aucun cas particulier : une balle hors du rayon est simplement « pas encore envoyée », donc si elle se rapproche elle part comme une nouvelle balle au bon moment ; si elle s'éloigne après avoir été envoyée, le serveur oublie son identifiant et le client la laisse expirer sur son propre minuteur.</p>
+</div>
+<div lang="en">
+<div class="note rule"><p class="note-label">Rule</p><p>"What can be seen" and "what is worth telling" are two questions with two numbers.</p><p>The hull radius comes from the camera; the bullet radius comes from what a player can read and react to. One number for both would either blind players or flood them.</p></div>
+</div>
+<div lang="fr">
+<div class="note rule"><p class="note-label">Règle</p><p>« Ce qu'on peut voir » et « ce qui vaut la peine d'être dit » sont deux questions avec deux nombres.</p><p>Le rayon des coques vient de la caméra ; celui des balles vient de ce qu'un joueur peut lire et à quoi il peut réagir. Un seul nombre pour les deux aveuglerait les joueurs ou les noierait.</p></div>
+</div>
+</section>
+
+<section class="sec" id="takeaways">
+<div class="takeaways">
+<div lang="en"><h2>Key takeaways</h2><ul>
+<li>Separate "what can a player see" (a radius, a design value) from "how to find objects quickly" (a grid, a cost knob).</li>
+<li>Use a flat grid for moving objects, query by radius with an exact distance test, and size cells around a third of the radius.</li>
+<li>Derive the view radius from the camera, with a margin, and write the derivation down.</li>
+<li>Rebuild the index every tick from the object table, double-buffered, and publish it by reference so readers never lock.</li>
+<li>Let each object type have its own relevance radius; fix shapes early, measure constants later.</li>
+</ul></div>
+<div lang="fr"><h2>À retenir</h2><ul>
+<li>Séparer « que peut voir un joueur » (un rayon, une valeur de conception) de « comment trouver vite les objets » (une grille, un bouton de coût).</li>
+<li>Utiliser une grille plate pour des objets qui bougent, interroger par rayon avec un test de distance exact, et dimensionner les cellules vers un tiers du rayon.</li>
+<li>Déduire le rayon de vue de la caméra, avec une marge, et écrire la déduction.</li>
+<li>Reconstruire l'index à chaque tick depuis la table d'objets, en double tampon, et le publier par référence pour que les lecteurs ne verrouillent jamais.</li>
+<li>Donner à chaque type d'objet son propre rayon de pertinence ; corriger les formes tôt, mesurer les constantes plus tard.</li>
+</ul></div>
+</div>
+</section>
+
+</div>
+<div data-chapter-foot></div>
+</article>
+</main>
+<aside class="rail" id="mq-rail"></aside>
+</div>
+<footer class="site-footer" id="mq-footer"></footer>
+<script src="assets/js/site-data.js" defer></script>
+<script src="assets/js/glossary-data.js" defer></script>
+<script src="assets/js/app.js" defer></script>
+<script src="assets/js/widgets.js" defer></script>
+</body>
+</html>

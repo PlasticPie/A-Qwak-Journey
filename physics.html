@@ -1,0 +1,314 @@
+<!doctype html>
+<html lang="en" data-lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Physics at MMO scale · MoonQwak</title>
+<meta name="description" content="One Box2D world per map, collision filters, bullets without bodies, and the eightfold shape cut that fixed the broad-phase.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Chakra+Petch:wght@500;600&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="assets/css/site.css">
+<script>(function(){var r=document.documentElement,l,t;try{l=localStorage.getItem("mq-lang");t=localStorage.getItem("mq-theme");}catch(e){}if(l!=="en"&&l!=="fr"){l=(navigator.language||"").toLowerCase().indexOf("fr")===0?"fr":"en";}r.setAttribute("data-lang",l);r.setAttribute("lang",l);if(t==="light"||t==="dark")r.setAttribute("data-theme",t);})();</script>
+</head>
+<body data-page="physics">
+<a class="skip-link" href="#main"><span lang="en">Skip to content</span><span lang="fr">Aller au contenu</span></a>
+<header class="site-header" id="mq-header"></header>
+<div class="layout">
+<aside class="sidebar" id="mq-sidebar"></aside>
+<main class="content" id="main">
+<article>
+<header class="chapter-head">
+  <div class="eyebrow" data-auto></div>
+  <h1><span lang="en">Physics at MMO scale</span><span lang="fr">La physique à l'échelle d'un MMO</span></h1>
+  <p class="dek"><span lang="en">One Box2D world per map, collision filters, bullets without bodies, and the eightfold shape cut that fixed the broad-phase.</span><span lang="fr">Un monde Box2D par carte, les filtres de collision, des balles sans corps, et la division par huit des formes qui a réparé la broad-phase.</span></p>
+  <div class="meta-row" data-auto></div>
+</header>
+
+<div class="prose">
+
+<section class="sec" id="world-per-map">
+<div lang="en">
+<h2>One physics world per map</h2>
+<p>The server runs real rigid-body physics: ships have mass and inertia, ram each other, and bounce off asteroids. The engine is Box2D (version 3, through a .NET binding), and each loaded map owns its own Box2D world, stepped once per tick with a fixed 1/25 s step and four sub-steps. Separate worlds are what let maps tick in parallel without sharing anything (chapter <a href="threading.html">3.3</a>).</p>
+<div class="note beginner"><p class="note-label">Beginner note</p><p>A physics step has three stages. The <strong>broad-phase</strong> finds pairs of shapes whose bounding boxes overlap, using a tree of boxes so it does not test every pair. The <strong>narrow-phase</strong> computes the exact contact points for those pairs. The <strong>solver</strong> applies impulses so that touching bodies push each other apart. Which stage dominates depends on your scene, and this chapter is the story of guessing wrong about that.</p></div>
+<p>Two facts about the engine shape everything else. Box2D is not safe to mutate while it steps, so bodies are only created or destroyed on the tick thread, between steps. And Box2D has a hard limit of 128 worlds per process: past it, creating a world returns a null handle and the map is not created. That ceiling decides how many maps one game server may host (chapter <a href="map-hosting.html">7.1</a>).</p>
+</div>
+<div lang="fr">
+<h2>Un monde physique par carte</h2>
+<p>Le serveur fait tourner une vraie physique de corps rigides : les vaisseaux ont une masse et une inertie, s'éperonnent, et rebondissent sur les astéroïdes. Le moteur est Box2D (version 3, via un binding .NET), et chaque carte chargée possède son propre monde Box2D, avancé une fois par tick avec un pas fixe de 1/25 s et quatre sous-pas. Des mondes séparés sont ce qui permet aux cartes de ticker en parallèle sans rien partager (chapitre <a href="threading.html">3.3</a>).</p>
+<div class="note beginner"><p class="note-label">Pour débuter</p><p>Un pas physique a trois étages. La <strong>broad-phase</strong> trouve les paires de formes dont les boîtes englobantes se chevauchent, avec un arbre de boîtes pour ne pas tester toutes les paires. La <strong>narrow-phase</strong> calcule les points de contact exacts de ces paires. Le <strong>solveur</strong> applique des impulsions pour que les corps en contact se repoussent. Lequel domine dépend de la scène, et ce chapitre raconte comment je me suis trompé à ce sujet.</p></div>
+<p>Deux faits sur le moteur façonnent tout le reste. Box2D ne supporte pas d'être modifié pendant un pas : les corps ne sont créés ou détruits que sur le thread du tick, entre deux pas. Et Box2D a une limite dure de 128 mondes par processus : au-delà, créer un monde rend un identifiant nul et la carte n'est pas créée. Ce plafond décide du nombre de cartes qu'un serveur de jeu peut héberger (chapitre <a href="map-hosting.html">7.1</a>).</p>
+</div>
+</section>
+
+<section class="sec" id="filters">
+<div lang="en">
+<h2>Collision filters: who touches whom</h2>
+<p>Every shape carries a <em>category</em> (what it is) and a <em>mask</em> (what it collides with). Two shapes interact only if each one's mask contains the other's category. A ship is not one thing to the physics engine: it is walls for the people walking inside it, a silhouette for the weapons aimed at it, and a solid object for the ship ramming it. Categories let one body carry all three without them interfering.</p>
+<div class="table-wrap"><table>
+<thead><tr><th>Category</th><th>What it is</th><th>Touches</th></tr></thead>
+<tbody>
+<tr><td><code>Ship</code> (walls)</td><td>Thin boxes along each exposed hex face. The interior is hollow so a character can walk the cabin.</td><td>Characters only.</td></tr>
+<tr><td><code>HullSolid</code></td><td>One solid hexagon per hex, massless.</td><td>Other solid hexes and asteroids.</td></tr>
+<tr><td><code>ShipEnvelope</code></td><td>The silhouette of the living hexes, for weapons.</td><td>Weapon queries.</td></tr>
+<tr><td><code>Shield</code></td><td>A circle per active shield.</td><td>Weapon queries only: a ramming ship passes through the bubble.</td></tr>
+<tr><td><code>Character</code></td><td>A walking person.</td><td>Walls, dead-hex barriers, solid props.</td></tr>
+<tr><td><code>Missile</code></td><td>One circle on a kinematic body.</td><td>Weapon queries, so missiles can be shot down.</td></tr>
+<tr><td><code>ResourceNode</code></td><td>An asteroid.</td><td>Solid hexes (terrain) and weapon queries (cover, and the mining beam).</td></tr>
+<tr><td><code>Bullet</code></td><td>Not a shape at all: the category of the query a bullet casts.</td><td>Envelopes, shields, characters, missiles, asteroids.</td></tr>
+</tbody></table></div>
+<div class="note pitfall"><p class="note-label">Pitfall I hit</p><p>Ship-against-ship collision originally used the walls: two 0.25-unit boxes meeting at speed, with no continuous collision between dynamic bodies. At ordinary speeds one step was enough to pass <em>through</em> the wall and end up inside the other ship's hollow interior, walls all around, every attempt to leave blocked by the next wall: stuck inside the enemy. A solid hexagon has no inside, so two overlapping hexagons are always pushed apart however deep they are. The walls kept their only real job, holding walkers in.</p></div>
+<p>A detail that surprises everyone once: Box2D filters <em>queries</em> in both directions too. A shape is visible to a weapon's ray cast only if the cast's mask contains the shape's category <strong>and</strong> the shape's mask contains the cast's category. That is why envelopes, shields and missiles all keep the <code>Bullet</code> bit in their masks, although no bullet body exists anymore.</p>
+<p>Categories also encode design decisions. Shields stop projectiles and nothing else: a station with shields of radius 6 had become impossible to approach, docking bay included, and a shield is a filter for shots, not a wall. Asteroids stop shots but take no damage, and that "solid but harmless" rule lives in one function that every damage path goes through, so no future weapon can forget it.</p>
+</div>
+<div lang="fr">
+<h2>Les filtres de collision : qui touche qui</h2>
+<p>Chaque forme porte une <em>catégorie</em> (ce qu'elle est) et un <em>masque</em> (ce avec quoi elle entre en collision). Deux formes n'interagissent que si le masque de chacune contient la catégorie de l'autre. Un vaisseau n'est pas une seule chose pour le moteur physique : ce sont des murs pour ceux qui marchent dedans, une silhouette pour les armes qui le visent, et un objet solide pour le vaisseau qui l'éperonne. Les catégories permettent à un seul corps de porter les trois sans qu'ils se gênent.</p>
+<div class="table-wrap"><table>
+<thead><tr><th>Catégorie</th><th>Ce que c'est</th><th>Touche</th></tr></thead>
+<tbody>
+<tr><td><code>Ship</code> (murs)</td><td>Des boîtes fines le long de chaque face d'hex exposée. L'intérieur est creux pour qu'un personnage puisse marcher dans la cabine.</td><td>Les personnages seulement.</td></tr>
+<tr><td><code>HullSolid</code></td><td>Un hexagone plein par hex, sans masse.</td><td>Les autres hex pleins et les astéroïdes.</td></tr>
+<tr><td><code>ShipEnvelope</code></td><td>La silhouette des hex vivants, pour les armes.</td><td>Les requêtes des armes.</td></tr>
+<tr><td><code>Shield</code></td><td>Un cercle par bouclier actif.</td><td>Les requêtes des armes seulement : un vaisseau qui éperonne traverse la bulle.</td></tr>
+<tr><td><code>Character</code></td><td>Une personne à pied.</td><td>Murs, barrières d'hex morts, props solides.</td></tr>
+<tr><td><code>Missile</code></td><td>Un cercle sur un corps cinématique.</td><td>Les requêtes des armes, pour qu'on puisse abattre un missile.</td></tr>
+<tr><td><code>ResourceNode</code></td><td>Un astéroïde.</td><td>Les hex pleins (terrain) et les requêtes des armes (couvert, et le laser de minage).</td></tr>
+<tr><td><code>Bullet</code></td><td>Pas une forme du tout : la catégorie de la requête que lance une balle.</td><td>Enveloppes, boucliers, personnages, missiles, astéroïdes.</td></tr>
+</tbody></table></div>
+<div class="note pitfall"><p class="note-label">Piège rencontré</p><p>La collision vaisseau contre vaisseau passait d'abord par les murs : deux boîtes de 0,25 qui se rencontrent à vitesse, sans collision continue entre corps dynamiques. À une vitesse ordinaire, un pas suffisait à passer <em>à travers</em> le mur et à se retrouver dans le creux de l'autre vaisseau, des murs tout autour, chaque tentative de sortie bloquée par le mur suivant : collé dans l'ennemi. Un hexagone plein n'a pas d'intérieur : deux hexagones qui se chevauchent sont toujours repoussés, quelle que soit la profondeur. Les murs ont gardé leur seul vrai rôle, retenir ceux qui marchent.</p></div>
+<p>Un détail qui surprend tout le monde une fois : Box2D filtre aussi les <em>requêtes</em> dans les deux sens. Une forme n'est visible pour le lancer de rayon d'une arme que si le masque de la requête contient la catégorie de la forme <strong>et</strong> que le masque de la forme contient la catégorie de la requête. C'est pourquoi enveloppes, boucliers et missiles gardent tous le bit <code>Bullet</code> dans leur masque, alors qu'aucun corps de balle n'existe plus.</p>
+<p>Les catégories encodent aussi des décisions de conception. Les boucliers arrêtent les projectiles et rien d'autre : une station aux boucliers de rayon 6 était devenue impossible à approcher, quai compris, et un bouclier est un filtre à tirs, pas un mur. Les astéroïdes arrêtent les tirs sans prendre de dégâts, et cette règle « solide mais inoffensif » vit dans une seule fonction par laquelle passent tous les chemins de dégâts, pour qu'aucune future arme ne puisse l'oublier.</p>
+</div>
+</section>
+
+<section class="sec" id="bullets">
+<div lang="en">
+<h2>Bullets without bodies</h2>
+<p>Bullets went through three designs. First a sensor shape with a manual sweep; then a real dynamic body per bullet with Box2D's continuous collision and a pre-solve callback to cancel the physical response; then no body at all. The second version bought native tunnelling protection, and paid for it with a body and a shape created and destroyed per shot, constant churn in the broad-phase tree, solver work for bodies that never respond to anything, and a callback fired from inside the engine's multithreaded step.</p>
+<p>Today a bullet is one slot in a flat array of structs: position, previous position, velocity, distance travelled, owner, target mask. Each tick, after the physics step:</p>
+<ol>
+<li><strong>Integrate</strong> every live slot: pure array arithmetic, parallelized above 256 bullets, no engine call.</li>
+<li><strong>Sweep</strong> the segment each bullet just travelled through the Box2D broad-phase with a ray cast. The engine is used as a read-only spatial index. Because the segment covers the bullet's whole motion for the tick, a fast shot cannot skip over a thin wall, which is exactly what continuous collision was doing internally.</li>
+<li><strong>Report</strong> hits and expirations to the map, which applies damage and schedules removal. A bullet that hit is moved to the impact point first, so its last appearance on clients shows it at the target rather than past it.</li>
+</ol>
+</div>
+<div lang="fr">
+<h2>Des balles sans corps</h2>
+<p>Les balles ont connu trois conceptions. D'abord une forme capteur avec un balayage manuel ; puis un vrai corps dynamique par balle, avec la collision continue de Box2D et un rappel avant résolution pour annuler la réponse physique ; puis plus de corps du tout. La deuxième version achetait la protection native contre l'effet tunnel, et la payait par un corps et une forme créés et détruits à chaque tir, un remue-ménage constant dans l'arbre de la broad-phase, du travail de solveur pour des corps qui ne répondent jamais à rien, et un rappel lancé depuis l'intérieur du pas multithreadé du moteur.</p>
+<p>Aujourd'hui, une balle est une case dans un tableau plat de structures : position, position précédente, vitesse, distance parcourue, tireur, masque de cibles. À chaque tick, après le pas physique :</p>
+<ol>
+<li><strong>Intégrer</strong> chaque case vivante : de l'arithmétique pure sur tableau, parallélisée au-delà de 256 balles, sans appel au moteur.</li>
+<li><strong>Balayer</strong> le segment que chaque balle vient de parcourir, par un lancer de rayon dans la broad-phase de Box2D. Le moteur sert d'index spatial en lecture seule. Comme le segment couvre tout le mouvement de la balle sur le tick, un tir rapide ne peut pas sauter par-dessus un mur fin, ce que la collision continue faisait de toute façon en interne.</li>
+<li><strong>Rapporter</strong> impacts et expirations à la carte, qui applique les dégâts et planifie le retrait. Une balle qui a touché est d'abord ramenée au point d'impact, pour que sa dernière apparition chez les clients la montre sur la cible plutôt qu'au-delà.</li>
+</ol>
+</div>
+<div class="code"><div class="code-head"><span class="file">GameServer/Physics/BulletSimulation.cs · simplified</span></div><pre><code data-lang="cs">private struct BulletState  // one live bullet, contiguous in memory
+{
+    public float X, Y, PrevX, PrevY, VelX, VelY;
+    public float DistanceTravelled, MaxRange;
+    public ulong OwnerId, TargetMask;
+    public bool Alive;
+}
+
+private static void Integrate(ref BulletState s, float dt)  // the ONLY place a bullet moves
+{
+    s.PrevX = s.X;  s.PrevY = s.Y;
+    s.X += s.VelX * dt;  s.Y += s.VelY * dt;
+    s.DistanceTravelled += MathF.Sqrt(s.VelX * s.VelX + s.VelY * s.VelY) * dt;
+}
+
+private bool SweepSegment(ref BulletState s, Bullet bullet, out BulletHit hit)
+{
+    hit = default;
+    var origin = new Vector2(s.PrevX, s.PrevY);
+    var travel = new Vector2(s.X, s.Y) - origin;
+    // Box2D as a read-only spatial index; skips the shooter's own hull and re-casts past it.
+    if (!WeaponRaycast.Cast(_world, origin, travel, s.OwnerId, s.TargetMask, out var rayHit))
+        return false;
+    s.X = rayHit.Point.X;  s.Y = rayHit.Point.Y;  // clamp to the impact point
+    hit = new BulletHit(bullet, rayHit.Target, rayHit.Part, rayHit.IsShield);
+    return true;
+}</code></pre></div>
+<div lang="en">
+<div class="note measured"><p class="note-label">Measured</p><p>With 1,000 bullets per shot at a fire rate of 10, the server went from <strong>5 to 24 ticks per second</strong> when bullets lost their bodies.</p></div>
+<div class="note pitfall"><p class="note-label">Pitfall I hit</p><p>The sequential and parallel branches of the integration each spelled out the same three lines, and a duplicated integrate call crept into one of them. Below 256 bullets, every bullet moved twice per tick while its "previous position" was overwritten by the second step, so only the last half of each bullet's travel was ever tested for collision. Half a tick of motion went through walls untested, and collision behaviour silently changed when a map crossed 256 live bullets. Two copies of a loop body that must stay identical is the bug; one shared function is the fix.</p></div>
+<p>Two more lessons from the same file. The sweep loop ran up to a "high-water mark", the highest slot ever used, which never went back down: a map that had seen one big battle kept scanning thousands of dead slots every tick, forever, even empty. The mark now shrinks from the tail at the start of each update, so the cost follows the bullets in flight. And the design accepts one known asymmetry: the sweep covers only the bullet's motion, so a very fast ship steering into an almost motionless bullet could miss it within a single tick. Bullet speeds dwarf ship speeds, so it has not mattered; it is written down in case it ever does.</p>
+<p>Missiles are different on purpose. A missile must be <em>interceptable</em>, so it carries one circle on a kinematic body whose only job is to sit in the broad-phase where other weapons' rays can find it. It still moves by hand and detects its own impacts with the same sweep as bullets. The binding exposes body positions as read-only, so the missile's body is moved by setting the velocity that reaches the target position in exactly one step, recomputed every tick from the real position. The proxy lags the authoritative position by one tick, which only affects interception, never where the missile hits.</p>
+</div>
+<div lang="fr">
+<div class="note measured"><p class="note-label">Mesuré</p><p>Avec 1 000 balles par tir à une cadence de 10, le serveur est passé de <strong>5 à 24 ticks par seconde</strong> quand les balles ont perdu leur corps.</p></div>
+<div class="note pitfall"><p class="note-label">Piège rencontré</p><p>Les branches séquentielle et parallèle de l'intégration écrivaient chacune les trois mêmes lignes, et un appel d'intégration en double s'est glissé dans l'une d'elles. Sous 256 balles, chaque balle avançait deux fois par tick pendant que sa « position précédente » était écrasée par le second pas : seule la dernière moitié du trajet de chaque balle était testée. Un demi-tick de mouvement traversait les murs sans test, et le comportement des collisions changeait en silence quand une carte franchissait 256 balles vivantes. Deux copies d'un corps de boucle qui doivent rester identiques, c'est le bug ; une seule fonction partagée, c'est la correction.</p></div>
+<p>Deux autres leçons du même fichier. La boucle de balayage allait jusqu'à une « ligne de crue », la plus haute case jamais utilisée, qui ne redescendait jamais : une carte qui avait vu une grosse bataille balayait des milliers de cases mortes à chaque tick, pour toujours, même vide. La ligne se rétracte maintenant depuis la queue en tête de chaque mise à jour, et le coût suit les balles en vol. Et la conception accepte une asymétrie connue : le balayage ne couvre que le mouvement de la balle, donc un vaisseau très rapide qui fonce sur une balle presque immobile pourrait la rater dans la fenêtre d'un tick. Les vitesses des balles écrasent celles des vaisseaux, donc ça n'a pas compté ; c'est écrit au cas où.</p>
+<p>Les missiles sont différents exprès. Un missile doit pouvoir être <em>intercepté</em> : il porte un cercle sur un corps cinématique dont le seul rôle est d'occuper la broad-phase, là où les rayons des autres armes peuvent le trouver. Il avance quand même à la main et détecte ses propres impacts avec le même balayage que les balles. Le binding expose la position des corps en lecture seule : le corps du missile est donc déplacé en posant la vitesse qui atteint la position visée en exactement un pas, recalculée à chaque tick depuis la position réelle. Le proxy a un tick de retard sur la position qui fait autorité, ce qui n'affecte que l'interception, jamais l'endroit où le missile touche.</p>
+</div>
+</section>
+
+<section class="sec" id="shape-cut">
+<div lang="en">
+<h2>The eightfold shape cut</h2>
+<p>Once the tick's other costs were fixed, one phase stayed stubbornly high on the 400-ship bench: the physics step, between 16 and 21 ms and <em>never below 16</em>, while the whole process used 0.9 of a core. A floor, not a spike, eating almost half of the 40 ms budget. The obvious reading was "Box2D is not using its threads", and I spent several benches on it: providing the engine with a task system that ran on the tick workers, counting its calls, reading the binding's metadata to find out why the callbacks never arrived. A counter that should print every five seconds as soon as one task arrived never printed a single line. That silence was data: the engine never called back.</p>
+<p>What finally answered was the engine's own profiler. Box2D exports a per-step profile and a set of counters, and reading them directly gave this:</p>
+</div>
+<div lang="fr">
+<h2>La division par huit des formes</h2>
+<p>Une fois les autres coûts du tick réglés, une phase restait obstinément haute au banc à 400 vaisseaux : le pas physique, entre 16 et 21 ms et <em>jamais sous 16</em>, pendant que tout le processus consommait 0,9 cœur. Un plancher, pas un pic, qui mangeait près de la moitié du budget de 40 ms. La lecture évidente était « Box2D n'utilise pas ses threads », et j'y ai passé plusieurs bancs : fournir au moteur un système de tâches tournant sur les ouvriers du tick, compter ses appels, lire les métadonnées du binding pour comprendre pourquoi les rappels n'arrivaient jamais. Un compteur censé s'imprimer toutes les cinq secondes dès qu'une tâche arrivait n'a jamais écrit une seule ligne. Ce silence était une donnée : le moteur ne rappelait jamais.</p>
+<p>Ce qui a fini par répondre, c'est le profileur du moteur lui-même. Box2D exporte un profil par pas et un jeu de compteurs, et les lire directement a donné ceci :</p>
+</div>
+<div class="code"><div class="code-head"><span class="file">GameServer console · 14th bench, 400 ships · mean/max in ms</span></div><pre><code data-lang="txt">[Physique/box2d] step 15,12/18,46 · pairs 10,91/13,58 · solve 2,34/3,51 · collide 1,87/3,25
+                 · refit 1,32/2,31 · transformes 0,93/1,86 · contraintes 0,08 · impulsions 0,02
+[Physique/box2d] corps 410 · formes 16688 · contacts 390 · îles 11 · arbre 19 · TÂCHES 4</code></pre></div>
+<div lang="en">
+<p>The solver did almost nothing: 0.08 ms of constraints for 390 contacts. <strong>The broad-phase ("pairs") took 11 of the 15 ms</strong>, and the denominator explained why: 16,688 shapes for 410 bodies, 41 shapes per hull, 43 proxies carried through the tree for every useful contact. A hull was described to Box2D three times: walls face by face for walkers, the envelope face by face for weapons, and solid hexagons for ramming.</p>
+</div>
+<div lang="fr">
+<p>Le solveur ne faisait presque rien : 0,08 ms de contraintes pour 390 contacts. <strong>La broad-phase (« pairs ») prenait 11 des 15 ms</strong>, et le dénominateur expliquait pourquoi : 16 688 formes pour 410 corps, 41 formes par coque, 43 proxys promenés dans l'arbre pour chaque contact utile. Une coque était décrite trois fois à Box2D : les murs face par face pour ceux qui marchent, l'enveloppe face par face pour les armes, et les hexagones pleins pour l'éperonnage.</p>
+</div>
+<figure class="fig fig-scroll">
+<svg viewBox="0 0 760 205" role="img" aria-label="A three-hex hull described three times, as 12 wall boxes, 12 envelope boxes and 3 solid hexagons, 27 shapes in total; the bare hull keeps only the 3 solid hexagons">
+  <defs><marker id="ph-arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="currentColor" opacity="0.7"/></marker></defs>
+  <line x1="40" y1="38" x2="486" y2="38" class="dg-line"/>
+  <line x1="40" y1="38" x2="40" y2="46" class="dg-line"/>
+  <line x1="486" y1="38" x2="486" y2="46" class="dg-line"/>
+  <text class="dg-small" x="263" y="30" text-anchor="middle"><tspan lang="en">full description: 27 shapes for this 3-hex hull</tspan><tspan lang="fr">description complète : 27 formes pour cette coque de 3 hex</tspan></text>
+  <g class="dg-dash" style="fill:none;stroke:var(--ink-3);stroke-width:1">
+    <polygon points="94,100 82,120.78 58,120.78 46,100 58,79.22 82,79.22"/>
+    <polygon points="130,120.78 118,141.56 94,141.56 82,120.78 94,100 118,100"/>
+    <polygon points="130,79.22 118,100 94,100 82,79.22 94,58.44 118,58.44"/>
+  </g>
+  <polygon points="82,120.78 58,120.78 46,100 58,79.22 82,79.22 94,58.43 118,58.43 130,79.22 118,100 130,120.78 118,141.57 94,141.57" style="fill:none;stroke:var(--ink);stroke-width:4;stroke-linejoin:round"/>
+  <polygon points="252,120.78 228,120.78 216,100 228,79.22 252,79.22 264,58.43 288,58.43 300,79.22 288,100 300,120.78 288,141.57 264,141.57" style="fill:none;stroke:var(--accent);stroke-width:3;stroke-linejoin:round"/>
+  <g class="dg-box-2">
+    <polygon points="434,100 422,120.78 398,120.78 386,100 398,79.22 422,79.22"/>
+    <polygon points="470,120.78 458,141.56 434,141.56 422,120.78 434,100 458,100"/>
+    <polygon points="470,79.22 458,100 434,100 422,79.22 434,58.44 458,58.44"/>
+  </g>
+  <line x1="492" y1="100" x2="604" y2="100" class="dg-line" marker-end="url(#ph-arr)"/>
+  <text class="dg-small" x="548" y="90" text-anchor="middle"><tspan lang="en">intact, nobody near</tspan><tspan lang="fr">intacte, personne autour</tspan></text>
+  <g class="dg-hot">
+    <polygon points="664,100 652,120.78 628,120.78 616,100 628,79.22 652,79.22"/>
+    <polygon points="700,120.78 688,141.56 664,141.56 652,120.78 664,100 688,100"/>
+    <polygon points="700,79.22 688,100 664,100 652,79.22 664,58.44 688,58.44"/>
+  </g>
+  <text class="dg-text" x="88" y="172" text-anchor="middle"><tspan lang="en">walls · 12</tspan><tspan lang="fr">murs · 12</tspan></text>
+  <text class="dg-small" x="88" y="190" text-anchor="middle"><tspan lang="en">hold walkers in</tspan><tspan lang="fr">retiennent les marcheurs</tspan></text>
+  <text class="dg-text" x="258" y="172" text-anchor="middle"><tspan lang="en">envelope · 12</tspan><tspan lang="fr">enveloppe · 12</tspan></text>
+  <text class="dg-small" x="258" y="190" text-anchor="middle"><tspan lang="en">what weapons hit</tspan><tspan lang="fr">ce que touchent les armes</tspan></text>
+  <text class="dg-text" x="428" y="172" text-anchor="middle"><tspan lang="en">solid hexes · 3</tspan><tspan lang="fr">hex pleins · 3</tspan></text>
+  <text class="dg-small" x="428" y="190" text-anchor="middle"><tspan lang="en">ship against ship</tspan><tspan lang="fr">vaisseau contre vaisseau</tspan></text>
+  <text class="dg-text" x="658" y="172" text-anchor="middle" font-weight="700"><tspan lang="en">bare hull · 3</tspan><tspan lang="fr">coque nue · 3</tspan></text>
+  <text class="dg-small" x="658" y="190" text-anchor="middle"><tspan lang="en">+ weapon category, same mass</tspan><tspan lang="fr">+ catégorie arme, même masse</tspan></text>
+</svg>
+<figcaption><span lang="en"><strong>One hull, three descriptions.</strong> Walls and envelope trace the same perimeter face by face; only a hull that is intact and has nobody walking nearby can drop both and keep its solid hexagons, which also take over the weapon role.</span><span lang="fr"><strong>Une coque, trois descriptions.</strong> Murs et enveloppe retracent le même périmètre face par face ; seule une coque intacte, sans personne qui marche autour, peut abandonner les deux et garder ses hexagones pleins, qui reprennent aussi le rôle d'enveloppe.</span></figcaption>
+</figure>
+<div lang="en">
+<p>The walls only matter to people walking; the envelope only matters to weapons, and the solid hexagons can serve weapons themselves, since each already points to its part for per-hex damage. So an <strong>intact</strong> hull with <strong>nobody walking nearby</strong> is reduced to its solid hexagons, which gain the envelope category. The rest of the design is about not breaking anything:</p>
+<ul>
+<li><strong>Mass.</strong> Only the walls carry density. The hull is therefore always built complete first, Box2D computes its mass, centre and inertia, and those are read back and re-applied in bare mode. Same weight, same rotation, no shapes.</li>
+<li><strong>When to switch.</strong> Both conditions are re-evaluated once per second, from the object tick, which is between two steps and therefore the one window where changing shapes is legal. The proximity loop does not even run when the map has no walking character, which is the common case: a seated pilot is not a character of the map.</li>
+<li><strong>Hysteresis.</strong> A hull stays complete for 15 seconds after the last walker leaves. Rebuilding shapes is expensive, and a hull must not flicker between two descriptions while someone circles it.</li>
+<li><strong>Exceptions.</strong> A damaged hull keeps its full description, because a dead hex opens a breach you must be able to walk through and shoot into. Stations always stay complete: they are static, so they cost the broad-phase nothing, and they are where people walk the most.</li>
+<li><strong>Undo.</strong> One environment variable restores the old behaviour after a restart, because this touches the collision geometry of every hull.</li>
+</ul>
+</div>
+<div lang="fr">
+<p>Les murs ne comptent que pour ceux qui marchent ; l'enveloppe ne compte que pour les armes, et les hexagones pleins peuvent servir eux-mêmes aux armes, puisque chacun pointe déjà vers sa pièce pour les dégâts par hex. Une coque <strong>intacte</strong> avec <strong>personne qui marche autour</strong> est donc réduite à ses hexagones pleins, qui prennent la catégorie d'enveloppe. Le reste de la conception consiste à ne rien casser :</p>
+<ul>
+<li><strong>La masse.</strong> Seuls les murs portent une densité. La coque est donc toujours construite complète d'abord, Box2D calcule sa masse, son centre et son inertie, et on les relit pour les réappliquer en mode nu. Même poids, même rotation, sans les formes.</li>
+<li><strong>Quand basculer.</strong> Les deux conditions sont réévaluées une fois par seconde, depuis le tick des objets, qui est entre deux pas et donc la seule fenêtre où changer des formes est légal. La boucle de proximité ne tourne même pas quand la carte n'a aucun personnage à pied, ce qui est le cas courant : un pilote assis n'est pas un personnage de la carte.</li>
+<li><strong>L'hystérésis.</strong> Une coque reste complète 15 secondes après le départ du dernier marcheur. Reconstruire des formes coûte cher, et une coque ne doit pas clignoter entre deux descriptions pendant que quelqu'un tourne autour.</li>
+<li><strong>Les exceptions.</strong> Une coque abîmée garde sa description complète, parce qu'un hex mort ouvre une brèche où l'on doit pouvoir marcher et tirer. Les stations restent toujours complètes : elles sont statiques, donc ne coûtent rien à la broad-phase, et c'est là qu'on marche le plus.</li>
+<li><strong>Le retour arrière.</strong> Une variable d'environnement rend l'ancien comportement après un redémarrage, parce que ceci touche la géométrie de collision de toutes les coques.</li>
+</ul>
+</div>
+<figure class="fig">
+<div data-chart>
+<script type="application/json">
+{
+  "type": "bar",
+  "cats": { "en": ["Broad-phase\n(pairs)", "Box2D step", "Physics phase\n(Monitor)"], "fr": ["Broad-phase\n(pairs)", "Pas Box2D", "Phase physique\n(Monitor)"] },
+  "series": [
+    { "name": { "en": "14th bench: full hulls", "fr": "14e banc : coques complètes" }, "values": [10.91, 15.12, 19.21] },
+    { "name": { "en": "15th bench: bare hulls", "fr": "15e banc : coques nues" }, "values": [1.01, 1.87, 3.41] }
+  ],
+  "unit": "ms",
+  "decimals": 1,
+  "unitLabel": { "en": "mean, ms per tick", "fr": "moyenne, ms par tick" },
+  "aria": { "en": "Mean physics cost at 400 ships before and after the bare hull: broad-phase 10.9 to 1.0 ms, Box2D step 15.1 to 1.9 ms, physics phase 19.2 to 3.4 ms", "fr": "Coût physique moyen à 400 vaisseaux avant et après la coque nue : broad-phase de 10,9 à 1,0 ms, pas Box2D de 15,1 à 1,9 ms, phase physique de 19,2 à 3,4 ms" }
+}
+</script>
+</div>
+<figcaption><span lang="en"><strong>Same 400-ship bench, before and after.</strong> Shapes went from 16,688 to 2,156 (÷7.7) while contacts <em>doubled</em>, from 390 to 851: a solid hexagon covers area where a wall only covers an edge. The time was never in the contacts.</span><span lang="fr"><strong>Même banc à 400 vaisseaux, avant et après.</strong> Les formes sont passées de 16 688 à 2 156 (÷7,7) pendant que les contacts <em>doublaient</em>, de 390 à 851 : un hexagone plein couvre une surface là où un mur ne couvre qu'une arête. Le temps n'a jamais été dans les contacts.</span></figcaption>
+</figure>
+<div lang="en">
+<p>The shape cut also closed the threading project for good. Box2D parallelizes its solver <em>per island</em>, a group of bodies in contact with one another. In a general melee all the ships touch and the counters showed one or two islands: there was nothing to split, and a perfect task system would have returned about two milliseconds at most. The problem was solved from the other end.</p>
+<div class="note rule"><p class="note-label">Rule</p><p>Before theorizing about a library's internals, read its own counters.</p><p>Two diagnostics built on guesses about the binding were wrong. The engine had been exporting the answer (a profile per phase, a shape count, an island count) the whole time.</p></div>
+</div>
+<div lang="fr">
+<p>La division des formes a aussi refermé le chantier du threading pour de bon. Box2D parallélise son solveur <em>par îlot</em>, un groupe de corps en contact les uns avec les autres. En mêlée générale, tous les vaisseaux se touchent et les compteurs montraient un ou deux îlots : il n'y avait rien à découper, et un système de tâches parfait aurait rendu deux millisecondes tout au plus. Le problème a été résolu par l'autre bout.</p>
+<div class="note rule"><p class="note-label">Règle</p><p>Avant de théoriser sur les entrailles d'une bibliothèque, lire ses propres compteurs.</p><p>Deux diagnostics bâtis sur des suppositions à propos du binding étaient faux. Le moteur exportait la réponse (un profil par phase, un nombre de formes, un nombre d'îlots) depuis le début.</p></div>
+</div>
+</section>
+
+<section class="sec" id="binding">
+<div lang="en">
+<h2>Living with a native binding</h2>
+<p>A physics engine written in C and reached through a managed binding has its own class of traps. Four of them, each found the hard way:</p>
+<ul>
+<li><strong>A setter that is secretly global.</strong> <code>def.WorkerCount = …</code> looks like it writes a field of this world's definition. The binding actually writes a process-wide setting that Box2D refuses to change once a world exists: "Cannot change thread count while worlds exist". Invisible with one map, which was the whole development period; then a 700-bot bench crossing borders, and every map load after the first died. It is now applied once, guarded by a static flag.</li>
+<li><strong>A callback overload with a storage bug.</strong> The convenient overload for registering a pre-solve callback stored the delegate in a slot that a shape's user data could overwrite (an <code>InvalidCastException</code> from inside the engine). The workaround, a static thunk with a caller-owned handle, is recorded in the source for whoever needs a callback again.</li>
+<li><strong>Read-only positions.</strong> A body's position cannot be set directly, which is why missiles are steered by velocity.</li>
+<li><strong>Static shapes do not create contacts when added.</strong> A station founded in the middle of a game had no collision at all until the server restarted: Box2D only pairs a static shape when a dynamic body moves into it. At map load it did not matter, because stations are created before the ships arrive. The builder now asks for contacts explicitly when it adds a static body to a live world.</li>
+</ul>
+</div>
+<div lang="fr">
+<h2>Vivre avec un binding natif</h2>
+<p>Un moteur physique écrit en C et atteint à travers un binding managé a sa propre famille de pièges. Quatre d'entre eux, chacun trouvé à la dure :</p>
+<ul>
+<li><strong>Un accesseur secrètement global.</strong> <code>def.WorkerCount = …</code> a l'air d'écrire un champ de la définition de ce monde. Le binding écrit en fait un réglage global au processus, que Box2D refuse de changer dès qu'un monde existe : « Cannot change thread count while worlds exist ». Invisible avec une seule carte, c'est-à-dire toute la période de développement ; puis un banc de 700 bots qui franchissent des bords, et chaque chargement de carte après le premier mourait. Il est maintenant appliqué une seule fois, gardé par un drapeau statique.</li>
+<li><strong>Une surcharge de rappel avec un bug de stockage.</strong> La surcharge pratique pour enregistrer un rappel avant résolution stockait le délégué dans une case que les données utilisateur d'une forme pouvaient écraser (une <code>InvalidCastException</code> depuis l'intérieur du moteur). Le contournement, une fonction statique avec un handle détenu par l'appelant, est consigné dans le source pour qui aura de nouveau besoin d'un rappel.</li>
+<li><strong>Des positions en lecture seule.</strong> La position d'un corps ne peut pas être posée directement, d'où les missiles pilotés par la vitesse.</li>
+<li><strong>Une forme statique ne crée pas de contacts quand on l'ajoute.</strong> Une station fondée en cours de partie n'avait aucune collision jusqu'au redémarrage du serveur : Box2D n'apparie une forme statique que quand un corps dynamique entre dedans. Au chargement de carte ça ne comptait pas, puisque les stations naissent avant l'arrivée des vaisseaux. Le constructeur demande maintenant les contacts explicitement quand il ajoute un corps statique à un monde vivant.</li>
+</ul>
+</div>
+<div lang="en">
+<div class="note rule"><p class="note-label">Rule</p><p>A limit that breaks nothing while you are under it will be discovered on the day the game works.</p><p>One map during development, ten peers in a default parameter, 128 worlds per process: every one of these was found by the first load test that crossed it. Make such limits explicit, print them at startup, and test past them.</p></div>
+</div>
+<div lang="fr">
+<div class="note rule"><p class="note-label">Règle</p><p>Une limite qui ne casse rien tant qu'on est dessous sera découverte le jour où le jeu marche.</p><p>Une seule carte pendant le développement, dix pairs dans un paramètre par défaut, 128 mondes par processus : chacune de ces limites a été trouvée par le premier banc de charge qui l'a franchie. Les rendre explicites, les imprimer au démarrage, et tester au-delà.</p></div>
+</div>
+</section>
+
+<section class="sec" id="takeaways">
+<div class="takeaways">
+<div lang="en"><h2>Key takeaways</h2><ul>
+<li>Give each map its own physics world, and only mutate it between steps on the thread that steps it.</li>
+<li>Use collision categories to let one body be walls, target and solid at once, and remember that queries are filtered in both directions.</li>
+<li>Fast projectiles do not need bodies: integrate them in a flat array and sweep their segment through the broad-phase.</li>
+<li>Count shapes, not just bodies: the broad-phase pays for every proxy, and a description nobody needs is pure cost.</li>
+<li>Read the engine's own profile and counters before guessing why it is slow.</li>
+</ul></div>
+<div lang="fr"><h2>À retenir</h2><ul>
+<li>Donner à chaque carte son propre monde physique, et ne le modifier qu'entre deux pas, sur le thread qui le fait avancer.</li>
+<li>Utiliser les catégories de collision pour qu'un même corps soit murs, cible et solide à la fois, et se souvenir que les requêtes sont filtrées dans les deux sens.</li>
+<li>Les projectiles rapides n'ont pas besoin de corps : les intégrer dans un tableau plat et balayer leur segment dans la broad-phase.</li>
+<li>Compter les formes, pas seulement les corps : la broad-phase paie chaque proxy, et une description dont personne n'a besoin est un pur coût.</li>
+<li>Lire le profil et les compteurs du moteur avant de deviner pourquoi il est lent.</li>
+</ul></div>
+</div>
+</section>
+
+</div>
+<div data-chapter-foot></div>
+</article>
+</main>
+<aside class="rail" id="mq-rail"></aside>
+</div>
+<footer class="site-footer" id="mq-footer"></footer>
+<script src="assets/js/site-data.js" defer></script>
+<script src="assets/js/glossary-data.js" defer></script>
+<script src="assets/js/app.js" defer></script>
+<script src="assets/js/widgets.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,282 @@
+<!doctype html>
+<html lang="en" data-lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>A binary protocol of your own · MoonQwak</title>
+<meta name="description" content="Framing, positional payloads, and the discipline that keeps a hand-written serializer honest.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Chakra+Petch:wght@500;600&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="assets/css/site.css">
+<script>(function(){var r=document.documentElement,l,t;try{l=localStorage.getItem("mq-lang");t=localStorage.getItem("mq-theme");}catch(e){}if(l!=="en"&&l!=="fr"){l=(navigator.language||"").toLowerCase().indexOf("fr")===0?"fr":"en";}r.setAttribute("data-lang",l);r.setAttribute("lang",l);if(t==="light"||t==="dark")r.setAttribute("data-theme",t);})();</script>
+</head>
+<body data-page="packet-format">
+<a class="skip-link" href="#main"><span lang="en">Skip to content</span><span lang="fr">Aller au contenu</span></a>
+<header class="site-header" id="mq-header"></header>
+<div class="layout">
+<aside class="sidebar" id="mq-sidebar"></aside>
+<main class="content" id="main">
+<article>
+<header class="chapter-head">
+  <div class="eyebrow" data-auto></div>
+  <h1><span lang="en">A binary protocol of your own</span><span lang="fr">Un protocole binaire à soi</span></h1>
+  <p class="dek"><span lang="en">Framing, positional payloads, and the discipline that keeps a hand-written serializer honest.</span><span lang="fr">Les trames, les charges utiles positionnelles, et la discipline qui garde un sérialiseur écrit à la main honnête.</span></p>
+  <div class="meta-row" data-auto></div>
+</header>
+
+<div class="prose">
+
+<section class="sec" id="why-custom">
+<div lang="en">
+<h2>Why write the format by hand</h2>
+<p>JSON is readable and self-describing, and far too large for 25 updates a second per player: every field name travels with every value. Schema-based binary formats such as Protocol Buffers, FlatBuffers or MessagePack are compact and handle adding fields gracefully, and they are a perfectly good choice for a game. MoonQwak writes its packets by hand instead, for three reasons:</p>
+<ul>
+<li><strong>Control over every byte.</strong> The hottest messages use tricks a general serializer does not offer: a flag byte that says which blocks follow, quantized numbers, a bullet sent in two different formats depending on what the receiver already knows (Part 4).</li>
+<li><strong>No allocation on the hot path.</strong> The snapshot for one player is serialized into a reused buffer, 25 times a second, without creating garbage for the collector. That is easier to guarantee in code you wrote.</li>
+<li><strong>The same C# on both ends.</strong> The packet classes live in a library compiled for both the server and the Unity client, so there is no generated code to keep in sync with anything.</li>
+</ul>
+<p>The price is real. A hand-written format has no schema and no field names on the wire, so nothing but discipline makes the writer and the reader agree. Chapter <a href="protocol-testing.html">1.6</a> is the other half of this one: the tests and the version gate that turned that discipline into something checked.</p>
+</div>
+<div lang="fr">
+<h2>Pourquoi écrire le format à la main</h2>
+<p>JSON est lisible et auto-descriptif, et bien trop gros pour 25 mises à jour par seconde et par joueur : chaque nom de champ voyage avec chaque valeur. Les formats binaires à schéma comme Protocol Buffers, FlatBuffers ou MessagePack sont compacts et gèrent bien l'ajout de champs, et ce sont de très bons choix pour un jeu. MoonQwak écrit pourtant ses paquets à la main, pour trois raisons :</p>
+<ul>
+<li><strong>La maîtrise de chaque octet.</strong> Les messages les plus chauds utilisent des astuces qu'un sérialiseur générique n'offre pas : un octet de drapeaux qui dit quels blocs suivent, des nombres quantifiés, une balle envoyée sous deux formats différents selon ce que le destinataire sait déjà (partie 4).</li>
+<li><strong>Aucune allocation sur le chemin chaud.</strong> Le snapshot d'un joueur est sérialisé dans un tampon réutilisé, 25 fois par seconde, sans créer de déchets pour le ramasse-miettes. C'est plus facile à garantir dans du code qu'on a écrit.</li>
+<li><strong>Le même C# des deux côtés.</strong> Les classes de paquets vivent dans une bibliothèque compilée à la fois pour le serveur et pour le client Unity : aucun code généré à garder synchronisé avec quoi que ce soit.</li>
+</ul>
+<p>Le prix est réel. Un format écrit à la main n'a ni schéma ni noms de champs sur le fil : rien d'autre que la discipline ne garantit que l'écrivain et le lecteur sont d'accord. Le chapitre <a href="protocol-testing.html">1.6</a> est l'autre moitié de celui-ci : les tests et la porte de version qui ont transformé cette discipline en quelque chose de vérifié.</p>
+</div>
+</section>
+
+<section class="sec" id="frame">
+<div lang="en">
+<h2>The frame</h2>
+<p>Every message, whatever its type, starts with the same small header. Hover or focus each field to see what it is for.</p>
+</div>
+<div lang="fr">
+<h2>La trame</h2>
+<p>Chaque message, quel que soit son type, commence par le même petit en-tête. Survolez ou sélectionnez chaque champ pour voir à quoi il sert.</p>
+</div>
+<div data-bytes>
+<div class="bytes">
+  <div class="byte-field" data-en="Version (1 byte): the frame layout version. Only V1 exists; it tells the parser where the type field is and how long the header is." data-fr="Version (1 octet) : la version de la disposition de la trame. Seule V1 existe ; elle dit au parseur où se trouve le champ de type et quelle est la longueur de l'en-tête."><b>Version</b><span>01</span></div>
+  <div class="byte-field" data-en="Type (2 bytes, little-endian): which packet this is. About 140 types exist; the receiver uses it to pick the class that parses the payload." data-fr="Type (2 octets, petit-boutiste) : de quel paquet il s'agit. Il en existe environ 140 ; le récepteur s'en sert pour choisir la classe qui parse la charge utile."><b>Type</b><span>17 00</span></div>
+  <div class="byte-field" data-en="Reserved (1 byte): unused today. Keeping a spare byte in a header costs almost nothing and avoids a format change the day you need a flag." data-fr="Réservé (1 octet) : inutilisé aujourd'hui. Garder un octet libre dans un en-tête ne coûte presque rien et évite un changement de format le jour où il faut un drapeau."><b>RSV</b><span>00</span></div>
+  <div class="byte-field" data-en="Payload length (varint, 1 to 9 bytes): lets the parser refuse a truncated frame before reading any field." data-fr="Longueur de la charge utile (varint, 1 à 9 octets) : permet au parseur de refuser une trame tronquée avant de lire le moindre champ."><b>Length</b><span>82 1C</span></div>
+  <div class="byte-field grow" data-en="Payload: the fields of this packet type, written one after the other in a fixed order, without names. Snapshot (type 0x17) is shown here." data-fr="Charge utile : les champs de ce type de paquet, écrits les uns après les autres dans un ordre fixe, sans noms. Ici un Snapshot (type 0x17)."><b>Payload</b><span>tick · flags · self · others…</span></div>
+</div>
+<p class="byte-legend"><span lang="en">After encryption, the datagram on the wire is <code>[16-byte tag][nonce varint][ciphertext of this whole frame]</code>. See <a href="encryption.html">1.4</a>.</span><span lang="fr">Après chiffrement, le datagramme sur le fil est <code>[tag de 16 octets][nonce varint][chiffré de toute cette trame]</code>. Voir <a href="encryption.html">1.4</a>.</span></p>
+</div>
+<div lang="en">
+<p>The length field is not redundant with the transport: the transport delivers a whole datagram, but the parser still checks that the declared payload fits in what arrived before reading anything. A frame that claims more bytes than it carries is rejected as a whole instead of being half-parsed.</p>
+</div>
+<div lang="fr">
+<p>Le champ de longueur n'est pas redondant avec le transport : le transport livre un datagramme entier, mais le parseur vérifie quand même que la charge utile annoncée tient dans ce qui est arrivé avant de lire quoi que ce soit. Une trame qui annonce plus d'octets qu'elle n'en porte est refusée en bloc au lieu d'être parsée à moitié.</p>
+</div>
+</section>
+
+<section class="sec" id="positional">
+<div lang="en">
+<h2>Positional payloads</h2>
+<p>Inside the payload, fields are written in a fixed order with no names and no tags. A login is a string, a string, then a number. A snapshot is a tick number, a flag byte, an optional block for the player's own ship, then a count followed by that many objects. The reader must read exactly what the writer wrote, in the same order, with the same sizes. If it reads one byte too few or too many, every field after that point is garbage, and nothing in the bytes says so.</p>
+<p>This is the smallest possible encoding and the most fragile one. Three rules keep it workable:</p>
+<ol>
+<li><strong>Append, never insert.</strong> A new field goes at the end of a packet. A reader built later can then detect that an older writer did not send it, by checking whether any bytes remain.</li>
+<li><strong>Presence is explicit.</strong> An optional block is announced by a bit in a flag byte written before it, or by a count. The parser never guesses.</li>
+<li><strong>Absence has a meaning, or it has a count of zero.</strong> Only read "is there anything left?" when "not sent" must mean something different from "zero". Otherwise always write the field; a field that is always written cannot be forgotten by the reader.</li>
+</ol>
+</div>
+<div lang="fr">
+<h2>Des charges utiles positionnelles</h2>
+<p>Dans la charge utile, les champs sont écrits dans un ordre fixe, sans noms ni étiquettes. Un login, c'est une chaîne, une chaîne, puis un nombre. Un snapshot, c'est un numéro de tick, un octet de drapeaux, un bloc optionnel pour le vaisseau du joueur, puis un compte suivi d'autant d'objets. Le lecteur doit lire exactement ce que l'écrivain a écrit, dans le même ordre, avec les mêmes tailles. S'il lit un octet de trop ou de moins, chaque champ suivant est du bruit, et rien dans les octets ne le signale.</p>
+<p>C'est l'encodage le plus petit possible, et le plus fragile. Trois règles le rendent vivable :</p>
+<ol>
+<li><strong>Ajouter, jamais insérer.</strong> Un nouveau champ va à la fin du paquet. Un lecteur plus récent peut alors détecter qu'un écrivain plus ancien ne l'a pas envoyé, en regardant s'il reste des octets.</li>
+<li><strong>La présence est explicite.</strong> Un bloc optionnel est annoncé par un bit dans un octet de drapeaux écrit avant lui, ou par un compte. Le parseur ne devine jamais.</li>
+<li><strong>L'absence a un sens, ou elle a un compte de zéro.</strong> Ne regarder « reste-t-il quelque chose ? » que quand « non envoyé » doit vouloir dire autre chose que « zéro ». Sinon, toujours écrire le champ : un champ toujours écrit ne peut pas être oublié par le lecteur.</li>
+</ol>
+</div>
+<div class="code"><div class="code-head"><span class="file">Packet/Packets/Auth/Login.cs · an appended field, read defensively</span></div><pre><code data-lang="cs">// The default value is a compile-time constant, inlined at each call site:
+// every binary sends the protocol number it was built with, without anyone thinking about it.
+public Login(string username, string password, int protocol = ProtocolVersion.Current) { ... }
+
+protected override void Build()
+{
+    WriteString(Username);
+    WriteString(Password);
+    WriteVarInt(Protocol);  // appended later: always written at the end
+}
+
+protected override bool ParsePayload()
+{
+    Username = ReadString();
+    Password = ReadString();
+    // A client built before this field existed does not send it. Without this guard the read
+    // would throw on an exhausted stream and the old client would see a login screen that never
+    // answers. Reading 0 instead gets it refused, with a reason it can display.
+    Protocol = Remaining > 0 ? (int)ReadVarInt() : 0;
+    return true;
+}</code></pre></div>
+</section>
+
+<section class="sec" id="build-parse">
+<div lang="en">
+<h2>One class, two directions</h2>
+<p>Every packet type is a class deriving from <code>BasePacket</code>, with a <code>Build()</code> method that writes the payload and a <code>ParsePayload()</code> method that reads it. The base class owns the stream, the header and the primitives (fixed-size integers, strings, varints, quantized numbers, angles). A packet instance is either being written or being read, never both: asking a parsed packet to serialize itself throws.</p>
+<p>That last rule looks like a detail and shaped a habit. When the game server relays a message it received from the gateway to a client, it cannot forward the object it parsed: it builds a new one from the parsed fields. A "forward" would have worked by accident with some packet types and thrown with others.</p>
+</div>
+<div lang="fr">
+<h2>Une classe, deux sens</h2>
+<p>Chaque type de paquet est une classe dérivée de <code>BasePacket</code>, avec une méthode <code>Build()</code> qui écrit la charge utile et une méthode <code>ParsePayload()</code> qui la lit. La classe de base possède le flux, l'en-tête et les primitives (entiers de taille fixe, chaînes, varints, nombres quantifiés, angles). Une instance de paquet est soit en écriture, soit en lecture, jamais les deux : demander à un paquet parsé de se sérialiser lève une exception.</p>
+<p>Cette dernière règle a l'air d'un détail et a façonné une habitude. Quand le serveur de jeu relaie à un client un message reçu de la gateway, il ne peut pas transmettre l'objet parsé : il en construit un neuf à partir des champs lus. Un simple « transfert » aurait marché par hasard avec certains types de paquets et levé une exception avec d'autres.</p>
+</div>
+<div class="code"><div class="code-head"><span class="file">Packet/BasePacket.cs · framing, shared by every send path</span></div><pre><code data-lang="cs">private void FrameIntoStream()
+{
+    var ms = GetMemoryStream();
+    ms.SetLength(0);                   // reset BEFORE Build: the instance may be reused
+    Build();                           // subclass writes its payload
+
+    var payloadLen = (int)ms.Length;
+    var payload = ArrayPool&lt;byte&gt;.Shared.Rent(payloadLen);  // rented, not allocated
+    ms.Position = 0;
+    ms.Read(payload, 0, payloadLen);
+
+    ms.SetLength(0);
+    Write((byte)Version);              // header
+    Write(Type);
+    Write(RSV);
+    WriteUVarInt((ulong)payloadLen);
+    ms.Write(payload, 0, payloadLen);  // then the payload
+    ArrayPool&lt;byte&gt;.Shared.Return(payload);
+}</code></pre></div>
+<div lang="en">
+<div class="note pitfall"><p class="note-label">Pitfall I hit</p><p>The reset at the top of that method was once only at the bottom. A debug broadcaster sent the same packet object to several connected tools in a loop, so the second <code>Build()</code> appended its payload after the complete frame of the first call. The tools displayed "billions of connected peers" and negative byte counts. The fix was one line; finding it took an afternoon, because the numbers looked like a counter overflow, not like a framing bug.</p></div>
+</div>
+<div lang="fr">
+<div class="note pitfall"><p class="note-label">Piège rencontré</p><p>La remise à zéro en tête de cette méthode n'était autrefois qu'à la fin. Un diffuseur de debug envoyait le même objet paquet à plusieurs outils connectés dans une boucle : le second <code>Build()</code> ajoutait sa charge utile après la trame complète du premier appel. Les outils affichaient « des milliards de pairs connectés » et des compteurs d'octets négatifs. La correction tenait en une ligne ; la trouver a pris un après-midi, parce que les chiffres ressemblaient à un débordement de compteur, pas à un bug de trame.</p></div>
+</div>
+</section>
+
+<section class="sec" id="dispatch">
+<div lang="en">
+<h2>From a type id to a handler</h2>
+<p>The receiver reads the type field and asks a <code>ParserFactory</code> for a fresh instance of the matching class, then lets it parse. A <code>Dispatcher</code> maps each type to one or more handlers. Registering a handler for a type registers the parser at the same time, so there is no way to handle a packet you cannot parse, or to parse one nobody handles without the client saying so in its log.</p>
+<p>A few packets need a session token in front of their payload. Rather than asking each of them to remember, an <code>AuthenticatedPacket</code> base class writes and reads the token itself, then calls the subclass for the rest. Its <code>Build</code> and <code>ParsePayload</code> are sealed: a subclass cannot forget the token because it never had the chance to write it.</p>
+</div>
+<div lang="fr">
+<h2>D'un identifiant de type à un gestionnaire</h2>
+<p>Le récepteur lit le champ de type et demande à une <code>ParserFactory</code> une instance neuve de la classe correspondante, puis la laisse parser. Un <code>Dispatcher</code> associe chaque type à un ou plusieurs gestionnaires. Enregistrer un gestionnaire pour un type enregistre le parseur en même temps : impossible de gérer un paquet qu'on ne sait pas parser, ou d'en parser un que personne ne gère sans que le client le dise dans son journal.</p>
+<p>Quelques paquets doivent porter un jeton de session devant leur charge utile. Plutôt que de demander à chacun de s'en souvenir, une classe de base <code>AuthenticatedPacket</code> écrit et lit le jeton elle-même, puis appelle la sous-classe pour le reste. Ses <code>Build</code> et <code>ParsePayload</code> sont scellées : une sous-classe ne peut pas oublier le jeton, elle n'a jamais eu l'occasion de l'écrire.</p>
+</div>
+<div class="code"><div class="code-head"><span class="file">Network/Dispatcher.cs · one call registers parsing and handling</span></div><pre><code data-lang="cs">public bool Register&lt;T&gt;(ushort id, Handler handler) where T : IPacket, new()
+{
+    ParserFactory.Register&lt;T&gt;(id);   // how to build an instance of this type
+    return Register(id, handler);     // what to do with it
+}
+
+// usage, on the game server
+server.Dispatcher.Register&lt;PlayerInput&gt;((ushort)Type.PlayerInput,
+    (peerId, packet, source) =>
+        sessions.GetConnectedPlayer(peerId)?.HandleInput((PlayerInput)packet) ?? false);</code></pre></div>
+</section>
+
+<section class="sec" id="two-styles">
+<div lang="en">
+<h2>Two styles of packet</h2>
+<p>Not every message deserves the same care about bytes. MoonQwak ended up with two deliberately different styles.</p>
+<div class="compare">
+<div><h4>Gameplay stream</h4><p>Snapshots, inputs, bullets. Sent many times a second to many players.</p><ul><li>Compact: varints, quantization, flag bytes.</li><li>May be delta or conditional.</li><li>Tuned by measurement.</li></ul></div>
+<div class="pick"><h4>Social and economy state</h4><p>Market, mail, trade, guild roster. Sent when a screen opens or something changes.</p><ul><li>Always the full state; the client replaces its copy, never accumulates.</li><li>Durations ("expires in 3,600 s"), never dates, so no clocks to synchronize.</li><li>Codes, never sentences (see <a href="protocol-testing.html#codes-not-words">1.6</a>).</li></ul></div>
+</div>
+<p>A market screen opens a few times per session and weighs a few kilobytes. Making it idempotent (the same message applied twice gives the same result) is worth far more than the bytes a delta would save, because no race can leave a ghost order on screen, and resynchronizing costs one packet.</p>
+</div>
+<div lang="fr">
+<h2>Deux styles de paquets</h2>
+<p>Tous les messages ne méritent pas le même soin sur les octets. MoonQwak a fini avec deux styles volontairement différents.</p>
+<div class="compare">
+<div><h4>Flux de jeu</h4><p>Snapshots, entrées, balles. Envoyés de nombreuses fois par seconde à de nombreux joueurs.</p><ul><li>Compacts : varints, quantification, octets de drapeaux.</li><li>Peuvent être en delta ou conditionnels.</li><li>Réglés à la mesure.</li></ul></div>
+<div class="pick"><h4>État social et économique</h4><p>Marché, courrier, échange, liste de guilde. Envoyés à l'ouverture d'un écran ou quand quelque chose change.</p><ul><li>Toujours l'état complet ; le client remplace sa copie, il n'accumule jamais.</li><li>Des durées (« expire dans 3 600 s »), jamais des dates : aucune horloge à synchroniser.</li><li>Des codes, jamais des phrases (voir <a href="protocol-testing.html#codes-not-words">1.6</a>).</li></ul></div>
+</div>
+<p>Un écran de marché s'ouvre quelques fois par session et pèse quelques kilo-octets. Le rendre idempotent (le même message appliqué deux fois donne le même résultat) vaut bien plus que les octets qu'un delta économiserait : aucune course ne peut laisser un ordre fantôme à l'écran, et une resynchronisation coûte un paquet.</p>
+</div>
+</section>
+
+<section class="sec" id="shared-codecs">
+<div lang="en">
+<h2>Shared codecs: one layout, two readers</h2>
+<p>For a long time, the body of a snapshot object was written by server domain classes (a ship, a bullet) and read by Unity classes (the client's ship, the client's bullet). Two files, in two projects, bound together only by a comment saying "exact mirror of the server's Marshal". Five wire bugs in one optimization session came from that gap, and none of them could be caught by a test, because no test project could reference both sides.</p>
+<p>The fix was to move the <em>layout</em> of the hottest blocks into small codecs in the shared packet library. The server fills a plain struct from its ship and calls <code>Write</code>; the client calls <code>Read</code> and applies the struct. The codec knows nothing about ships. Adding a field adds it for both readers at once, or the client stops compiling.</p>
+</div>
+<div lang="fr">
+<h2>Des codecs partagés : une disposition, deux lecteurs</h2>
+<p>Longtemps, le corps d'un objet de snapshot a été écrit par des classes de domaine du serveur (un vaisseau, une balle) et lu par des classes Unity (le vaisseau du client, la balle du client). Deux fichiers, dans deux projets, liés seulement par un commentaire « miroir exact du Marshal du serveur ». Cinq bugs de fil en une seule session d'optimisation sont venus de cet écart, et aucun ne pouvait être attrapé par un test, puisqu'aucun projet de test ne pouvait référencer les deux côtés.</p>
+<p>La correction a été de déplacer la <em>disposition</em> des blocs les plus chauds dans de petits codecs de la bibliothèque de paquets partagée. Le serveur remplit une structure simple depuis son vaisseau et appelle <code>Write</code> ; le client appelle <code>Read</code> et applique la structure. Le codec ne sait rien d'un vaisseau. Ajouter un champ l'ajoute pour les deux lecteurs d'un coup, ou le client ne compile plus.</p>
+</div>
+<div class="code"><div class="code-head"><span class="file">Packet/Wire/MovementWire.cs</span></div><pre><code data-lang="cs">public struct MovementFields { public double X, Y, Rotation, VelX, VelY, AngularVelocity; }
+
+public static class MovementWire
+{
+    public static void Write(BasePacket p, in MovementFields f)
+    {
+        p.WriteQuantized(f.X, NetworkPrecision.Position);  // 2.5 cm steps
+        p.WriteQuantized(f.Y, NetworkPrecision.Position);
+        p.WriteAngle(f.Rotation);                             // 16-bit fraction of a turn
+        p.WriteQuantized(f.VelX, NetworkPrecision.Velocity);  // 1 cm/s steps
+        p.WriteQuantized(f.VelY, NetworkPrecision.Velocity);
+        p.WriteQuantized(f.AngularVelocity, NetworkPrecision.AngularVelocity);
+    }
+
+    public static MovementFields Read(BasePacket p) => new MovementFields
+    {
+        X = p.ReadQuantized(NetworkPrecision.Position),
+        Y = p.ReadQuantized(NetworkPrecision.Position),
+        Rotation = p.ReadAngle(),
+        VelX = p.ReadQuantized(NetworkPrecision.Velocity),
+        VelY = p.ReadQuantized(NetworkPrecision.Velocity),
+        AngularVelocity = p.ReadQuantized(NetworkPrecision.AngularVelocity),
+    };
+}</code></pre></div>
+<div lang="en">
+<div class="note pitfall"><p class="note-label">Pitfall I hit</p><p>The client once skipped the per-hex block of a ship it could not apply yet with a hard-coded <code>bytesPerPart</code> constant. The server later removed one field from that block. The constant became wrong, the reader desynchronized, and the client threw <code>EndOfStreamException</code> on ships in the middle of a rebuild. It now skips the block by parsing it with the same code as the normal path.</p></div>
+<div class="note rule"><p class="note-label">Rule</p><p>Knowledge of a wire format must exist in exactly one place: the writer/reader pair.</p><p>A constant that "knows" how many bytes a block takes, a second parser written for a special case, a comment that promises a mirror: each is a copy of the format that will not be updated with it.</p></div>
+</div>
+<div lang="fr">
+<div class="note pitfall"><p class="note-label">Piège rencontré</p><p>Le client sautait autrefois le bloc par hex d'un vaisseau qu'il ne pouvait pas encore appliquer, avec une constante <code>bytesPerPart</code> écrite en dur. Le serveur a ensuite retiré un champ de ce bloc. La constante est devenue fausse, le lecteur s'est désynchronisé, et le client levait <code>EndOfStreamException</code> sur les vaisseaux en pleine reconstruction. Il saute maintenant ce bloc en le parsant avec le même code que le chemin normal.</p></div>
+<div class="note rule"><p class="note-label">Règle</p><p>La connaissance d'un format de fil doit exister à un seul endroit : la paire écrivain/lecteur.</p><p>Une constante qui « sait » combien d'octets fait un bloc, un second parseur écrit pour un cas particulier, un commentaire qui promet un miroir : chacun est une copie du format qui ne sera pas mise à jour avec lui.</p></div>
+</div>
+</section>
+
+<section class="sec" id="takeaways">
+<div class="takeaways">
+<div lang="en"><h2>Key takeaways</h2><ul>
+<li>A small fixed header (version, type, reserved byte, payload length) in front of every message lets the receiver reject malformed frames before reading fields.</li>
+<li>Positional payloads are the most compact and the most fragile encoding: append fields at the end, announce optional blocks explicitly.</li>
+<li>Keep writing and reading of one packet in one class, and never reuse a parsed packet to send.</li>
+<li>Use full-state, idempotent packets for anything that is not sent many times a second.</li>
+<li>Put the layout of the hottest blocks in codecs shared by both ends, so that a format change cannot reach only one of them.</li>
+</ul></div>
+<div lang="fr"><h2>À retenir</h2><ul>
+<li>Un petit en-tête fixe (version, type, octet réservé, longueur) devant chaque message permet au récepteur de refuser une trame malformée avant de lire les champs.</li>
+<li>Les charges utiles positionnelles sont l'encodage le plus compact et le plus fragile : ajouter les champs à la fin, annoncer explicitement les blocs optionnels.</li>
+<li>Garder l'écriture et la lecture d'un paquet dans une seule classe, et ne jamais réutiliser un paquet parsé pour envoyer.</li>
+<li>Utiliser des paquets d'état complet et idempotents pour tout ce qui n'est pas envoyé plusieurs fois par seconde.</li>
+<li>Mettre la disposition des blocs les plus chauds dans des codecs partagés par les deux bouts, pour qu'un changement de format ne puisse pas n'en atteindre qu'un.</li>
+</ul></div>
+</div>
+</section>
+
+</div>
+<div data-chapter-foot></div>
+</article>
+</main>
+<aside class="rail" id="mq-rail"></aside>
+</div>
+<footer class="site-footer" id="mq-footer"></footer>
+<script src="assets/js/site-data.js" defer></script>
+<script src="assets/js/glossary-data.js" defer></script>
+<script src="assets/js/app.js" defer></script>
+<script src="assets/js/widgets.js" defer></script>
+</body>
+</html>

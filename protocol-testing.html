@@ -1,0 +1,248 @@
+<!doctype html>
+<html lang="en" data-lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Keeping both ends in agreement · MoonQwak</title>
+<meta name="description" content="A protocol version gate, byte-exact round-trip tests, golden bytes, shared codecs, and codes instead of words.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Chakra+Petch:wght@500;600&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="assets/css/site.css">
+<script>(function(){var r=document.documentElement,l,t;try{l=localStorage.getItem("mq-lang");t=localStorage.getItem("mq-theme");}catch(e){}if(l!=="en"&&l!=="fr"){l=(navigator.language||"").toLowerCase().indexOf("fr")===0?"fr":"en";}r.setAttribute("data-lang",l);r.setAttribute("lang",l);if(t==="light"||t==="dark")r.setAttribute("data-theme",t);})();</script>
+</head>
+<body data-page="protocol-testing">
+<a class="skip-link" href="#main"><span lang="en">Skip to content</span><span lang="fr">Aller au contenu</span></a>
+<header class="site-header" id="mq-header"></header>
+<div class="layout">
+<aside class="sidebar" id="mq-sidebar"></aside>
+<main class="content" id="main">
+<article>
+<header class="chapter-head">
+  <div class="eyebrow" data-auto></div>
+  <h1><span lang="en">Keeping both ends in agreement</span><span lang="fr">Garder les deux bouts d'accord</span></h1>
+  <p class="dek"><span lang="en">A protocol version gate, byte-exact round-trip tests, golden bytes, shared codecs, and codes instead of words.</span><span lang="fr">Une porte de version, des tests aller-retour à l'octet près, des octets d'or, des codecs partagés, et des codes plutôt que des mots.</span></p>
+  <div class="meta-row" data-auto></div>
+</header>
+
+<div class="prose">
+
+<section class="sec" id="costliest-bug">
+<div lang="en">
+<h2>The most expensive bug in the project</h2>
+<p>Every wire format in MoonQwak is written twice: once in <code>Build()</code>, once in <code>ParsePayload()</code>. Nothing forces them to agree. Add a field to the writer and forget the reader, or read two fields in the opposite order, and every field after that point decodes as garbage. There is no schema to catch it and no field name to notice. The symptom appears somewhere else: a hull with absurd health, a stream exception three packets later, a feature that "randomly" stops working.</p>
+<p>This was, by a wide margin, the costliest class of bug in the project, and it gets more expensive with each packet you add. The answer is three independent layers: a version check that keeps mismatched programs apart, tests that prove each packet round-trips, and shared code so that the most complex formats exist only once.</p>
+</div>
+<div lang="fr">
+<h2>Le bug le plus cher du projet</h2>
+<p>Chaque format de fil de MoonQwak est écrit deux fois : une fois dans <code>Build()</code>, une fois dans <code>ParsePayload()</code>. Rien ne les force à être d'accord. Ajoutez un champ à l'écrivain en oubliant le lecteur, ou lisez deux champs dans l'ordre inverse, et chaque champ suivant se décode en bruit. Aucun schéma pour l'attraper, aucun nom de champ pour s'en apercevoir. Le symptôme apparaît ailleurs : une coque à la santé absurde, une exception de flux trois paquets plus loin, une fonctionnalité qui cesse « au hasard » de marcher.</p>
+<p>C'était, de loin, la catégorie de bug la plus coûteuse du projet, et elle coûte plus cher à chaque paquet ajouté. La réponse tient en trois couches indépendantes : une vérification de version qui tient à l'écart les programmes désaccordés, des tests qui prouvent que chaque paquet fait l'aller-retour, et du code partagé pour que les formats les plus complexes n'existent qu'une fois.</p>
+</div>
+</section>
+
+<section class="sec" id="version-gate">
+<div lang="en">
+<h2>A version gate at the door</h2>
+<p>The shared library defines one integer, the protocol version, compiled into every program. The client sends it inside its login packet; the gateway compares it with its own and refuses any difference, in either direction.</p>
+</div>
+<div lang="fr">
+<h2>Une porte de version à l'entrée</h2>
+<p>La bibliothèque partagée définit un entier, la version du protocole, compilée dans chaque programme. Le client l'envoie dans son paquet de login ; la gateway la compare à la sienne et refuse toute différence, dans un sens comme dans l'autre.</p>
+</div>
+<div class="code"><div class="code-head"><span class="file">Gateway/Services/AuthHandlers.cs</span></div><pre><code data-lang="cs">public bool HandleLogin(int peerId, Login packet, Server server)
+{
+    // BEFORE the database, BEFORE the password hash: an outdated client retrying in a
+    // loop must not cost a 100,000-iteration PBKDF2 per attempt.
+    if (packet.Protocol != ProtocolVersion.Current)
+    {
+        var clientBehind = packet.Protocol &lt; ProtocolVersion.Current;
+        // Two codes, because the culprit differs and the player can only fix the first one.
+        server.Send(peerId, new LoginResult(clientBehind ? Code.ClientOutdated : Code.ServerOutdated, ""));
+        return true;
+    }
+    // ... verify credentials, create the session
+}</code></pre></div>
+<div lang="en">
+<p>A few details decide whether such a gate helps or annoys:</p>
+<ul>
+<li><strong>It is checked before anything expensive.</strong> The version comparison costs nothing; the password hash is designed to be slow.</li>
+<li><strong>Strict equality, both ways.</strong> Without schema versioning, a newer client is as dangerous as an older one. But the two refusals carry different codes: telling a player "update your client" when the server is the one behind would send them in circles.</li>
+<li><strong>Old clients are refused with a reason.</strong> A client built before the field existed does not send it; the gateway reads 0, which matches no valid version, so the player sees a proper refusal instead of a login screen that never answers.</li>
+<li><strong>The number changes with every wire change, and only then.</strong> The mechanical rule: if the wire tests had to change, the protocol version changes too. Forgetting lets a client in that should have been refused; bumping it for nothing locks everybody out and is noticed in ten seconds. Neither mistake stays silent for long.</li>
+</ul>
+<p>The launcher knows the protocol of the build it installs, so when the gateway refuses a client, the message can say which build speaks which protocol instead of just "connection refused" (chapter <a href="launcher.html">8.2</a>).</p>
+</div>
+<div lang="fr">
+<p>Quelques détails décident si une telle porte aide ou agace :</p>
+<ul>
+<li><strong>Elle est vérifiée avant tout ce qui coûte.</strong> La comparaison de version ne coûte rien ; le hachage du mot de passe est conçu pour être lent.</li>
+<li><strong>Égalité stricte, dans les deux sens.</strong> Sans versionnage de schéma, un client plus récent est aussi dangereux qu'un plus ancien. Mais les deux refus portent des codes différents : dire « mettez votre client à jour » à un joueur dont le serveur est en retard l'enverrait tourner en rond.</li>
+<li><strong>Les vieux clients sont refusés avec une raison.</strong> Un client compilé avant l'existence du champ ne l'envoie pas ; la gateway lit 0, qui ne correspond à aucune version valide, et le joueur voit un vrai refus au lieu d'un écran de login qui ne répond jamais.</li>
+<li><strong>Le numéro change à chaque changement de fil, et seulement alors.</strong> La règle mécanique : si les tests de fil ont dû changer, la version du protocole change aussi. L'oublier laisse entrer un client qui aurait dû être refusé ; l'incrémenter pour rien bloque tout le monde et se voit en dix secondes. Aucune des deux erreurs ne reste silencieuse longtemps.</li>
+</ul>
+<p>Le launcher connaît le protocole du build qu'il installe : quand la gateway refuse un client, le message peut dire quel build parle quel protocole au lieu d'un simple « connexion refusée » (chapitre <a href="launcher.html">8.2</a>).</p>
+</div>
+<div lang="en">
+<div class="note rule"><p class="note-label">Rule</p><p>Bump the protocol version on every wire change, and on nothing else.</p><p>The gate does not remove the risk of mismatched formats; it bounds it to "refused at login, with a reason", which is the cheapest place for it to show up.</p></div>
+</div>
+<div lang="fr">
+<div class="note rule"><p class="note-label">Règle</p><p>Incrémenter la version du protocole à chaque changement de fil, et à rien d'autre.</p><p>La porte ne supprime pas le risque de formats désaccordés ; elle le borne à « refusé au login, avec une raison », l'endroit le moins cher où il puisse se montrer.</p></div>
+</div>
+</section>
+
+<section class="sec" id="round-trip">
+<div lang="en">
+<h2>Round-trip tests for every packet</h2>
+<p>The test project, <code>WireTest</code>, holds one filled-in sample of each of the roughly 150 packet types and runs four checks against all of them.</p>
+<div class="table-wrap"><table>
+<thead><tr><th>Test</th><th>What it catches</th></tr></thead>
+<tbody>
+<tr><td>Byte-identical round trip</td><td>Serialize, parse, serialize again, and require identical bytes. Catches a field written but not read, or read in another order.</td></tr>
+<tr><td>Fields survive</td><td>Compare every property of the sent and received objects by reflection. Catches a read of the right size into the wrong property, which leaves the bytes perfect.</td></tr>
+<tr><td>Truncated frames</td><td>Feed every prefix of a valid frame to the parser and require a clean refusal. Catches a length check that no longer holds.</td></tr>
+<tr><td>Coverage</td><td>Fail the suite if any packet type has no sample, with the type's name in the message. Also fails if two types share an id.</td></tr>
+</tbody></table></div>
+<p>The byte-identical check is the one that carries the suite. It knows nothing about what the fields mean, so a lazy sample cannot fool it: any field that is written and not read breaks it. The reflection check complements it, because swapping two integers of the same width between writing and reading leaves the bytes identical and only the values show the mistake.</p>
+</div>
+<div lang="fr">
+<h2>Des tests aller-retour pour chaque paquet</h2>
+<p>Le projet de test, <code>WireTest</code>, contient un échantillon rempli de chacun des quelque 150 types de paquets et exécute quatre vérifications sur tous.</p>
+<div class="table-wrap"><table>
+<thead><tr><th>Test</th><th>Ce qu'il attrape</th></tr></thead>
+<tbody>
+<tr><td>Aller-retour à l'octet près</td><td>Sérialiser, parser, resérialiser, et exiger des octets identiques. Attrape un champ écrit mais pas lu, ou lu dans un autre ordre.</td></tr>
+<tr><td>Les champs survivent</td><td>Comparer par réflexion chaque propriété des objets envoyé et reçu. Attrape une lecture de la bonne taille dans la mauvaise propriété, qui laisse les octets parfaits.</td></tr>
+<tr><td>Trames tronquées</td><td>Donner au parseur chaque préfixe d'une trame valide et exiger un refus propre. Attrape une vérification de longueur qui ne tient plus.</td></tr>
+<tr><td>Couverture</td><td>Faire échouer la suite si un type de paquet n'a pas d'échantillon, avec le nom du type dans le message. Échoue aussi si deux types partagent un identifiant.</td></tr>
+</tbody></table></div>
+<p>L'aller-retour à l'octet près est celui qui porte la suite. Il ne sait rien du sens des champs : un échantillon paresseux ne peut pas le tromper, et tout champ écrit mais non lu le casse. La vérification par réflexion le complète, parce qu'intervertir deux entiers de même largeur entre l'écriture et la lecture laisse les octets identiques ; seules les valeurs trahissent l'erreur.</p>
+</div>
+<div class="code"><div class="code-head"><span class="file">WireTest/RoundTripTests.cs · one case per packet type</span></div><pre><code data-lang="cs">// One [Theory] case per packet type rather than one giant [Fact]: a failure names the
+// packet in the test explorer instead of making you read a stack trace.
+[Theory]
+[MemberData(nameof(PacketSamples.Names), MemberType = typeof(PacketSamples))]
+public void RoundTripIsByteIdentical(string name)
+{
+    var c = PacketSamples.Get(name);
+    // serialize → parse → serialize, then compare; the message names the first differing byte
+    WireRoundTrip.AssertIdempotent(c.Factory());
+}
+
+[Theory]
+[MemberData(nameof(PacketSamples.Names), MemberType = typeof(PacketSamples))]
+public void FieldsSurviveTheRoundTrip(string name)
+{
+    var c = PacketSamples.Get(name);
+    var sent = c.Factory();
+    var received = RoundTripDynamic(sent);
+    // every public field and property, by reflection; fields Build() deliberately skips are declared
+    WireRoundTrip.AssertFieldsMatch(sent, received, c.Ignored, c.Tolerance);
+}</code></pre></div>
+<div lang="en">
+<p>Two decisions make the suite age well. The field comparison uses reflection instead of one assertion per field: a test that has to be extended by hand has exactly the weakness of the code it watches. And the coverage test fails when a new packet has no sample, so silencing it requires a deliberate edit, which is to say a review. Samples must use non-default values everywhere: a field left at zero round-trips perfectly even when nobody writes or reads it, and the test would report success on a field it never checked.</p>
+<div class="note rule"><p class="note-label">Rule</p><p>A test that someone must remember to extend has the same weakness as the code it protects. Make the missing case fail by itself.</p></div>
+</div>
+<div lang="fr">
+<p>Deux décisions font bien vieillir la suite. La comparaison des champs passe par la réflexion plutôt que par une assertion par champ : un test qu'il faut penser à étendre a exactement la faiblesse du code qu'il surveille. Et le test de couverture échoue quand un nouveau paquet n'a pas d'échantillon : le faire taire demande une modification délibérée, donc une relecture. Les échantillons doivent utiliser partout des valeurs non nulles : un champ laissé à zéro fait un aller-retour parfait même quand personne ne l'écrit ni ne le lit, et le test annoncerait un succès sur un champ qu'il n'a jamais vérifié.</p>
+<div class="note rule"><p class="note-label">Règle</p><p>Un test qu'il faut penser à étendre a la même faiblesse que le code qu'il protège. Faire échouer le cas manquant de lui-même.</p></div>
+</div>
+</section>
+
+<section class="sec" id="golden-bytes">
+<div lang="en">
+<h2>Golden bytes for shared codecs</h2>
+<p>A round trip proves that a format agrees with itself. It does not prove that it has not changed: a codec that starts writing velocity before position, and reads it in the same new order, passes every round trip and breaks every client already installed. For the shared codecs of the hottest blocks (chapter <a href="packet-format.html#shared-codecs">1.2</a>), the tests therefore compare the output with a fixed hexadecimal string, computed by hand with an independent reference encoder.</p>
+</div>
+<div lang="fr">
+<h2>Des octets d'or pour les codecs partagés</h2>
+<p>Un aller-retour prouve qu'un format est cohérent avec lui-même. Il ne prouve pas qu'il n'a pas changé : un codec qui se met à écrire la vitesse avant la position, et la lit dans ce même nouvel ordre, passe tous les allers-retours et casse chaque client déjà installé. Pour les codecs partagés des blocs les plus chauds (chapitre <a href="packet-format.html#shared-codecs">1.2</a>), les tests comparent donc la sortie à une chaîne hexadécimale fixe, calculée à la main avec un encodeur de référence indépendant.</p>
+</div>
+<div class="code"><div class="code-head"><span class="file">WireTest/WireCodecTests.cs</span></div><pre><code data-lang="cs">[Fact]
+public void MovementGolden()
+{
+    MovementFields f;
+    f.X = 12.5; f.Y = -3.25; f.Rotation = Math.PI / 2;
+    f.VelX = 1.5; f.VelY = -0.75; f.AngularVelocity = 0.25;
+
+    // 12.5×40 = 500 → zig-zag 1000 → 83E8 · −3.25×40 = −130 → 259 → 8103
+    // π/2 = a quarter turn = 16384 → 0040 (ushort, little-endian)
+    // 1.5×100 → 300 → 812C · −0.75×100 → 149 → 8095 · 0.25×1000 → 500 → 81F4
+    var bytes = ProbePacket.Payload(p => MovementWire.Write(p, in f));
+    Assert.Equal("83E881030040812C809581F4", ProbePacket.Hex(bytes));
+}</code></pre></div>
+<div lang="en">
+<p>Changing a scale is still allowed. It simply fails this test on purpose, which is the reminder that the client libraries must be rebuilt and shipped in the same commit. The sample values also avoid exact half steps, because .NET rounds halves to the nearest even number and a test depending on that convention would be testing the convention.</p>
+</div>
+<div lang="fr">
+<p>Changer une échelle reste permis. Ça fait simplement échouer ce test exprès, ce qui rappelle que les bibliothèques du client doivent être recompilées et livrées dans le même commit. Les valeurs d'échantillon évitent aussi les demi-pas exacts, parce que .NET arrondit les moitiés au pair le plus proche et qu'un test qui dépendrait de cette convention testerait la convention.</p>
+</div>
+</section>
+
+<section class="sec" id="blind-spot">
+<div lang="en">
+<h2>What the tests cannot see</h2>
+<p>Snapshots and object details carry bodies written by the server's domain classes and read by the Unity client's classes. The packet library, where the tests live, can reference neither. Those two packets are tested at the layer the library owns (the envelope), with fake objects whose payload imitates the real shape: a flag byte, then a block present only if a bit is set. That covers cursor movement, not agreement on content.</p>
+<p>A round trip on the server alone would not close the gap either: it would prove that the server agrees with itself. The gap is closed piece by piece, by moving each hot block into a shared codec, which is both tested with golden bytes and compiled into the client. What remains outside the codecs is the list of flags and counts that decide which blocks are present.</p>
+</div>
+<div lang="fr">
+<h2>Ce que les tests ne voient pas</h2>
+<p>Les snapshots et les détails d'objets portent des corps écrits par les classes de domaine du serveur et lus par les classes du client Unity. La bibliothèque de paquets, où vivent les tests, ne peut référencer ni les unes ni les autres. Ces deux paquets sont testés à la couche que possède la bibliothèque (l'enveloppe), avec de faux objets dont la charge utile imite la vraie forme : un octet de drapeaux, puis un bloc présent seulement si un bit est levé. Ça couvre le déplacement du curseur, pas l'accord sur le contenu.</p>
+<p>Un aller-retour côté serveur seul ne fermerait pas l'écart non plus : il prouverait que le serveur est d'accord avec lui-même. L'écart se ferme morceau par morceau, en déplaçant chaque bloc chaud dans un codec partagé, à la fois testé en octets d'or et compilé dans le client. Ce qui reste hors des codecs, c'est la liste des drapeaux et des comptes qui décident quels blocs sont présents.</p>
+</div>
+</section>
+
+<section class="sec" id="codes-not-words">
+<div lang="en">
+<h2>The wire speaks no language</h2>
+<p>The last kind of disagreement between the two ends is not about bytes but about meaning. For a while, several messages carried French words: a refusal said "Refusé", a map state change said "Guerre civile" (civil war).</p>
+<div class="note pitfall"><p class="note-label">Pitfall I hit</p><p>To keep a badge up to date, the client compared the received phrase with the label of each value of an enum until one matched. It worked. Translating the game would have switched the badge off silently, without breaking anything visible. A second symptom should have raised the alarm earlier: <code>/selfdestruct</code> had to be added next to <code>/autodestruction</code>, because a French verb is awkward to type for someone else.</p></div>
+<p>The rule that came out of it is the only definitive rule about the wire in the project. A message carries <strong>what</strong> happened (a code), <strong>why</strong> (a <code>Detail</code> byte, which is a value of a shared enum: a refusal reason, an attitude, a map state), and <strong>data</strong> (a player name, a guild name: text typed by a human, untranslatable by nature). It never carries <strong>how to say it</strong>. Commands are parsed on the client and travel as operation codes; the words live only in the client.</p>
+<p>The test is easy to apply to any new field: <em>would translating the game require touching the server?</em> If a <code>string</code> field contains anything other than text a player typed, it is an enum that doesn't know it yet.</p>
+</div>
+<div lang="fr">
+<h2>Le fil ne parle aucune langue</h2>
+<p>Le dernier type de désaccord entre les deux bouts ne porte pas sur les octets mais sur le sens. Pendant un temps, plusieurs messages transportaient des mots français : un refus disait « Refusé », un changement d'état de carte disait « Guerre civile ».</p>
+<div class="note pitfall"><p class="note-label">Piège rencontré</p><p>Pour tenir un badge à jour, le client comparait la phrase reçue au libellé de chaque valeur d'une énumération jusqu'à en trouver une qui corresponde. Ça marchait. Traduire le jeu aurait éteint le badge en silence, sans rien casser de visible. Un second symptôme aurait dû alerter plus tôt : il avait fallu ajouter <code>/selfdestruct</code> à côté de <code>/autodestruction</code>, parce qu'un verbe français est peu pratique à taper pour quelqu'un d'autre.</p></div>
+<p>La règle qui en est sortie est la seule règle définitive du projet sur le fil. Un message porte <strong>ce qui</strong> s'est passé (un code), <strong>pourquoi</strong> (un octet <code>Detail</code>, valeur d'une énumération partagée : une raison de refus, une attitude, un état de carte), et des <strong>données</strong> (un pseudo, un nom de guilde : du texte tapé par un humain, intraduisible par nature). Il ne porte jamais <strong>comment le dire</strong>. Les commandes sont parsées côté client et voyagent en codes d'opération ; les mots ne vivent que dans le client.</p>
+<p>Le test s'applique facilement à tout nouveau champ : <em>est-ce que traduire le jeu obligerait à toucher au serveur ?</em> Si un champ <code>string</code> contient autre chose que du texte tapé par un joueur, c'est une énumération qui s'ignore.</p>
+</div>
+<div lang="en">
+<div class="note rule"><p class="note-label">Rule</p><p>A packet says what happened, why, and with which data. It never says how to phrase it.</p><p>Wording belongs to the client. A server that sends sentences has frozen the game in one language and invited the client to parse them back.</p></div>
+</div>
+<div lang="fr">
+<div class="note rule"><p class="note-label">Règle</p><p>Un paquet dit ce qui s'est passé, pourquoi, et avec quelles données. Il ne dit jamais comment le formuler.</p><p>La formulation appartient au client. Un serveur qui envoie des phrases a figé le jeu dans une langue et invité le client à les reparser.</p></div>
+</div>
+</section>
+
+<section class="sec" id="takeaways">
+<div class="takeaways">
+<div lang="en"><h2>Key takeaways</h2><ul>
+<li>Hand-written formats disagree silently; plan three layers of defence: a version gate, round-trip tests, shared codecs.</li>
+<li>Check the protocol version before any expensive work, with distinct refusals for an old client and an old server.</li>
+<li>Byte-identical round trips catch unread fields; reflection catches swapped fields; coverage tests catch forgotten packets.</li>
+<li>Freeze shared codecs with golden bytes so that a format change is always a deliberate, visible decision.</li>
+<li>Keep human language off the wire: codes, reason enums and player-typed data only.</li>
+</ul></div>
+<div lang="fr"><h2>À retenir</h2><ul>
+<li>Les formats écrits à la main divergent en silence ; prévoir trois couches de défense : porte de version, tests aller-retour, codecs partagés.</li>
+<li>Vérifier la version du protocole avant tout travail coûteux, avec des refus distincts pour un vieux client et un vieux serveur.</li>
+<li>L'aller-retour à l'octet près attrape les champs non lus ; la réflexion attrape les champs intervertis ; la couverture attrape les paquets oubliés.</li>
+<li>Figer les codecs partagés en octets d'or, pour qu'un changement de format soit toujours une décision délibérée et visible.</li>
+<li>Garder la langue humaine hors du fil : des codes, des énumérations de raisons et des données tapées par les joueurs.</li>
+</ul></div>
+</div>
+</section>
+
+</div>
+<div data-chapter-foot></div>
+</article>
+</main>
+<aside class="rail" id="mq-rail"></aside>
+</div>
+<footer class="site-footer" id="mq-footer"></footer>
+<script src="assets/js/site-data.js" defer></script>
+<script src="assets/js/glossary-data.js" defer></script>
+<script src="assets/js/app.js" defer></script>
+<script src="assets/js/widgets.js" defer></script>
+</body>
+</html>

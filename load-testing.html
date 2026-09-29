@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="en" data-lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Load testing an MMO · MoonQwak</title>
+<meta name="description" content="Bots that are real clients, a bench that doesn't fabricate its own failures, and measuring the server rather than the machine.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Chakra+Petch:wght@500;600&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="assets/css/site.css">
+<script>(function(){var r=document.documentElement,l,t;try{l=localStorage.getItem("mq-lang");t=localStorage.getItem("mq-theme");}catch(e){}if(l!=="en"&&l!=="fr"){l=(navigator.language||"").toLowerCase().indexOf("fr")===0?"fr":"en";}r.setAttribute("data-lang",l);r.setAttribute("lang",l);if(t==="light"||t==="dark")r.setAttribute("data-theme",t);})();</script>
+</head>
+<body data-page="load-testing">
+<a class="skip-link" href="#main"><span lang="en">Skip to content</span><span lang="fr">Aller au contenu</span></a>
+<header class="site-header" id="mq-header"></header>
+<div class="layout">
+<aside class="sidebar" id="mq-sidebar"></aside>
+<main class="content" id="main">
+<article>
+<header class="chapter-head">
+  <div class="eyebrow" data-auto></div>
+  <h1><span lang="en">Load testing an MMO</span><span lang="fr">Tester la charge d'un MMO</span></h1>
+  <p class="dek"><span lang="en">Bots that are real clients, a bench that doesn't fabricate its own failures, and measuring the server rather than the machine.</span><span lang="fr">Des bots qui sont de vrais clients, un banc qui ne fabrique pas ses propres pannes, et mesurer le serveur plutôt que la machine.</span></p>
+  <div class="meta-row" data-auto></div>
+</header>
+
+<div class="prose">
+
+<section class="sec" id="what">
+<div lang="en">
+<h2>What a load test must load</h2>
+<p>The first stress tool of the project spawned a hundred NPCs on a map. It loaded the physics and the AI, and it taught a lot (chapter <a href="bench-journal.html">10.4</a>), but it touched nothing that costs <em>per player</em>: serializing a snapshot for each viewer, querying the interest grid for each peer, the bytes going out. A hundred NPCs are one connected peer. What decides the size of an MMO server is the second list, so the real load tool had to be made of <strong>real clients</strong>.</p>
+<p>Each bot runs a complete session, in the same order as the game client: through the gateway, register, log in, list or create a character, select it and receive the game server's address and a token for it; then on the game server, enter the game, receive the map description, answer that it is ready, and send inputs at 20 Hz, forever. Same protocol, same encryption, same handshakes (chapters <a href="login-flow.html">2.2</a> and <a href="handover.html">2.3</a>).</p>
+</div>
+<div lang="fr">
+<h2>Ce qu'un test de charge doit charger</h2>
+<p>Le premier outil de stress du projet faisait apparaître une centaine de PNJ sur une carte. Il chargeait la physique et l'IA, et il a beaucoup appris (chapitre <a href="bench-journal.html">10.4</a>), mais il ne touchait à rien de ce qui coûte <em>par joueur</em> : sérialiser un snapshot pour chaque spectateur, interroger la grille d'intérêt pour chaque pair, les octets qui sortent. Cent PNJ, c'est un seul pair connecté. Ce qui décide de la taille d'un serveur de MMO, c'est la seconde liste : le vrai outil de charge devait donc être fait de <strong>vrais clients</strong>.</p>
+<p>Chaque bot déroule une session complète, dans le même ordre que le client de jeu : par la gateway, s'inscrire, se connecter, lister ou créer un personnage, le sélectionner et recevoir l'adresse du serveur de jeu et un jeton pour s'y connecter ; puis sur le serveur de jeu, entrer en jeu, recevoir la description de la carte, répondre qu'il est prêt, et envoyer des entrées à 20 Hz, pour toujours. Même protocole, même chiffrement, mêmes poignées de main (chapitres <a href="login-flow.html">2.2</a> et <a href="handover.html">2.3</a>).</p>
+</div>
+<figure class="fig fig-scroll">
+<svg viewBox="0 0 760 170" role="img" aria-label="A bot's session: at the gateway, register, login, character list, select, receive address and token; at the game server, enter game, map init, map ready, then inputs at 20 Hz">
+  <defs><marker id="lt-arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="currentColor" opacity="0.7"/></marker></defs>
+  <text class="dg-label" x="20" y="22">Gateway</text>
+  <g class="dg-small">
+    <rect x="20" y="32" width="92" height="30" rx="6" class="dg-box"/><text x="66" y="51" text-anchor="middle">Register</text>
+    <rect x="128" y="32" width="80" height="30" rx="6" class="dg-box"/><text x="168" y="51" text-anchor="middle">Login</text>
+    <rect x="224" y="32" width="112" height="30" rx="6" class="dg-box"/><text x="280" y="51" text-anchor="middle"><tspan lang="en">characters</tspan><tspan lang="fr">personnages</tspan></text>
+    <rect x="352" y="32" width="90" height="30" rx="6" class="dg-box"/><text x="397" y="51" text-anchor="middle"><tspan lang="en">select</tspan><tspan lang="fr">choisir</tspan></text>
+    <rect x="458" y="32" width="160" height="30" rx="6" class="dg-hot"/><text x="538" y="51" text-anchor="middle"><tspan lang="en">address + game token</tspan><tspan lang="fr">adresse + jeton de jeu</tspan></text>
+  </g>
+  <g class="dg-line">
+    <line x1="112" y1="47" x2="124" y2="47" marker-end="url(#lt-arr)"/><line x1="208" y1="47" x2="220" y2="47" marker-end="url(#lt-arr)"/><line x1="336" y1="47" x2="348" y2="47" marker-end="url(#lt-arr)"/><line x1="442" y1="47" x2="454" y2="47" marker-end="url(#lt-arr)"/>
+  </g>
+  <path d="M 538 62 V 84 H 75 V 106" class="dg-line" marker-end="url(#lt-arr)"/>
+  <text class="dg-label" x="740" y="100" text-anchor="end"><tspan lang="en">Game server</tspan><tspan lang="fr">Serveur de jeu</tspan></text>
+  <g class="dg-small">
+    <rect x="20" y="110" width="110" height="30" rx="6" class="dg-box"/><text x="75" y="129" text-anchor="middle">EnterGame</text>
+    <rect x="146" y="110" width="96" height="30" rx="6" class="dg-box"/><text x="194" y="129" text-anchor="middle">MapInit</text>
+    <rect x="258" y="110" width="100" height="30" rx="6" class="dg-box"/><text x="308" y="129" text-anchor="middle">MapReady</text>
+    <rect x="374" y="110" width="170" height="30" rx="6" class="dg-hot"/><text x="459" y="129" text-anchor="middle"><tspan lang="en">inputs at 20 Hz, forever</tspan><tspan lang="fr">entrées à 20 Hz, toujours</tspan></text>
+  </g>
+  <g class="dg-line">
+    <line x1="130" y1="125" x2="142" y2="125" marker-end="url(#lt-arr)"/><line x1="242" y1="125" x2="254" y2="125" marker-end="url(#lt-arr)"/><line x1="358" y1="125" x2="370" y2="125" marker-end="url(#lt-arr)"/>
+  </g>
+  <text class="dg-small" x="459" y="160" text-anchor="middle"><tspan lang="en">snapshots received, never decoded</tspan><tspan lang="fr">snapshots reçus, jamais décodés</tspan></text>
+</svg>
+<figcaption><span lang="en"><strong>A bot is a full session without the game.</strong> Every step the real client takes, in the same order, over the same protocol.</span><span lang="fr"><strong>Un bot est une session complète, sans le jeu.</strong> Chaque étape que fait le vrai client, dans le même ordre, par le même protocole.</span></figcaption>
+</figure>
+<div lang="en">
+<p>Two decisions in how bots are built are worth borrowing:</p>
+<ul>
+<li><strong>Accounts are created through the gateway, not written into the database.</strong> The bench is allowed to write to the database (these are test accounts), but the password hash belongs to the gateway. Re-implementing it in the bench would create a second truth, diverging at the first change of algorithm, for the price of one registration round trip in the life of an account. What the bench <em>does</em> write is pure data: a combat hull, and the admin and invulnerability flags. The admin flag is never grantable from inside the game ("a privilege the game can grant is a privilege an exploit can grant itself"); it is set by hand in the database, and the load tool is that hand. Nothing on the server side gains the power to promote itself.</li>
+<li><strong>Bots do not decode snapshots.</strong> They receive them and throw them away. No world model, no state. The bench runs on the machine that hosts the servers it measures, and parsing hundreds of snapshot streams would take the CPU of the very thing being measured. A load tool must stay light enough not to become the load.</li>
+</ul>
+</div>
+<div lang="fr">
+<p>Deux décisions dans la construction des bots méritent d'être reprises :</p>
+<ul>
+<li><strong>Les comptes sont créés par la gateway, pas écrits en base.</strong> Le banc a le droit d'écrire en base (ce sont des comptes de test), mais le hachage du mot de passe appartient à la gateway. Le réimplémenter dans le banc créerait une seconde vérité, qui divergerait au premier changement d'algorithme, pour le prix d'un aller-retour d'inscription dans la vie d'un compte. Ce que le banc écrit <em>vraiment</em>, c'est de la donnée pure : une coque de combat, et les drapeaux d'administrateur et d'invulnérabilité. Le drapeau d'administrateur n'est jamais accordable depuis le jeu (« un privilège que le jeu peut accorder est un privilège qu'un exploit peut s'accorder ») ; il se pose à la main en base, et l'outil de charge est cette main. Rien côté serveur ne gagne le pouvoir de se promouvoir.</li>
+<li><strong>Les bots ne décodent pas les snapshots.</strong> Ils les reçoivent et les jettent. Aucun modèle du monde, aucun état. Le banc tourne sur la machine qui héberge les serveurs qu'il mesure, et analyser des centaines de flux de snapshots prendrait le CPU de la chose même qu'on mesure. Un outil de charge doit rester assez léger pour ne pas devenir la charge.</li>
+</ul>
+</div>
+</section>
+
+<section class="sec" id="plateau">
+<div lang="en">
+<h2>Measure a plateau, not an arrival storm</h2>
+<p>A number read during a load test is only meaningful if the load was <em>steady</em> when it was read. Several settings exist only to make that true:</p>
+<ul>
+<li><strong>A ramp.</strong> Bots connect one every 250 ms by default. A hundred clients at once measure the arrival storm (logins, character loads, first snapshots), not the steady state. Both are interesting, but not at the same time.</li>
+<li><strong>Invulnerable bots.</strong> Twenty armed bots crossing NPCs die within minutes, respawn docked, and never come out again: the population melts during the measurement, and the report describes a map emptying itself. By default bots cannot be damaged, so the number of peers, the interest sets and the snapshot sizes stay constant. A second mode runs the full damage path (hull loss, debris, wrecks, death), knowing the load will decay.</li>
+<li><strong>Confinement.</strong> A server switch closes the map's borders. Without it, bots fly straight ahead, cross borders within seconds, spread over neighbouring maps, and the bench measures map transitions instead of density.</li>
+<li><strong>Destinations instead of wandering.</strong> The first bots changed heading at random every few seconds, a random walk, and a random walk diffuses: that is its definition. One bench ended with 700 bots on 373 occupied maps, 1.6 players per map.</li>
+</ul>
+<p>That last one changed what the bench could answer. A server pays for two things, and neither depends on how smart the bots are: <strong>maps</strong> (each live map is a full physics world, with a hard limit of about 120 per process) and <strong>neighbourhoods</strong> (a snapshot costs in proportion to what is in view; ten players who see each other are a hundred relations). A bench that disperses measures only the first: "how many empty worlds can a process hold", never "how many players can a battle hold", which is the question that sizes a server. So bots now fly towards a few <strong>hubs</strong>, linger, and leave for another: a random walk with a drift. Few hubs make crowds; many hubs make dispersion. Players per map stopped being an accident and became a dial.</p>
+<div class="note pitfall"><p class="note-label">Pitfall I hit</p><p>The first hub version seeded the bots <em>on</em> the hubs: a thousand bots on three maps. A map lives on exactly one server (chapter <a href="map-hosting.html">7.1</a>), so the fleet could not spread that load: two reinforcement servers started, received zero maps, and stayed empty. Bots are now seeded within a radius around the hubs, and the bench warns when fewer than ten starting maps exist, because the fleet cannot split the load into more pieces than it is given.</p></div>
+</div>
+<div lang="fr">
+<h2>Mesurer un plateau, pas une tempête d'arrivée</h2>
+<p>Un chiffre lu pendant un test de charge n'a de sens que si la charge était <em>stable</em> au moment de la lecture. Plusieurs réglages n'existent que pour que ce soit vrai :</p>
+<ul>
+<li><strong>Une rampe.</strong> Les bots se connectent un toutes les 250 ms par défaut. Cent clients d'un coup mesurent la tempête d'arrivée (connexions, chargements de personnages, premiers snapshots), pas le régime établi. Les deux sont intéressants, mais pas en même temps.</li>
+<li><strong>Des bots invulnérables.</strong> Vingt bots armés qui croisent des PNJ meurent en quelques minutes, réapparaissent à quai, et n'en ressortent plus : la population fond pendant la mesure, et le rapport décrit une carte qui se vide. Par défaut, les bots ne peuvent pas subir de dégâts : le nombre de pairs, les ensembles d'intérêt et la taille des snapshots restent constants. Un second mode suit le chemin de dégâts complet (perte d'hex, débris, épaves, mort), en sachant que la charge va décroître.</li>
+<li><strong>Le confinement.</strong> Un interrupteur du serveur ferme les bords de la carte. Sans lui, les bots volent tout droit, franchissent des bords en quelques secondes, se répandent sur les cartes voisines, et le banc mesure des changements de carte au lieu de la densité.</li>
+<li><strong>Des destinations au lieu de l'errance.</strong> Les premiers bots changeaient de cap au hasard toutes les quelques secondes, une marche aléatoire, et une marche aléatoire diffuse : c'est sa définition. Un banc s'est terminé avec 700 bots sur 373 cartes occupées, 1,6 joueur par carte.</li>
+</ul>
+<p>Ce dernier point a changé ce à quoi le banc pouvait répondre. Un serveur paie deux choses, et aucune ne dépend de l'intelligence des bots : les <strong>cartes</strong> (chaque carte vivante est un monde physique complet, avec une limite dure d'environ 120 par processus) et les <strong>voisinages</strong> (un snapshot coûte en proportion de ce qui est en vue ; dix joueurs qui se voient, ce sont cent relations). Un banc qui disperse ne mesure que le premier : « combien de mondes vides un processus peut-il tenir », jamais « combien de joueurs une bataille peut-elle tenir », qui est la question qui dimensionne un serveur. Les bots volent donc maintenant vers quelques <strong>pôles</strong>, s'y attardent, puis repartent vers un autre : une marche aléatoire avec dérive. Peu de pôles font des foules ; beaucoup de pôles font de la dispersion. Les joueurs par carte ont cessé d'être un accident pour devenir un cadran.</p>
+<div class="note pitfall"><p class="note-label">Piège rencontré</p><p>La première version des pôles semait les bots <em>sur</em> les pôles : mille bots sur trois cartes. Une carte vit sur exactement un serveur (chapitre <a href="map-hosting.html">7.1</a>) : le parc ne pouvait pas répartir cette charge. Deux serveurs de renfort ont démarré, n'ont reçu aucune carte, et sont restés vides. Les bots sont maintenant semés dans un rayon autour des pôles, et le banc prévient quand il existe moins de dix cartes de départ, parce que le parc ne peut pas découper la charge en plus de morceaux qu'on ne lui en donne.</p></div>
+</div>
+</section>
+
+<section class="sec" id="self-inflicted">
+<div lang="en">
+<h2>A bench that fabricates its own failures</h2>
+<p>The hardest lesson of load testing is that the bench runs on a real machine, often the same one as the server, and it can fail in ways that look exactly like the server failing. Each of the following was, at first, reported as a server problem:</p>
+</div>
+<div lang="fr">
+<h2>Un banc qui fabrique ses propres pannes</h2>
+<p>La leçon la plus dure des tests de charge est que le banc tourne sur une vraie machine, souvent la même que le serveur, et qu'il peut échouer de façons qui ressemblent exactement à une panne du serveur. Chacun des cas suivants a d'abord été rapporté comme un problème de serveur :</p>
+</div>
+<ol class="timeline">
+<li><span class="tl-tag"><span lang="en">priority</span><span lang="fr">priorité</span></span><div><h3><span lang="en">Bots stealing the server's CPU</span><span lang="fr">Des bots qui volent le CPU du serveur</span></h3><p><span lang="en">400 bots are 400 to 800 network threads waking up constantly. At equal priority they take scheduler quanta from the tick thread, and the monitor headlined "worst tick 239 ms" for 28 ms of actual work. The bench now runs below normal priority by default: the server goes first, since it is what is being measured. Normal priority remains available, to measure behaviour under contention, which is a different question.</span><span lang="fr">400 bots, ce sont 400 à 800 threads réseau qui se réveillent sans arrêt. À priorité égale, ils prennent des quanta d'ordonnancement au thread de tick, et le moniteur titrait « pire tick 239 ms » pour 28 ms de travail réel. Le banc tourne maintenant en priorité sous la normale par défaut : le serveur passe d'abord, puisque c'est lui qu'on mesure. La priorité normale reste disponible, pour mesurer la tenue sous contention, qui est une autre question.</span></p></div></li>
+<li><span class="tl-tag"><span lang="en">threads</span><span lang="fr">threads</span></span><div><h3><span lang="en">1,400 threads to read 700 bots</span><span lang="fr">1 400 threads pour lire 700 bots</span></h3><p><span lang="en">Each connection had its own polling thread, two per bot: 1,400 threads, each woken every 15 ms. The scheduler could not keep up, bots were disconnected for not being read in time, and the report said "640 × GameServer: Timeout", as if the server had given up. A few pump threads (a quarter of the cores, at least two) now read all sockets in slices, and each connection is read hundreds of times per second.</span><span lang="fr">Chaque connexion avait son propre thread d'écoute, deux par bot : 1 400 threads, chacun réveillé toutes les 15 ms. L'ordonnanceur ne suivait pas, les bots étaient déconnectés faute d'être lus à temps, et le rapport affichait « 640 × GameServer : Timeout », comme si le serveur avait lâché. Quelques threads de pompe (un quart des cœurs, au moins deux) lisent maintenant toutes les sockets par tranches, et chaque connexion est lue des centaines de fois par seconde.</span></p></div></li>
+<li><span class="tl-tag"><span lang="en">fairness</span><span lang="fr">équité</span></span><div><h3><span lang="en">One busy socket starving 279 others</span><span lang="fr">Une socket occupée qui affame les 279 autres</span></h3><p><span lang="en">With shared pumps, the transport library's default let one poll swallow 256 packets in a row. A bot that had just changed maps received a discovery burst and a 15 KB first snapshot; its queue was the only full one, and it ate the turn of the 279 others, which fell behind in turn. Measured: 47,000 pump passes per second at rest, 318 at the first map change, zero three seconds later, without a single exception. A cap of eight packets per poll and per connection loses nothing (what is not read this turn is read on the next) and ends the cascade.</span><span lang="fr">Avec des pompes partagées, le défaut de la bibliothèque de transport laissait un seul relevé avaler 256 paquets d'affilée. Un bot qui venait de changer de carte recevait une rafale de découverte et un premier snapshot de 15 Ko ; sa file était la seule pleine, et elle mangeait le tour des 279 autres, qui prenaient du retard à leur tour. Mesuré : 47 000 passes de pompe par seconde au repos, 318 au premier changement de carte, zéro trois secondes plus tard, sans une seule exception. Un plafond de huit paquets par relevé et par connexion ne perd rien (ce qui n'est pas lu à ce tour l'est au suivant) et met fin à la cascade.</span></p></div></li>
+<li><span class="tl-tag"><span lang="en">patience</span><span lang="fr">patience</span></span><div><h3><span lang="en">A bench more impatient than the client</span><span lang="fr">Un banc plus impatient que le client</span></h3><p><span lang="en">On a map change, the game server drops the old connection 300 ms after announcing the transition, betting that the new one is already up. The bet can lose when the destination map must first be loaded somewhere. The real client knows this and concludes nothing for two seconds; the bench concluded within a millisecond, and reported 136 desertions that never happened. It now waits the same two seconds. A bench more impatient than the client it simulates measures its own impatience.</span><span lang="fr">Lors d'un changement de carte, le serveur de jeu coupe l'ancienne connexion 300 ms après avoir annoncé la transition, en pariant que la nouvelle est déjà établie. Le pari peut se perdre quand la carte de destination doit d'abord être chargée quelque part. Le vrai client le sait et ne conclut rien pendant deux secondes ; le banc concluait en une milliseconde, et rapportait 136 désertions qui n'avaient jamais eu lieu. Il attend maintenant les mêmes deux secondes. Un banc plus impatient que le client qu'il simule mesure sa propre impatience.</span></p></div></li>
+<li><span class="tl-tag"><span lang="en">accounts</span><span lang="fr">comptes</span></span><div><h3><span lang="en">Two benches kicking each other</span><span lang="fr">Deux bancs qui s'éjectent l'un l'autre</span></h3><p><span lang="en">The server ends the previous session whenever an account logs in again (chapter <a href="login-flow.html">2.2</a>). Two people running the bench with the same account prefix drive the <em>same</em> accounts, kick each other in a loop, and the population never holds, which looks exactly like a server that cannot cope. The launcher script now asks each person for a unique prefix.</span><span lang="fr">Le serveur met fin à la session précédente chaque fois qu'un compte se reconnecte (chapitre <a href="login-flow.html">2.2</a>). Deux personnes qui lancent le banc avec le même préfixe de comptes pilotent les <em>mêmes</em> comptes, s'éjectent l'une l'autre en boucle, et la population ne tient jamais, ce qui ressemble exactement à un serveur qui ne suit pas. Le script de lancement demande maintenant à chacun un préfixe unique.</span></p></div></li>
+<li><span class="tl-tag"><span lang="en">database</span><span lang="fr">base</span></span><div><h3><span lang="en">Setup written into the wrong database</span><span lang="fr">Une préparation écrite dans la mauvaise base</span></h3><p><span lang="en">Before connecting, the bench writes to the database named in its own configuration: account flags, the combat hull, the hubs. Against a remote server, that can be a different database. The writes then <em>succeed</em>, in the wrong place, and the bots arrive mortal and unarmed without a line saying so. The bench cannot check that the two databases are the same, so it says so out loud when the target is remote.</span><span lang="fr">Avant de se connecter, le banc écrit dans la base nommée par sa propre configuration : drapeaux des comptes, coque de combat, pôles. Contre un serveur distant, ce peut être une autre base. Les écritures <em>réussissent</em> alors, au mauvais endroit, et les bots arrivent mortels et désarmés sans qu'une ligne le dise. Le banc ne peut pas vérifier que les deux bases sont la même : il le dit à voix haute quand la cible est distante.</span></p></div></li>
+</ol>
+<div lang="en"><div class="note rule"><p class="note-label">Rule</p><p>Before blaming the server, prove the bench is not the bottleneck: its priority, its threads, its fairness, its patience and its setup.</p></div></div>
+<div lang="fr"><div class="note rule"><p class="note-label">Règle</p><p>Avant d'accuser le serveur, prouver que le banc n'est pas le goulot : sa priorité, ses threads, son équité, sa patience et sa préparation.</p></div></div>
+</section>
+
+<section class="sec" id="bench-instruments">
+<div lang="en">
+<h2>Instruments for the bench itself</h2>
+<p>A bench needs its own instruments, precisely to tell its failures from the server's. The load tool prints one status line per second, deliberately short: how many bots are in the world, connecting or failed, and why; snapshots received per second; and three numbers about itself that settle the ambiguous cases:</p>
+<div class="table-wrap"><table>
+<thead><tr><th>Reading</th><th>Meaning</th><th>Look at</th></tr></thead>
+<tbody>
+<tr><td>Pump passes high, snapshots received near zero</td><td>The bench reads its sockets and they are empty</td><td>The server, or the network</td></tr>
+<tr><td>Pump passes collapsed</td><td>The bench's own threads are not being scheduled</td><td>The thread count on the same line</td></tr>
+<tr><td>Worst poll in milliseconds</td><td>One client eats the pump's turn</td><td>Its index, printed next to it</td></tr>
+<tr><td>Worst poll in microseconds while the rate collapses</td><td>The work is spread evenly; the machine is saturated</td><td>Scheduling and priorities</td></tr>
+<tr><td>Process thread count in the thousands</td><td>The transport library creates its own threads per connection manager: 700 bots with two connections each are 1,400 managers</td><td>The bench manufactures the starvation it blames on the server</td></tr>
+<tr><td>Inputs dropped per second</td><td>Time bots spend without a game connection</td><td>A few dozen during map changes is normal; a steady flow at rest means sessions never reopened</td></tr>
+</tbody></table></div>
+<p>Before the pump counter existed, the two first rows looked identical: bots dying of timeouts and snapshots collapsing. They call for opposite fixes, and without the counter the choice was a guess. It was guessed three times.</p>
+<div class="note measured"><p class="note-label">Measured</p><p>The verdict of a load test is not in the bench's output. The numbers that matter (tick work, snapshot build, bytes out, connected peers, GC pauses) are measured on the server and read in the monitor (chapter <a href="observability.html">10.1</a>). The bench only has to prove that the load it claims is the load the server received.</p></div>
+</div>
+<div lang="fr">
+<h2>Des instruments pour le banc lui-même</h2>
+<p>Un banc a besoin de ses propres instruments, justement pour distinguer ses pannes de celles du serveur. L'outil de charge imprime une ligne d'état par seconde, volontairement courte : combien de bots sont dans le monde, en cours de connexion ou en échec, et pourquoi ; les snapshots reçus par seconde ; et trois nombres sur lui-même qui tranchent les cas ambigus :</p>
+<div class="table-wrap"><table>
+<thead><tr><th>Lecture</th><th>Sens</th><th>Regarder</th></tr></thead>
+<tbody>
+<tr><td>Passes de pompe élevées, snapshots reçus proches de zéro</td><td>Le banc lit ses sockets et elles sont vides</td><td>Le serveur, ou le réseau</td></tr>
+<tr><td>Passes de pompe effondrées</td><td>Les threads du banc ne sont pas ordonnancés</td><td>Le nombre de threads sur la même ligne</td></tr>
+<tr><td>Pire relevé en millisecondes</td><td>Un client mange le tour de la pompe</td><td>Son index, imprimé à côté</td></tr>
+<tr><td>Pire relevé en microsecondes pendant que le débit s'effondre</td><td>Le travail est réparti ; la machine est saturée</td><td>L'ordonnancement et les priorités</td></tr>
+<tr><td>Nombre de threads du processus par milliers</td><td>La bibliothèque de transport crée ses propres threads par gestionnaire de connexions : 700 bots à deux connexions, ce sont 1 400 gestionnaires</td><td>Le banc fabrique la famine qu'il reproche au serveur</td></tr>
+<tr><td>Entrées perdues par seconde</td><td>Le temps passé par les bots sans connexion de jeu</td><td>Quelques dizaines pendant les changements de carte, c'est normal ; un flot continu au repos veut dire que des sessions ne se sont jamais rouvertes</td></tr>
+</tbody></table></div>
+<p>Avant que le compteur de pompe existe, les deux premières lignes se ressemblaient trait pour trait : des bots qui meurent de délais dépassés et des snapshots qui s'effondrent. Elles appellent des corrections opposées, et sans le compteur le choix était une devinette. On a deviné trois fois.</p>
+<div class="note measured"><p class="note-label">Mesuré</p><p>Le verdict d'un test de charge n'est pas dans la sortie du banc. Les chiffres qui comptent (travail du tick, construction des snapshots, octets sortants, pairs connectés, pauses du GC) sont mesurés sur le serveur et lus dans le moniteur (chapitre <a href="observability.html">10.1</a>). Le banc n'a qu'à prouver que la charge qu'il annonce est bien celle que le serveur a reçue.</p></div>
+</div>
+</section>
+
+<section class="sec" id="transitions">
+<div lang="en">
+<h2>Map changes: a latency, not a rate</h2>
+<p>Moving a bot to another map means closing one connection and opening another: joining the transport library's internal thread, binding a socket, a handshake. Getting this right cost three benches, and the story is a good lesson about throttles.</p>
+<ol class="timeline">
+<li><span class="tl-tag">1</span><div><h3>Inline on the pump</h3><p>The move ran on the pump thread that also reads 140 other bots. A wave of map changes froze 140 sockets at once, including those of bots waiting for their own reconnection message: the "connecting" counter climbed and never came down. Moves now run on one dedicated thread.</p></div></li>
+<li><span class="tl-tag">2</span><div><h3>A fixed gap</h3><p>Paced at 40 moves per second, one every 25 ms. Perfect with three in the queue, deadly with twenty-seven: the last one waited 675 ms, and the server drops the old connection 300 ms after announcing the move. The pacing meant to protect the server condemned half the queue.</p></div></li>
+<li><span class="tl-tag">3</span><div><h3>A gap that shrinks without limit</h3><p>Now the rule was a latency: the last in the queue must leave within 200 ms (the server's 300 ms, minus the cost of the move itself). At 67 pending, the gap fell to 3 ms, about 300 connection teardowns and rebuilds per second, each joining and recreating a thread. The server printed a slow tick of 1,111.8 ms, 1,108.8 of them preparing snapshots, for 0.0 ms of CPU: it was starved of threads, not busy. Worse, it looped: the storm froze the server, the freeze lengthened the queue, the queue shortened the gap, the gap fed the storm.</p></div></li>
+<li><span class="tl-tag win">4</span><div><h3>A latency with a floor</h3><p>The gap aims at the 200 ms budget for the whole queue, but never drops below 10 ms: at most 100 moves per second, whatever happens to the queue. Below that floor, the bench would be measuring the scheduler.</p></div></li>
+</ol>
+</div>
+<div lang="fr">
+<h2>Changements de carte : une latence, pas un débit</h2>
+<p>Déplacer un bot vers une autre carte, c'est fermer une connexion et en ouvrir une autre : joindre le thread interne de la bibliothèque de transport, lier une socket, une poignée de main. Le faire correctement a coûté trois bancs, et l'histoire est une bonne leçon sur les limiteurs de débit.</p>
+<ol class="timeline">
+<li><span class="tl-tag">1</span><div><h3>En ligne sur la pompe</h3><p>Le déménagement tournait sur le thread de pompe qui lit aussi 140 autres bots. Une vague de changements de carte gelait 140 sockets d'un coup, y compris celles des bots qui attendaient leur propre message de reconnexion : le compteur « en cours » montait et ne redescendait jamais. Les déménagements tournent maintenant sur un thread dédié.</p></div></li>
+<li><span class="tl-tag">2</span><div><h3>Un intervalle fixe</h3><p>Cadencé à 40 déménagements par seconde, un toutes les 25 ms. Parfait avec trois en file, mortel avec vingt-sept : le dernier attendait 675 ms, et le serveur coupe l'ancienne connexion 300 ms après avoir annoncé le déménagement. La cadence censée protéger le serveur condamnait la moitié de la file.</p></div></li>
+<li><span class="tl-tag">3</span><div><h3>Un intervalle qui rétrécit sans limite</h3><p>La règle devenait une latence : le dernier de la file doit partir en moins de 200 ms (les 300 ms du serveur, moins le coût du déménagement lui-même). À 67 en attente, l'intervalle tombait à 3 ms, environ 300 fermetures et reconstructions de connexion par seconde, chacune joignant et recréant un thread. Le serveur imprimait un tick lent de 1 111,8 ms, dont 1 108,8 à préparer les snapshots, pour 0,0 ms de CPU : il manquait de threads, il n'était pas occupé. Pire, cela bouclait : la tempête gelait le serveur, le gel allongeait la file, la file raccourcissait l'intervalle, l'intervalle nourrissait la tempête.</p></div></li>
+<li><span class="tl-tag win">4</span><div><h3>Une latence avec un plancher</h3><p>L'intervalle vise le budget de 200 ms pour toute la file, mais ne descend jamais sous 10 ms : au plus 100 déménagements par seconde, quoi qu'il arrive à la file. Sous ce plancher, le banc mesurerait l'ordonnanceur.</p></div></li>
+</ol>
+</div>
+<div class="code"><div class="code-head"><span class="file">Qwak.LoadTest/Program.cs · the transition gap</span></div><pre><code data-lang="cs">const int TransitionBudgetMs = 200;  // the server's 300 ms grace, minus the move itself
+const int TransitionFloorMs  = 10;   // never more than 100 moves per second
+
+// Count first: the gap is chosen for the whole queue, not recomputed per departure.
+var gap = pending &gt; 1
+    ? Math.Max(TransitionFloorMs,  // the floor always wins
+               Math.Min(transitionGapMs, TransitionBudgetMs / pending))
+    : transitionGapMs;  // 25 ms at the default 40/s</code></pre></div>
+<div lang="en">
+<p>One more observation made the whole problem smaller: 700 bots changing maps in the same second do not exist. They all start from the same spawn area and reach the borders in waves, an artifact of the bench, not a load a real population produces. Spreading them measures the right regime. The rate can still be raised on purpose to test a genuine burst (a whole fleet jumping together does exist), but that is a different experiment.</p>
+<div class="note rule"><p class="note-label">Rule</p><p>A throttle that protects a deadline must be expressed as a latency, and bounded by a floor.</p><p>A fixed rate misses the deadline under bursts; an unbounded latency target turns a burst into a storm. A fix that feeds itself is worse than the defect it replaces, because it has no point of equilibrium.</p></div>
+</div>
+<div lang="fr">
+<p>Une observation de plus a rendu tout le problème plus petit : 700 bots qui changent de carte à la même seconde, ça n'existe pas. Ils partent tous de la même zone d'apparition et atteignent les bords par vagues, un artefact du banc, pas une charge que produit une vraie population. Les étaler, c'est mesurer le bon régime. La cadence peut toujours être montée exprès pour tester une vraie rafale (une flotte entière qui saute ensemble, ça existe), mais c'est une autre expérience.</p>
+<div class="note rule"><p class="note-label">Règle</p><p>Un limiteur qui protège une échéance doit s'exprimer en latence, et être borné par un plancher.</p><p>Un débit fixe rate l'échéance sous rafale ; une cible de latence sans borne transforme une rafale en tempête. Une correction qui s'auto-alimente est pire que le défaut qu'elle remplace, parce qu'elle n'a pas de point d'équilibre.</p></div>
+</div>
+</section>
+
+<section class="sec" id="remote">
+<div lang="en">
+<h2>Benching from somewhere else</h2>
+<p>A local bench cannot measure the network: every packet goes through the loopback interface, with no latency, no loss and no upload limit. So the bench can also run from another machine, against the public address of the servers, and the launcher is a small script meant to be handed to a friend. It is written defensively, because its user will not have the code: no accented characters in the file (a script re-saved in the wrong encoding breaks at the first accented line, with a message that does not say why), quoted assignments (a trailing space would otherwise become part of the address, and an address with an invisible space at the end does not resolve), a unique account prefix, and "start small, then climb in steps". The target is given on the command line rather than in the shared configuration file, because a one-off test against another machine should die with its window instead of lingering in a file that three other processes read.</p>
+</div>
+<div lang="fr">
+<h2>Tester depuis ailleurs</h2>
+<p>Un banc local ne peut pas mesurer le réseau : chaque paquet passe par l'interface de bouclage, sans latence, sans perte et sans limite de débit montant. Le banc peut donc aussi tourner depuis une autre machine, contre l'adresse publique des serveurs, et le lanceur est un petit script fait pour être confié à un ami. Il est écrit de façon défensive, parce que son utilisateur n'aura pas le code : aucun caractère accentué dans le fichier (un script réenregistré dans le mauvais encodage casse à la première ligne accentuée, avec un message qui ne dit pas pourquoi), des affectations entre guillemets (sinon une espace en fin de ligne ferait partie de l'adresse, et une adresse avec une espace invisible au bout ne se résout pas), un préfixe de comptes unique, et « commencer petit, puis monter par paliers ». La cible se donne sur la ligne de commande plutôt que dans le fichier de configuration partagé, parce qu'un essai ponctuel contre une autre machine doit mourir avec sa fenêtre au lieu de traîner dans un fichier que trois autres processus lisent.</p>
+</div>
+</section>
+
+<section class="sec" id="takeaways">
+<div class="takeaways">
+<div lang="en"><h2>Key takeaways</h2><ul>
+<li>Load what costs per player: bots must be real clients running full sessions over the real protocol.</li>
+<li>Create accounts through the real entry point; write only pure data directly, and never grant privileges from inside the game.</li>
+<li>Keep bots light: receive snapshots, never decode them, or the bench becomes the load.</li>
+<li>Measure plateaus: ramp connections, keep the population alive, confine or concentrate it, and make players-per-map a setting.</li>
+<li>Lower the bench's priority, share a few pump threads, cap per-poll work, and watch the bench's own thread count.</li>
+<li>Be exactly as patient as the real client, and use unique account prefixes per bench.</li>
+<li>Express throttles as latencies with a floor; a self-feeding fix has no equilibrium.</li>
+</ul></div>
+<div lang="fr"><h2>À retenir</h2><ul>
+<li>Charger ce qui coûte par joueur : les bots doivent être de vrais clients qui déroulent des sessions complètes sur le vrai protocole.</li>
+<li>Créer les comptes par le vrai point d'entrée ; n'écrire directement que de la donnée pure, et ne jamais accorder de privilèges depuis le jeu.</li>
+<li>Garder les bots légers : recevoir les snapshots, ne jamais les décoder, sinon le banc devient la charge.</li>
+<li>Mesurer des plateaux : étaler les connexions, garder la population en vie, la confiner ou la concentrer, et faire des joueurs par carte un réglage.</li>
+<li>Baisser la priorité du banc, partager quelques threads de pompe, plafonner le travail par relevé, et surveiller le nombre de threads du banc lui-même.</li>
+<li>Être exactement aussi patient que le vrai client, et utiliser des préfixes de comptes uniques par banc.</li>
+<li>Exprimer les limiteurs en latences avec un plancher ; une correction qui s'auto-alimente n'a pas d'équilibre.</li>
+</ul></div>
+</div>
+</section>
+
+</div>
+<div data-chapter-foot></div>
+</article>
+</main>
+<aside class="rail" id="mq-rail"></aside>
+</div>
+<footer class="site-footer" id="mq-footer"></footer>
+<script src="assets/js/site-data.js" defer></script>
+<script src="assets/js/glossary-data.js" defer></script>
+<script src="assets/js/app.js" defer></script>
+<script src="assets/js/widgets.js" defer></script>
+</body>
+</html>

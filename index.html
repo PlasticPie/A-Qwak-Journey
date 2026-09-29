@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en" data-lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>MoonQwak</title>
+<meta name="description" content="MMO architecture field notes: a custom UDP protocol, an authoritative 25 Hz simulation, interest management, prediction, persistence, a self-sizing fleet and a self-updating launcher, with the mistakes and the measurements.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Chakra+Petch:wght@500;600&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="assets/css/site.css">
+<script>(function(){var r=document.documentElement,l,t;try{l=localStorage.getItem("mq-lang");t=localStorage.getItem("mq-theme");}catch(e){}if(l!=="en"&&l!=="fr"){l=(navigator.language||"").toLowerCase().indexOf("fr")===0?"fr":"en";}r.setAttribute("data-lang",l);r.setAttribute("lang",l);if(t==="light"||t==="dark")r.setAttribute("data-theme",t);})();</script>
+</head>
+<body data-page="index">
+<a class="skip-link" href="#main"><span lang="en">Skip to content</span><span lang="fr">Aller au contenu</span></a>
+<header class="site-header" id="mq-header"></header>
+<div class="layout full">
+<aside class="sidebar" id="mq-sidebar"></aside>
+<main class="content" id="main">
+
+<section class="home-hero">
+<div>
+  <p class="kicker"><span lang="en">MMO architecture field notes · ongoing solo project</span><span lang="fr">Carnets d'architecture MMO · projet solo en cours</span></p>
+  <h1><span lang="en">Building an MMO backend, decision by decision</span><span lang="fr">Construire le backend d'un MMO, décision par décision</span></h1>
+  <p class="dek"><span lang="en">Notes from MoonQwak, an ongoing project by one developer, self-taught in MMO architecture, who wanted to find out how far one person can go. From a custom UDP protocol to a server fleet that sizes itself: what I built, what broke, what the measurements said, and what I decided. Shared for learning, not as the way it must be done.</span><span lang="fr">Les carnets de MoonQwak, un projet en cours mené par un seul développeur, autodidacte en architecture de MMO, qui voulait savoir jusqu'où une personne seule peut aller. D'un protocole UDP maison à un parc de serveurs qui se dimensionne seul : ce que j'ai construit, ce qui a cassé, ce qu'ont dit les mesures, et ce que j'ai décidé. Partagé pour apprendre, pas comme la façon dont il faut faire.</span></p>
+  <div class="hero-actions">
+    <a class="btn primary" href="start-here.html"><span lang="en">Start here</span><span lang="fr">Commencer ici</span> →</a>
+    <a class="btn" href="topics.html"><span lang="en">Browse by topic</span><span lang="fr">Parcourir par thème</span></a>
+    <a class="btn" href="lessons.html"><span lang="en">Rules of thumb</span><span lang="fr">Règles d'or</span></a>
+  </div>
+</div>
+<figure class="hero-map">
+<svg viewBox="0 0 520 380" role="img" aria-label="The system on one screen: update server and launcher, game client, gateway, game servers, database, world simulation, node agents and monitor, with messages flowing between them" data-flow>
+  <defs><marker id="hm-arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="currentColor" opacity="0.6"/></marker></defs>
+  <path d="M82 56 L82 84" class="dg-line" marker-end="url(#hm-arr)" data-flow-path data-flow-class="alt" data-flow-rate="0.6" data-flow-speed="40"/>
+  <path d="M82 126 L82 166" class="dg-line" marker-end="url(#hm-arr)"/>
+  <path d="M148 184 L368 158" class="dg-line" marker-end="url(#hm-arr)" data-flow-path data-flow-rate="2.4" data-flow-speed="150"/>
+  <path d="M368 178 L150 204" class="dg-line" marker-end="url(#hm-arr)" data-flow-path data-flow-class="alt" data-flow-rate="3" data-flow-speed="150"/>
+  <path d="M110 226 C 110 262, 150 274, 192 274" class="dg-line" marker-end="url(#hm-arr)" data-flow-path data-flow-rate="0.4" data-flow-speed="70"/>
+  <path d="M328 264 C 360 264, 380 240, 396 206" class="dg-line" marker-end="url(#hm-arr)" data-flow-path data-flow-rate="0.5" data-flow-speed="70"/>
+  <path d="M420 206 C 420 280, 380 330, 332 340" class="dg-line" marker-end="url(#hm-arr)" data-flow-path data-flow-class="alt2" data-flow-rate="0.8" data-flow-speed="70"/>
+  <path d="M262 300 L262 320" class="dg-line" marker-end="url(#hm-arr)"/>
+  <path d="M148 344 L192 344" class="dg-line" marker-end="url(#hm-arr)" data-flow-path data-flow-class="alt2" data-flow-rate="0.2" data-flow-speed="40"/>
+  <path d="M470 322 L470 208" class="dg-line" marker-end="url(#hm-arr)"/>
+  <path d="M470 128 L470 60" class="dg-line" marker-end="url(#hm-arr)" data-flow-path data-flow-class="alt" data-flow-rate="1" data-flow-speed="40"/>
+  <text class="dg-small" x="258" y="160" text-anchor="middle"><tspan lang="en">inputs</tspan><tspan lang="fr">entrées</tspan></text>
+  <text class="dg-small" x="258" y="214" text-anchor="middle"><tspan lang="en">snapshots, 25/s</tspan><tspan lang="fr">snapshots, 25/s</tspan></text>
+
+  <rect x="16" y="16" width="132" height="40" rx="7" class="dg-box"/>
+  <text class="dg-small" x="82" y="40" text-anchor="middle" font-weight="700" style="fill:var(--ink)"><tspan lang="en">Update server</tspan><tspan lang="fr">Serveur de MAJ</tspan></text>
+  <rect x="16" y="86" width="132" height="40" rx="7" class="dg-box"/>
+  <text class="dg-small" x="82" y="110" text-anchor="middle" font-weight="700" style="fill:var(--ink)">Launcher</text>
+  <rect x="16" y="168" width="132" height="58" rx="7" class="dg-hot"/>
+  <text class="dg-text" x="82" y="192" text-anchor="middle" font-weight="700"><tspan lang="en">Game client</tspan><tspan lang="fr">Client de jeu</tspan></text>
+  <text class="dg-small" x="82" y="210" text-anchor="middle"><tspan lang="en">predicts, renders</tspan><tspan lang="fr">prédit, affiche</tspan></text>
+
+  <rect x="196" y="250" width="132" height="50" rx="7" class="dg-box-2"/>
+  <text class="dg-text" x="262" y="272" text-anchor="middle" font-weight="700">Gateway</text>
+  <text class="dg-small" x="262" y="289" text-anchor="middle"><tspan lang="en">login, placement</tspan><tspan lang="fr">login, placement</tspan></text>
+
+  <rect x="380" y="118" width="124" height="70" rx="7" class="dg-box-2" style="opacity:0.55"/>
+  <rect x="376" y="124" width="124" height="70" rx="7" class="dg-box-2" style="opacity:0.8"/>
+  <rect x="372" y="130" width="124" height="74" rx="7" class="dg-box-2"/>
+  <text class="dg-text" x="434" y="160" text-anchor="middle" font-weight="700"><tspan lang="en">Game servers</tspan><tspan lang="fr">Serveurs de jeu</tspan></text>
+  <text class="dg-small" x="434" y="178" text-anchor="middle"><tspan lang="en">25 Hz, authoritative</tspan><tspan lang="fr">25 Hz, autoritaires</tspan></text>
+
+  <rect x="372" y="16" width="132" height="40" rx="7" class="dg-box"/>
+  <text class="dg-small" x="438" y="40" text-anchor="middle" font-weight="700" style="fill:var(--ink)">Monitor</text>
+  <rect x="196" y="322" width="132" height="44" rx="7" class="dg-box"/>
+  <text class="dg-small" x="262" y="348" text-anchor="middle" font-weight="700" style="fill:var(--ink)"><tspan lang="en">Database</tspan><tspan lang="fr">Base de données</tspan></text>
+  <rect x="16" y="322" width="132" height="44" rx="7" class="dg-box"/>
+  <text class="dg-small" x="82" y="341" text-anchor="middle" font-weight="700" style="fill:var(--ink)"><tspan lang="en">World sim</tspan><tspan lang="fr">Simu du monde</tspan></text>
+  <text class="dg-small" x="82" y="356" text-anchor="middle"><tspan lang="en">hourly</tspan><tspan lang="fr">à l'heure</tspan></text>
+  <rect x="404" y="322" width="100" height="44" rx="7" class="dg-box"/>
+  <text class="dg-small" x="454" y="341" text-anchor="middle" font-weight="700" style="fill:var(--ink)"><tspan lang="en">Node agents</tspan><tspan lang="fr">Agents</tspan></text>
+  <text class="dg-small" x="454" y="356" text-anchor="middle"><tspan lang="en">start, retire</tspan><tspan lang="fr">lancent, retirent</tspan></text>
+</svg>
+<figcaption><span lang="en">The whole system on one screen. Chapter <a href="big-picture.html">0.2</a> walks through every arrow.</span><span lang="fr">Tout le système sur un écran. Le chapitre <a href="big-picture.html">0.2</a> parcourt chaque flèche.</span></figcaption>
+</figure>
+</section>
+
+<section class="home-section" id="about">
+<h2 class="section-title"><span lang="en">About this project</span><span lang="fr">À propos de ce projet</span></h2>
+<div class="about-panel">
+<div class="chips about-badges">
+  <span class="chip"><span lang="en">Ongoing project</span><span lang="fr">Projet en cours</span></span>
+  <span class="chip"><span lang="en">One developer</span><span lang="fr">Un seul développeur</span></span>
+  <span class="chip"><span lang="en">Self-taught in MMO architecture</span><span lang="fr">Autodidacte en architecture MMO</span></span>
+  <span class="chip"><span lang="en">Educational purpose only</span><span lang="fr">But uniquement éducatif</span></span>
+</div>
+<div lang="en">
+<p class="about-lead">MoonQwak is an ongoing project, built by one person, self-taught in MMO architecture. It started from a simple question: <strong>how far can one developer go in building this kind of architecture alone?</strong></p>
+<p>These pages record what I chose, what I learned and what I measured along the way. They do not claim that this is how an MMO must be built, or how the large studios do it: it is what I chose, and why. I keep improving it and learning every day while working on it, so things will change, and there are certainly mistakes and decisions that should be made differently. If you spot one, that is exactly the kind of conversation this site is meant to start.</p>
+<p>This site exists for educational purposes only. If it helps you avoid one of my mistakes, or gives you the words to question one of my decisions, it has done its job.</p>
+<p class="about-contact">A question, a mistake you spotted, a better way to do it? Reach me on <a href="https://www.linkedin.com/in/matthieu-bastianel-80656b7b/" rel="noopener">LinkedIn</a>.</p>
+</div>
+<div lang="fr">
+<p class="about-lead">MoonQwak est un projet en cours, construit par une seule personne, autodidacte en architecture de MMO. Il est parti d'une question simple : <strong>jusqu'où un développeur seul peut-il aller dans la construction de ce genre d'architecture ?</strong></p>
+<p>Ces pages racontent ce que j'ai choisi, appris et mesuré en chemin. Elles ne prétendent pas que c'est ainsi qu'un MMO doit être construit, ni que c'est ce que font les grands studios : c'est ce que j'ai choisi, et pourquoi. Je continue de l'améliorer et d'apprendre chaque jour en travaillant dessus : des choses changeront, et il y a sûrement des erreurs et des décisions qu'il faudrait prendre autrement. Si vous en repérez une, c'est exactement le genre de discussion que ce site veut ouvrir.</p>
+<p>Ce site existe dans un but uniquement éducatif. S'il vous évite une de mes erreurs, ou vous donne les mots pour remettre en cause une de mes décisions, il aura rempli son rôle.</p>
+<p class="about-contact">Une question, une erreur repérée, une autre façon de faire ? Écrivez-moi sur <a href="https://www.linkedin.com/in/matthieu-bastianel-80656b7b/" rel="noopener">LinkedIn</a>.</p>
+</div>
+</div>
+
+<div class="prose about-more">
+<div lang="en">
+<h3>Why C# and Unity?</h3>
+<p>Honestly: taste, not a performance study. I wanted to come back to C#, a language I like and had not used for a long time. I know its constraints for this kind of server. A garbage-collected runtime gives less control over memory than C++ (chapter <a href="allocations.html">10.2</a> is what that costs), the runtime is heavier, and parts of this server lean on Windows-specific APIs that running on Linux would require replacing. It was a choice of preference, not a reasoned choice for performance.</p>
+<p>One practical benefit did come with it: the game rules, the data catalogs, the network protocol and even the networking layer live in C# libraries shared by the servers and the Unity client, which loads C# libraries natively. As for Unity, it is simply an engine I had worked with years ago. The goal at the start was the MMO architecture, not the engine, so I did not want to fight the tools. (The project has grown a little beyond that goal since.)</p>
+<h3>How to read these notes</h3>
+<p>Each chapter explains one building block from first principles, then shows what this project did: the options, the choice, the bugs, the numbers that exposed them, and the rule kept afterwards. If you are starting out, read in order from Part 0: each part builds on the previous ones. If you are looking for one answer, use the search (<kbd>Ctrl</kbd> <kbd>K</kbd>), the topics page, the rules of thumb or the key takeaways. Every chapter exists in English and in French.</p>
+</div>
+<div lang="fr">
+<h3>Pourquoi C# et Unity ?</h3>
+<p>Honnêtement : par goût, pas après une étude de performance. Je voulais revenir au C#, un langage que j'aime et que je n'avais pas pratiqué depuis longtemps. Je connais ses contraintes pour ce genre de serveur. Un runtime à ramasse-miettes laisse moins de contrôle sur la mémoire que le C++ (le chapitre <a href="allocations.html">10.2</a> montre ce que ça coûte), le runtime est plus lourd, et une partie de ce serveur s'appuie sur des API propres à Windows qu'il faudrait remplacer pour tourner sous Linux. C'était un choix de préférence, pas un choix réfléchi en termes de performance.</p>
+<p>Un avantage pratique est quand même venu avec : les règles du jeu, les catalogues de données, le protocole réseau et même la couche réseau vivent dans des bibliothèques C# partagées par les serveurs et le client Unity, qui charge nativement les bibliothèques C#. Quant à Unity, c'est simplement un moteur avec lequel j'avais travaillé il y a des années. Au départ, le but était l'architecture du MMO, pas le moteur : je ne voulais pas me battre avec les outils. (Le projet a un peu dépassé ce but depuis.)</p>
+<h3>Comment lire ces carnets</h3>
+<p>Chaque chapitre explique une brique à partir des principes, puis montre ce que ce projet a fait : les options, le choix, les bugs, les chiffres qui les ont révélés, et la règle retenue ensuite. Si vous débutez, lisez dans l'ordre à partir de la partie 0 : chaque partie s'appuie sur les précédentes. Si vous cherchez une réponse précise, utilisez la recherche (<kbd>Ctrl</kbd> <kbd>K</kbd>), la page des thèmes, les règles d'or ou la page « À retenir ». Chaque chapitre existe en anglais et en français.</p>
+</div>
+</div>
+</section>
+
+<section class="home-section">
+<h2 class="section-title"><span lang="en">The route</span><span lang="fr">Le parcours</span></h2>
+<p class="section-dek"><span lang="en">Eleven parts, from the first packet to the tools that keep the whole system honest. Chapters you have opened are marked.</span><span lang="fr">Onze parties, du premier paquet aux outils qui gardent tout le système honnête. Les chapitres déjà ouverts sont marqués.</span></p>
+<ol class="route" id="mq-route"></ol>
+</section>
+
+<section class="home-section">
+<h2 class="section-title"><span lang="en">A few numbers from the journey</span><span lang="fr">Quelques chiffres du parcours</span></h2>
+<div lang="en">
+<div class="stats">
+<div class="stat"><div class="v">25<small>Hz</small></div><div class="k">world tick, 40 ms budget, held at 800 players on one map</div></div>
+<div class="stat"><div class="v">÷7.7</div><div class="k">physics shapes after the "bare hull" (16,688 → 2,156)</div></div>
+<div class="stat"><div class="v">×44.6</div><div class="k">yield of serializing each object once at 100 viewers</div></div>
+<div class="stat"><div class="v">19</div><div class="k">numbered load benches, all written down</div></div>
+</div>
+</div>
+<div lang="fr">
+<div class="stats">
+<div class="stat"><div class="v">25<small>Hz</small></div><div class="k">tick du monde, budget de 40 ms, tenu à 800 joueurs sur une carte</div></div>
+<div class="stat"><div class="v">÷7,7</div><div class="k">formes physiques après la « coque nue » (16 688 → 2 156)</div></div>
+<div class="stat"><div class="v">×44,6</div><div class="k">rendement de la sérialisation unique à 100 spectateurs</div></div>
+<div class="stat"><div class="v">19</div><div class="k">bancs de charge numérotés, tous consignés</div></div>
+</div>
+</div>
+</section>
+
+<section class="home-section">
+<h2 class="section-title"><span lang="en">Reference</span><span lang="fr">Références</span></h2>
+<div class="cards">
+<a class="card" href="topics.html"><div class="card-top"><span class="card-num"><span lang="en">Browse</span><span lang="fr">Parcourir</span></span></div><h3><span lang="en">Topics</span><span lang="fr">Thèmes</span></h3><p><span lang="en">Every chapter, filtered by subject (networking, security, performance…) and by level.</span><span lang="fr">Tous les chapitres, filtrés par sujet (réseau, sécurité, performance…) et par niveau.</span></p></a>
+<a class="card" href="glossary.html"><div class="card-top"><span class="card-num"><span lang="en">Look up</span><span lang="fr">Chercher</span></span></div><h3><span lang="en">Glossary</span><span lang="fr">Glossaire</span></h3><p><span lang="en">The vocabulary of game networking and server design, each term linked to the chapters that use it.</span><span lang="fr">Le vocabulaire du réseau de jeu et de la conception serveur, chaque terme relié aux chapitres qui l'emploient.</span></p></a>
+<a class="card" href="lessons.html"><div class="card-top"><span class="card-num"><span lang="en">Remember</span><span lang="fr">Retenir</span></span></div><h3><span lang="en">Rules of thumb</span><span lang="fr">Règles d'or</span></h3><p><span lang="en">Every rule stated in the chapters, on one page, each with a link back to the story that produced it.</span><span lang="fr">Toutes les règles énoncées dans les chapitres, sur une page, chacune avec un lien vers l'histoire qui l'a produite.</span></p></a>
+<a class="card" href="takeaways.html"><div class="card-top"><span class="card-num"><span lang="en">Revise</span><span lang="fr">Réviser</span></span></div><h3><span lang="en">Key takeaways</span><span lang="fr">À retenir</span></h3><p><span lang="en">The closing summary of every chapter, in reading order: the whole site in one scroll.</span><span lang="fr">Le résumé final de chaque chapitre, dans l'ordre de lecture : tout le site en un seul défilement.</span></p></a>
+</div>
+</section>
+
+</main>
+</div>
+<footer class="site-footer" id="mq-footer"></footer>
+<script src="assets/js/site-data.js" defer></script>
+<script src="assets/js/glossary-data.js" defer></script>
+<script src="assets/js/app.js" defer></script>
+<script src="assets/js/widgets.js" defer></script>
+</body>
+</html>

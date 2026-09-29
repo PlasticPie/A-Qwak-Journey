@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="en" data-lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Bandwidth accounting · MoonQwak</title>
+<meta name="description" content="Where every byte of a snapshot goes, the arithmetic that predicts megabytes per second, and the MTU wall.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Chakra+Petch:wght@500;600&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="assets/css/site.css">
+<script>(function(){var r=document.documentElement,l,t;try{l=localStorage.getItem("mq-lang");t=localStorage.getItem("mq-theme");}catch(e){}if(l!=="en"&&l!=="fr"){l=(navigator.language||"").toLowerCase().indexOf("fr")===0?"fr":"en";}r.setAttribute("data-lang",l);r.setAttribute("lang",l);if(t==="light"||t==="dark")r.setAttribute("data-theme",t);})();</script>
+</head>
+<body data-page="bandwidth">
+<a class="skip-link" href="#main"><span lang="en">Skip to content</span><span lang="fr">Aller au contenu</span></a>
+<header class="site-header" id="mq-header"></header>
+<div class="layout">
+<aside class="sidebar" id="mq-sidebar"></aside>
+<main class="content" id="main">
+<article>
+<header class="chapter-head">
+  <div class="eyebrow" data-auto></div>
+  <h1><span lang="en">Bandwidth accounting</span><span lang="fr">La comptabilité de la bande passante</span></h1>
+  <p class="dek"><span lang="en">Where every byte of a snapshot goes, the arithmetic that predicts megabytes per second, and the MTU wall.</span><span lang="fr">Où va chaque octet d'un snapshot, l'arithmétique qui prédit les mégaoctets par seconde, et le mur du MTU.</span></p>
+  <div class="meta-row" data-auto></div>
+</header>
+
+<div class="prose">
+
+<section class="sec" id="measure-first">
+<div lang="en">
+<h2>Know where the bytes go before cutting</h2>
+<p>Bandwidth is the one resource that does not get cheaper by making code faster: it is paid per player, per tick, in the server's outgoing link and in every client's download. It is also the easiest place to optimize the wrong thing. A change that shortened bullets and dropped their angle was expected to save 15 % of the snapshot; the measurement said 0.7 %, within noise. Both assumptions behind the estimate were wrong: bullets were already sent only twice per viewer (chapter <a href="snapshots.html#lifetimes">4.2</a>), and their speeds already fitted in two bytes (chapter <a href="encoding.html">1.3</a>). Twice in a row, a cost had been optimized whose weight had never been measured.</p>
+<p>The answer was an instrument, off by default: once per second, for one player, the server breaks the snapshot down by object type. It re-serializes each object into a scratch packet, one at a time, and reads the length; hulls are copied from their prepared block, which has no side effect. The player's own block is not re-serialized, because it is a delta with memory and writing it twice would consume the delta; it is deduced by subtraction. About a hundred copies per second, for one player: negligible.</p>
+</div>
+<div lang="fr">
+<h2>Savoir où vont les octets avant de couper</h2>
+<p>La bande passante est la seule ressource qui ne devient pas moins chère en rendant le code plus rapide : elle se paie par joueur, par tick, dans le lien sortant du serveur et dans le téléchargement de chaque client. C'est aussi l'endroit le plus facile pour optimiser la mauvaise chose. Un changement qui raccourcissait les balles et supprimait leur angle devait économiser 15 % du snapshot ; la mesure a dit 0,7 %, dans le bruit. Les deux hypothèses derrière l'estimation étaient fausses : les balles n'étaient déjà envoyées que deux fois par spectateur (chapitre <a href="snapshots.html#lifetimes">4.2</a>), et leurs vitesses tenaient déjà sur deux octets (chapitre <a href="encoding.html">1.3</a>). Deux fois de suite, on avait optimisé un coût dont on n'avait jamais mesuré le poids.</p>
+<p>La réponse a été un instrument, éteint par défaut : une fois par seconde, pour un joueur, le serveur ventile le snapshot par type d'objet. Il re-sérialise chaque objet dans un paquet de brouillon, un par un, et lit la longueur ; les coques sont recopiées depuis leur bloc préparé, sans effet de bord. Le bloc du joueur lui-même n'est pas re-sérialisé, parce que c'est un delta à mémoire et que l'écrire deux fois consommerait le delta : il est déduit par soustraction. Une centaine de recopies par seconde, pour un joueur : négligeable.</p>
+</div>
+<figure class="fig">
+<div data-chart>
+<script type="application/json">
+{
+  "type": "hbar",
+  "labelWidth": 230,
+  "cats": { "en": ["Other hulls (60 × 22 B)", "Bullets (5 × 9 B)", "Own ship + header"], "fr": ["Autres coques (60 × 22 o)", "Balles (5 × 9 o)", "Ma coque + en-tête"] },
+  "series": [ { "name": { "en": "Bytes in one snapshot", "fr": "Octets dans un snapshot" }, "values": [1371, 47, 31] } ],
+  "unit": { "en": "B", "fr": "o" },
+  "unitLabel": { "en": "bytes, one snapshot of 1,449 B", "fr": "octets, un snapshot de 1 449 o" },
+  "aria": { "en": "A 1,449-byte snapshot at 600 players: other hulls 1,371 bytes, bullets 47 bytes, own ship and header 31 bytes", "fr": "Un snapshot de 1 449 octets à 600 joueurs : autres coques 1 371 octets, balles 47 octets, ma coque et en-tête 31 octets" }
+}
+</script>
+</div>
+<figcaption><span lang="en"><strong>One snapshot at 600 players, broken down by the trace.</strong> 95 % is the base block of other hulls; every conditional block (damage, beams, effects, gunners, fire) is at zero, meaning the delta rules of chapter <a href="deltas.html">4.4</a> are doing their job. The 116 bytes of ids are included in the bars.</span><span lang="fr"><strong>Un snapshot à 600 joueurs, ventilé par la trace.</strong> 95 % est le bloc de base des autres coques ; tous les blocs conditionnels (dégâts, faisceaux, effets, artilleurs, feu) sont à zéro : les règles de delta du chapitre <a href="deltas.html">4.4</a> font leur travail. Les 116 octets d'identifiants sont compris dans les barres.</span></figcaption>
+</figure>
+<div lang="en">
+<p>What remains is irreducible: about 22 bytes per hull of id, type, flags, quantized movement and turret orientation, per hull, per tick, per viewer. When the delta rules have removed everything conditional, the only levers left are <em>how many</em> hulls each player receives and <em>how often</em>, which is exactly what the freshness budget controls.</p>
+</div>
+<div lang="fr">
+<p>Ce qui reste est irréductible : environ 22 octets par coque d'identifiant, de type, de drapeaux, de mouvement quantifié et d'orientation des tourelles, par coque, par tick, par spectateur. Une fois que les règles de delta ont retiré tout le conditionnel, les seuls leviers restants sont <em>combien</em> de coques reçoit chaque joueur et <em>à quelle fréquence</em>, exactement ce que contrôle le budget de fraîcheur.</p>
+</div>
+</section>
+
+<section class="sec" id="arithmetic">
+<div lang="en">
+<h2>The arithmetic that predicts the link</h2>
+<p>Once the payload is understood, outgoing bandwidth is a multiplication, and it is worth doing before every bench:</p>
+</div>
+<div lang="fr">
+<h2>L'arithmétique qui prédit le lien</h2>
+<p>Une fois la charge utile comprise, la bande passante sortante est une multiplication, et elle mérite d'être faite avant chaque banc :</p>
+</div>
+<div class="code"><div class="code-head"><span class="file">600-player bench, two rings 30 / 60</span></div><pre><code data-lang="txt">hulls per tick per player × bytes per hull × players × snapshots per second
+      (30 + 60) / 2       ×     22 B      ×   600   ×          25          = 14.85 MB/s
+                                                                  measured : 14.5  MB/s</code></pre></div>
+<div lang="en">
+<p>Within 2 %. When the formula and the measurement agree, you understand the system; when they disagree, the gap is the most interesting number of the day. The formula is also an upper bound: when a player sees fewer hulls than a ring's capacity, that ring takes them all and costs less. On the next bench, with three rings (20 / 40 / 100) and players seeing about forty hulls each, the far ring was never saturated and the outgoing traffic fell to 12.2 MB/s.</p>
+<p>The same arithmetic tells you what can and cannot be optimized. At 400 players the server sent 8.08 MB/s, about 20 KB/s per player at 25 packets per second. That figure is the wall of the trade, not of the code: it does not get crossed by optimizing, it gets spread across processes and machines.</p>
+</div>
+<div lang="fr">
+<p>À 2 % près. Quand la formule et la mesure sont d'accord, on comprend le système ; quand elles ne le sont pas, l'écart est le chiffre le plus intéressant de la journée. La formule est aussi un majorant : quand un joueur voit moins de coques que la capacité d'un anneau, cet anneau les prend toutes et coûte moins. Au banc suivant, avec trois anneaux (20 / 40 / 100) et des joueurs voyant une quarantaine de coques chacun, l'anneau lointain n'était jamais saturé et le trafic sortant est tombé à 12,2 Mo/s.</p>
+<p>La même arithmétique dit ce qui peut s'optimiser et ce qui ne le peut pas. À 400 joueurs, le serveur envoyait 8,08 Mo/s, environ 20 Ko/s par joueur à 25 paquets par seconde. Ce chiffre est le mur du métier, pas celui du code : il ne se franchit pas en optimisant, il se répartit sur des processus et des machines.</p>
+</div>
+<figure class="fig">
+<div data-chart>
+<script type="application/json">
+{
+  "type": "bar",
+  "cats": { "en": ["201 packed\nno budget", "201 spread out\nno budget", "400, one map\nbudget", "600, one map\nthree rings"], "fr": ["201 regroupés\nsans budget", "201 dispersés\nsans budget", "400, une carte\nbudget", "600, une carte\ntrois anneaux"] },
+  "series": [ { "name": { "en": "Outgoing per player", "fr": "Sortant par joueur" }, "values": [1086, 147, 162, 163] } ],
+  "unit": "kbit/s",
+  "unitLabel": { "en": "kbit/s per player", "fr": "kbit/s par joueur" },
+  "aria": { "en": "Outgoing bandwidth per player: 1,086 kbit/s for 201 packed players without budget, 147 spread out, 162 at 400 on one map with the budget, 163 at 600 on one map with three rings", "fr": "Bande passante sortante par joueur : 1 086 kbit/s pour 201 joueurs regroupés sans budget, 147 dispersés, 162 à 400 sur une carte avec le budget, 163 à 600 sur une carte avec trois anneaux" }
+}
+</script>
+</div>
+<figcaption><span lang="en"><strong>With the budget, a crowd costs the same per head as an empty map.</strong> Values derived from the benches' totals (27.3, 8.08 and 12.2 MB/s divided by the player count). The conditions differ between benches, so read the shape, not the decimals.</span><span lang="fr"><strong>Avec le budget, une foule coûte par tête autant qu'une carte vide.</strong> Valeurs tirées des totaux des bancs (27,3, 8,08 et 12,2 Mo/s divisés par le nombre de joueurs). Les conditions diffèrent d'un banc à l'autre : lisez la forme, pas les décimales.</span></figcaption>
+</figure>
+</section>
+
+<section class="sec" id="per-map">
+<div lang="en">
+<h2>The first ceiling is the network card</h2>
+<p>A bench aimed at 1,000 players on one map stopped around 780 on an exception (chapter <a href="serialize-once.html#race">4.3</a>). Setting the crash aside, its numbers tell where the next wall is:</p>
+<div class="table-wrap"><table>
+<thead><tr><th>Measure</th><th>Value</th><th>Reading</th></tr></thead>
+<tbody>
+<tr><td>Work of the worst tick</td><td>38.0 ms</td><td>The tick held: 800 players on one map inside the 40 ms budget.</td></tr>
+<tr><td>Outgoing, mean / peak</td><td>8.8 / 15.1 MB/s</td><td>About 121 Mbit/s at peak: a 100 Mbit/s card is saturated, and a sixth of a gigabit link is gone, for one map.</td></tr>
+<tr><td>Packets out per second, mean / peak</td><td>12,010 / 19,637</td><td>The peak equals 780 × 25: the send path can hold the rate. The mean says it did not: an effective 15.4 Hz.</td></tr>
+<tr><td>Late wake-up of the worst tick</td><td>258.8 ms</td><td>87 % of the interval outside the tick: bots and server fighting for the same PC. No conclusion about the server is possible from this line.</td></tr>
+</tbody></table></div>
+<p>The ceiling here is not the CPU but the outgoing traffic of one map, which grows linearly with the number of players once the budget's rings are saturated. Around 500 players per map, the peak falls back to about 9 MB/s, and a gigabit link hosts several populated maps instead of one crowded one. And a per-map ceiling is only a game ceiling if there is only one map: the next question is not "how many per map" but "how many maps per server", which is a measurement for chapter <a href="map-hosting.html">7.1</a>, not a prediction.</p>
+</div>
+<div lang="fr">
+<h2>Le premier plafond est la carte réseau</h2>
+<p>Un banc visant 1 000 joueurs sur une carte s'est arrêté vers 780 sur une exception (chapitre <a href="serialize-once.html#race">4.3</a>). Plantage mis à part, ses chiffres disent où est le prochain mur :</p>
+<div class="table-wrap"><table>
+<thead><tr><th>Mesure</th><th>Valeur</th><th>Lecture</th></tr></thead>
+<tbody>
+<tr><td>Travail du pire tick</td><td>38,0 ms</td><td>Le tick a tenu : 800 joueurs sur une carte dans le budget de 40 ms.</td></tr>
+<tr><td>Sortant, moyen / pic</td><td>8,8 / 15,1 Mo/s</td><td>Environ 121 Mbit/s au pic : une carte à 100 Mbit/s est saturée, et un sixième d'un lien gigabit est parti, pour une seule carte.</td></tr>
+<tr><td>Paquets sortants par seconde, moyen / pic</td><td>12 010 / 19 637</td><td>Le pic vaut 780 × 25 : le chemin d'envoi sait tenir la cadence. La moyenne dit qu'il ne l'a pas tenue : 15,4 Hz effectifs.</td></tr>
+<tr><td>Réveil en retard du pire tick</td><td>258,8 ms</td><td>87 % de l'intervalle hors du tick : bots et serveur se disputent le même PC. Aucune conclusion sur le serveur n'est possible depuis cette ligne.</td></tr>
+</tbody></table></div>
+<p>Le plafond, ici, n'est pas le CPU mais le trafic sortant d'une carte, qui grandit linéairement avec le nombre de joueurs une fois les anneaux du budget saturés. Vers 500 joueurs par carte, le pic retombe vers 9 Mo/s, et un lien gigabit héberge plusieurs cartes peuplées au lieu d'une seule à l'étroit. Et un plafond par carte n'est un plafond de jeu que s'il n'y a qu'une carte : la question suivante n'est plus « combien par carte » mais « combien de cartes par serveur », ce qui est une mesure pour le chapitre <a href="map-hosting.html">7.1</a>, pas une prédiction.</p>
+</div>
+</section>
+
+<section class="sec" id="mtu">
+<div lang="en">
+<h2>The MTU wall: the first snapshot of an arrival</h2>
+<p>A snapshot in steady state is a kilobyte or two. The largest one measured was <strong>15,687 bytes</strong>, and it happened while the 601st player was connecting. For a newcomer, every object in view is "never sent", therefore mandatory, and every damaged hull goes out in its full view with its damage list. The budget caps discretionary sends, not mandatory ones.</p>
+<div class="note beginner"><p class="note-label">Beginner note</p><p>A UDP datagram that does not fit in the path's maximum transmission unit (around 1,400 bytes of payload in practice) is split into fragments, by the library or by IP. The message is only usable once <em>every</em> fragment has arrived. Eleven fragments multiply the chance of losing the whole message by eleven, and on a reliable channel they also delay everything queued behind them (chapter <a href="transport.html">1.1</a>).</p></div>
+<p>So the moment a player arrives, the one moment where a smooth first impression matters most, is also the moment their largest and most fragile packet goes out. It is the first item on the list of what remains, and the natural fix is to let the budget spread the newcomer's mandatory sends over a few ticks, nearest first, instead of describing the whole scene in one datagram.</p>
+<div class="note rule"><p class="note-label">Rule</p><p>Watch the maximum packet size, not only the average bandwidth.</p><p>Averages describe the link; the tail describes the experience. A 15 KB packet once per arrival is invisible in megabytes per second and very visible to the player who is arriving.</p></div>
+</div>
+<div lang="fr">
+<h2>Le mur du MTU : le premier snapshot d'une arrivée</h2>
+<p>En régime, un snapshot fait un ou deux kilooctets. Le plus gros mesuré faisait <strong>15 687 octets</strong>, pendant que le 601e joueur se connectait. Pour un nouveau venu, chaque objet en vue est « jamais envoyé », donc obligatoire, et chaque coque abîmée part dans sa vue pleine avec sa liste de dégâts. Le budget plafonne les envois discrétionnaires, pas les obligatoires.</p>
+<div class="note beginner"><p class="note-label">Pour débuter</p><p>Un datagramme UDP qui ne tient pas dans l'unité de transmission maximale du chemin (environ 1 400 octets de charge utile en pratique) est découpé en fragments, par la bibliothèque ou par IP. Le message n'est utilisable qu'une fois <em>tous</em> les fragments arrivés. Onze fragments multiplient par onze la probabilité de perdre tout le message, et sur un canal fiable ils retardent aussi tout ce qui attend derrière eux (chapitre <a href="transport.html">1.1</a>).</p></div>
+<p>Ainsi, le moment où un joueur arrive, le seul moment où une première impression fluide compte le plus, est aussi celui où part son paquet le plus gros et le plus fragile. C'est le premier point de la liste de ce qui reste, et la correction naturelle est de laisser le budget étaler les envois obligatoires du nouveau venu sur quelques ticks, les plus proches d'abord, au lieu de décrire toute la scène en un seul datagramme.</p>
+<div class="note rule"><p class="note-label">Règle</p><p>Surveiller la taille maximale des paquets, pas seulement la bande passante moyenne.</p><p>Les moyennes décrivent le lien ; la queue de distribution décrit l'expérience. Un paquet de 15 Ko une fois par arrivée est invisible en mégaoctets par seconde, et très visible pour le joueur qui arrive.</p></div>
+</div>
+</section>
+
+<section class="sec" id="both-ends">
+<div lang="en">
+<h2>Bytes cost CPU on both ends</h2>
+<p>Every byte sent is also a byte serialized by the server, encrypted, decrypted, parsed and applied by the client. The bullet delta protocol was not motivated by the network at all: at 1,000 bullets per shot, the client's network update showed 100 ms spikes, parsing and applying hundreds of unchanged bullet states per snapshot. Cutting the bytes cut the frame-time spikes. When you budget bandwidth, budget the client's CPU with it.</p>
+</div>
+<div lang="fr">
+<h2>Les octets coûtent du CPU aux deux bouts</h2>
+<p>Chaque octet envoyé est aussi un octet sérialisé par le serveur, chiffré, déchiffré, analysé et appliqué par le client. Le protocole delta des balles n'était pas du tout motivé par le réseau : à 1 000 balles par tir, la mise à jour réseau du client montrait des pics de 100 ms, à analyser et appliquer des centaines d'états de balles inchangés par snapshot. Couper les octets a coupé les pics de temps de trame. Quand on budgète la bande passante, on budgète le CPU du client avec.</p>
+</div>
+</section>
+
+<section class="sec" id="takeaways">
+<div class="takeaways">
+<div lang="en"><h2>Key takeaways</h2><ul>
+<li>Break the snapshot down by object type before optimizing anything; estimates made without it were wrong twice.</li>
+<li>Predict outgoing traffic with sends × bytes × players × rate, and treat a gap with the measurement as a finding.</li>
+<li>Once conditional blocks are gone, only the number and frequency of sends remain as levers.</li>
+<li>Expect the first per-map ceiling to be the network link, and spread load across maps and machines.</li>
+<li>Watch the maximum packet size, especially on arrival, and count client CPU as part of the bandwidth cost.</li>
+</ul></div>
+<div lang="fr"><h2>À retenir</h2><ul>
+<li>Ventiler le snapshot par type d'objet avant d'optimiser quoi que ce soit ; les estimations faites sans cela ont été fausses deux fois.</li>
+<li>Prédire le trafic sortant par envois × octets × joueurs × cadence, et traiter un écart avec la mesure comme une découverte.</li>
+<li>Une fois les blocs conditionnels partis, seuls le nombre et la fréquence des envois restent comme leviers.</li>
+<li>S'attendre à ce que le premier plafond par carte soit le lien réseau, et répartir la charge sur des cartes et des machines.</li>
+<li>Surveiller la taille maximale des paquets, surtout à l'arrivée, et compter le CPU du client dans le coût de la bande passante.</li>
+</ul></div>
+</div>
+</section>
+
+</div>
+<div data-chapter-foot></div>
+</article>
+</main>
+<aside class="rail" id="mq-rail"></aside>
+</div>
+<footer class="site-footer" id="mq-footer"></footer>
+<script src="assets/js/site-data.js" defer></script>
+<script src="assets/js/glossary-data.js" defer></script>
+<script src="assets/js/app.js" defer></script>
+<script src="assets/js/widgets.js" defer></script>
+</body>
+</html>

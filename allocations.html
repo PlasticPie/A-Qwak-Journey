@@ -1,0 +1,333 @@
+<!doctype html>
+<html lang="en" data-lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Allocation discipline · MoonQwak</title>
+<meta name="description" content="In a tick, don't build: fill. Pools, ownership contracts, and the GC settings for a 25 Hz server.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Chakra+Petch:wght@500;600&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="assets/css/site.css">
+<script>(function(){var r=document.documentElement,l,t;try{l=localStorage.getItem("mq-lang");t=localStorage.getItem("mq-theme");}catch(e){}if(l!=="en"&&l!=="fr"){l=(navigator.language||"").toLowerCase().indexOf("fr")===0?"fr":"en";}r.setAttribute("data-lang",l);r.setAttribute("lang",l);if(t==="light"||t==="dark")r.setAttribute("data-theme",t);})();</script>
+</head>
+<body data-page="allocations">
+<a class="skip-link" href="#main"><span lang="en">Skip to content</span><span lang="fr">Aller au contenu</span></a>
+<header class="site-header" id="mq-header"></header>
+<div class="layout">
+<aside class="sidebar" id="mq-sidebar"></aside>
+<main class="content" id="main">
+<article>
+<header class="chapter-head">
+  <div class="eyebrow" data-auto></div>
+  <h1><span lang="en">Allocation discipline</span><span lang="fr">La discipline des allocations</span></h1>
+  <p class="dek"><span lang="en">In a tick, don't build: fill. Pools, ownership contracts, and the GC settings for a 25 Hz server.</span><span lang="fr">Dans un tick, on ne construit pas : on remplit. Pools, contrats de propriété, et réglages du GC pour un serveur à 25 Hz.</span></p>
+  <div class="meta-row" data-auto></div>
+</header>
+
+<div class="prose">
+
+<section class="sec" id="frequency">
+<div lang="en">
+<h2>Judge an allocation by how often, and who pays</h2>
+<p>In a garbage-collected language, an allocation is not judged by its size. It is judged by its <strong>frequency</strong> and by <strong>who pays</strong> for it. Fifty bytes allocated once when a map loads are invisible, and should stay that way. Fifty bytes allocated per actor and per tick are 25 allocations per second times the number of monsters, on the simulation thread. They show up in no line-by-line profile, since each <code>new</code> costs a few nanoseconds. They show up on the garbage collector's curve, as a pause of a few milliseconds that lands precisely when the scene is busy: in the middle of a fight.</p>
+<p>So allocations are sorted in that order: the hot path first, and within it, what allocates <em>in proportion to the number of actors</em> before what allocates once per tick. The client follows the same reasoning with a different clock. Unity's immediate-mode GUI calls <code>OnGUI</code> twice per frame (layout, then repaint), so a formatted string in a permanent HUD is 120 strings per second at 60 frames per second, to display a text that changes once a second.</p>
+<div class="note beginner"><p class="note-label">Beginner note</p><p>.NET's garbage collector sorts objects by age into <strong>generations</strong>. Most objects die young and are reclaimed cheaply in generation 0 collections; objects that survive are promoted and examined less often, and a full generation 2 collection is the expensive one. Every collection needs some pause of the application threads. Allocating less does not make any single collection faster: it makes collections rarer, and it keeps short-lived garbage from being promoted by accident.</p></div>
+</div>
+<div lang="fr">
+<h2>Juger une allocation à sa fréquence, et à qui la paie</h2>
+<p>Dans un langage à ramasse-miettes, une allocation ne se juge pas à sa taille. Elle se juge à sa <strong>fréquence</strong> et à <strong>qui la paie</strong>. Cinquante octets alloués une fois au chargement d'une carte sont invisibles, et doivent le rester. Cinquante octets alloués par acteur et par tick, ce sont 25 allocations par seconde fois le nombre de monstres, sur le thread de simulation. Ils n'apparaissent dans aucun profil ligne à ligne, puisque chaque <code>new</code> coûte quelques nanosecondes. Ils apparaissent sur la courbe du ramasse-miettes, sous forme d'une pause de quelques millisecondes qui tombe précisément quand la scène est chargée : en plein combat.</p>
+<p>Les allocations se trient donc dans cet ordre : le chemin chaud d'abord, et dans celui-ci, ce qui alloue <em>en proportion du nombre d'acteurs</em> avant ce qui alloue une fois par tick. Le client suit le même raisonnement avec une autre horloge. L'interface immédiate d'Unity appelle <code>OnGUI</code> deux fois par image (mise en page, puis dessin) : une chaîne formatée dans un HUD permanent, c'est 120 chaînes par seconde à 60 images par seconde, pour afficher un texte qui change une fois par seconde.</p>
+<div class="note beginner"><p class="note-label">Pour débuter</p><p>Le ramasse-miettes de .NET range les objets par âge en <strong>générations</strong>. La plupart des objets meurent jeunes et sont récupérés à bas coût par les collectes de génération 0 ; ceux qui survivent sont promus et examinés moins souvent, et une collecte complète de génération 2 est la plus chère. Chaque collecte demande une pause des threads de l'application. Allouer moins ne rend aucune collecte plus rapide : cela rend les collectes plus rares, et évite que des déchets à vie courte soient promus par accident.</p></div>
+</div>
+</section>
+
+<section class="sec" id="fill">
+<div lang="en">
+<h2>In a tick, don't build: fill</h2>
+<p>An allocation audit of the server found the same shape again and again: a collection created fresh inside a per-tick method, used for a few microseconds, and thrown away. The fix is always the same, a buffer kept in a field and emptied at the start of each use:</p>
+<div class="table-wrap"><table>
+<thead><tr><th>Found</th><th>Frequency</th><th>Fix</th></tr></thead>
+<tbody>
+<tr><td>Fire spreading across a hull: a new dictionary, one string per hex to fill it, and an enum-values array allocated in the inner loop</td><td>per burning hull, per tick: about 130 allocations per tick for a 60-hex hull with 10 hexes on fire</td><td>A reused dictionary keyed by a number; the six directions walked by index over a static table</td></tr>
+<tr><td>Snapshot blocks: a temporary list per hull, only to write the entry count before the entries</td><td>per hull, per tick, on the hottest path after physics</td><td>Two passes: count, write the count, then write the entries</td></tr>
+<tr><td>Station sweeps: a new hash set per tick to answer "who is in range?"</td><td>per player station, per tick</td><td>Sets kept in fields</td></tr>
+<tr><td>NPC target selection: a new dictionary to count who targets whom</td><td>per monster, per retarget, in combat</td><td>A reused field</td></tr>
+<tr><td>Removing spent ammunition through a queued lambda</td><td>per bullet removed: tens per second per map</td><td>A plain list of the objects, drained at one point of the tick</td></tr>
+<tr><td>The world tick itself: a copy of the map collection and a new timings array</td><td>per tick</td><td>A published immutable array, rebuilt only when maps load or unload</td></tr>
+</tbody></table></div>
+<p>Two of those deserve a closer look. The ammunition case is subtle because the lambda looked free. Deferring work through a queue of lambdas is the right tool for callers on <em>other</em> threads (docking, disconnection: a few per minute). Inside the tick, each removal paid two allocations, the closure object that captures the bullet and the delegate. Since the work is the same for every bullet, it does not need to be carried by a closure; it only needs to be written once, and the list of bullets says the same thing without allocating.</p>
+<p>The world-tick case hid an allocation inside a property. The tick called <code>ToArray()</code> on the dictionary of loaded maps, and a pooled buffer would not have helped: <code>ConcurrentDictionary.Values</code> already builds a fresh copy on every read. The line allocated three objects per tick on the very thread a whole project had just freed of allocations. The fix moved up one level: the map manager <em>publishes</em> an immutable array, rebuilt only at the three places that change the set of maps, and the tick just reads a reference.</p>
+</div>
+<div lang="fr">
+<h2>Dans un tick, on ne construit pas : on remplit</h2>
+<p>Un audit des allocations du serveur a trouvé la même forme encore et encore : une collection créée à neuf dans une méthode appelée à chaque tick, utilisée quelques microsecondes, puis jetée. La correction est toujours la même, un tampon gardé en champ et vidé au début de chaque usage :</p>
+<div class="table-wrap"><table>
+<thead><tr><th>Trouvé</th><th>Fréquence</th><th>Correction</th></tr></thead>
+<tbody>
+<tr><td>La propagation du feu sur une coque : un dictionnaire neuf, une chaîne par hex pour le remplir, et un tableau de valeurs d'énumération alloué dans la boucle intérieure</td><td>par coque en feu, par tick : environ 130 allocations par tick pour une coque de 60 hex dont 10 brûlent</td><td>Un dictionnaire réutilisé à clé numérique ; les six directions parcourues par indice sur une table statique</td></tr>
+<tr><td>Les blocs du snapshot : une liste temporaire par coque, seulement pour écrire le nombre d'entrées avant les entrées</td><td>par coque, par tick, sur le chemin le plus chaud après la physique</td><td>Deux passes : compter, écrire le compte, puis écrire les entrées</td></tr>
+<tr><td>Les balayages de station : un ensemble neuf par tick pour répondre « qui est à portée ? »</td><td>par station de joueur, par tick</td><td>Des ensembles gardés en champs</td></tr>
+<tr><td>Le choix de cible des PNJ : un dictionnaire neuf pour compter qui cible qui</td><td>par monstre, par changement de cible, en combat</td><td>Un champ réutilisé</td></tr>
+<tr><td>Le retrait des munitions dépensées par une lambda mise en file</td><td>par balle retirée : des dizaines par seconde et par carte</td><td>Une simple liste des objets, vidée à un seul point du tick</td></tr>
+<tr><td>Le tick du monde lui-même : une copie de la collection des cartes et un tableau de temps neuf</td><td>par tick</td><td>Un tableau immuable publié, reconstruit seulement quand des cartes se chargent ou se déchargent</td></tr>
+</tbody></table></div>
+<p>Deux d'entre elles méritent qu'on s'y arrête. Le cas des munitions est subtil parce que la lambda avait l'air gratuite. Différer du travail par une file de lambdas est le bon outil pour des appelants sur d'<em>autres</em> threads (amarrage, déconnexion : quelques-uns par minute). Dans le tick, chaque retrait payait deux allocations, l'objet de fermeture qui capture la balle et le délégué. Puisque le travail est le même pour chaque balle, il n'a pas besoin d'être transporté par une fermeture ; il suffit de l'écrire une fois, et la liste des balles dit la même chose sans allouer.</p>
+<p>Le cas du tick du monde cachait une allocation dans une propriété. Le tick appelait <code>ToArray()</code> sur le dictionnaire des cartes chargées, et un tampon réutilisé n'aurait rien changé : <code>ConcurrentDictionary.Values</code> construit déjà une copie neuve à chaque lecture. La ligne allouait trois objets par tick sur le thread même qu'un chantier entier venait de libérer de ses allocations. La correction est remontée d'un cran : le gestionnaire de cartes <em>publie</em> un tableau immuable, reconstruit seulement aux trois endroits qui changent l'ensemble des cartes, et le tick ne fait que lire une référence.</p>
+</div>
+<div class="code"><div class="code-head"><span class="file">GameServer/Maps/MapInstance.cs · per-map scratch buffers</span></div><pre><code data-lang="cs">// Kept for the map's lifetime, emptied at the top of each tick, never reallocated.
+// On the MAP, not on the host: two maps ticking in parallel never share a buffer.
+public sealed class TickScratch
+{
+    public readonly Dictionary&lt;ulong, Vector2&gt; PreStepVelocities = new();
+    public readonly List&lt;BulletHit&gt; BulletHits = new();
+    public readonly List&lt;Domain.Bullet&gt; ExpiredBullets = new();
+    public readonly List&lt;MissileDetonation&gt; Detonations = new();
+    public readonly List&lt;Domain.Missile&gt; ExpiredMissiles = new();
+
+    // Called once, first thing in this map's tick: every phase can assume
+    // it starts from empty instead of each remembering to clear its own.
+    public void Clear() { PreStepVelocities.Clear(); BulletHits.Clear(); /* … */ }
+}</code></pre></div>
+<div lang="en">
+<p>Where the buffers live matters as much as their reuse. These scratch buffers first lived on the host, shared by every map in turn. That was correct only while maps ticked one after another, and it was the one thing standing between the map loop and parallelism (chapter <a href="threading.html">3.3</a>). Owning them on the map removes the sharing by construction instead of by convention.</p>
+<div class="note pitfall"><p class="note-label">Watch out</p><p>A reused buffer has one trap, and it is always the same: it can be <strong>longer than this pass's content</strong>. An array of per-map results that grows and never shrinks still holds, in its tail, the values of a tick when more maps were loaded. Every read must be bounded by this pass's count, never by <code>.Length</code>; a sum of timings bounded by <code>.Length</code> would count the same work twice.</p></div>
+<div class="note rule"><p class="note-label">Rule</p><p>In a tick or a frame, don't build: fill.</p><p>A buffer in a field, emptied at the start of each use. And when a buffer is reused, the bound is this pass's count, never its length.</p></div>
+</div>
+<div lang="fr">
+<p>L'endroit où vivent les tampons compte autant que leur réutilisation. Ces tampons de travail ont d'abord vécu sur l'hôte, partagés par chaque carte à son tour. C'était juste tant que les cartes tiquaient l'une après l'autre, et c'était la seule chose qui séparait la boucle des cartes du parallélisme (chapitre <a href="threading.html">3.3</a>). Les posséder sur la carte supprime le partage par construction plutôt que par convention.</p>
+<div class="note pitfall"><p class="note-label">Attention</p><p>Un tampon réutilisé a un piège, et c'est toujours le même : il peut être <strong>plus long que le contenu de ce passage</strong>. Un tableau de résultats par carte qui grandit et ne rétrécit jamais garde, dans sa queue, les valeurs d'un tick où plus de cartes étaient chargées. Toute lecture doit être bornée par le compte de ce passage, jamais par <code>.Length</code> ; une somme de temps bornée par <code>.Length</code> compterait deux fois le même travail.</p></div>
+<div class="note rule"><p class="note-label">Règle</p><p>Dans un tick ou une image, on ne construit pas : on remplit.</p><p>Un tampon en champ, vidé au début de chaque usage. Et quand un tampon est réutilisé, la borne est le compte de ce passage, jamais sa longueur.</p></div>
+</div>
+</section>
+
+<section class="sec" id="keys">
+<div lang="en">
+<h2>Strings are expensive keys</h2>
+<p>Hex coordinates were used as dictionary keys through a readable string, <code>"q-r-s"</code> formatted in hexadecimal. Every lookup built a string. That cost was not per tick but per <em>event</em>: when a hex dies, several rebuilds walk the hull and its neighbours (walls, collision envelope, barriers around dead hexes, part combos, connectivity), about 74 objects per hex of the hull. For a 60-hex ship that is some 4,400 objects (about 140 KB) per destroyed hex; for a 96-hex station, about 7,100.</p>
+<p>On average it was nothing: 0.05 to 0.2 % of wall time. What made it worth fixing is <em>when</em> it happened. A ship under focus fire losing two hexes per second produces about 280 KB/s of garbage; ten hulls trading blows produce about 2.8 MB/s, in bursts, during the melee, on the tick thread. This was work on the variance, not on the mean.</p>
+<p>The fix is a numeric key: the two axes packed into one 64-bit integer, plus a function that gives a neighbour's key <em>without constructing the neighbour</em>. Migrating every site that used the string as a key removed the whole "strings" column: about 60 % of the objects on the server and 85 % on the client, where Unity compiled the string interpolation into a formatting call with three boxings and an argument array.</p>
+</div>
+<div lang="fr">
+<h2>Les chaînes sont des clés chères</h2>
+<p>Les coordonnées d'hex servaient de clés de dictionnaire à travers une chaîne lisible, <code>"q-r-s"</code> formatée en hexadécimal. Chaque recherche construisait une chaîne. Ce coût n'était pas par tick mais par <em>événement</em> : quand un hex meurt, plusieurs reconstructions parcourent la coque et ses voisins (murs, enveloppe de collision, barrières autour des hex morts, combinaisons de pièces, connexité), environ 74 objets par hex de la coque. Pour un vaisseau de 60 hex, c'est quelque 4 400 objets (environ 140 Ko) par hex détruit ; pour une station de 96 hex, environ 7 100.</p>
+<p>En moyenne, ce n'était rien : 0,05 à 0,2 % du temps mural. Ce qui justifiait la correction, c'est <em>quand</em> cela arrivait. Un vaisseau sous tir concentré qui perd deux hex par seconde produit environ 280 Ko/s de déchets ; dix coques qui échangent des coups en produisent environ 2,8 Mo/s, en rafales, pendant la mêlée, sur le thread de tick. C'était un travail sur la variance, pas sur la moyenne.</p>
+<p>La correction est une clé numérique : les deux axes empaquetés dans un seul entier de 64 bits, plus une fonction qui donne la clé d'un voisin <em>sans construire le voisin</em>. Migrer chaque site qui utilisait la chaîne comme clé a retiré toute la colonne « chaînes » : environ 60 % des objets côté serveur et 85 % côté client, où Unity compilait l'interpolation de chaîne en un appel de formatage avec trois boxings et un tableau d'arguments.</p>
+</div>
+<div class="code"><div class="code-head"><span class="file">HexCoord/Cube.cs · the working key</span></div><pre><code data-lang="cs">// The WORKING form: valid for the duration of an in-memory computation.
+public long Key =&gt; KeyOf(Q, R);
+
+// A neighbour's key, without allocating the neighbour. (S is implied: q + r + s = 0.)
+public static long KeyOf(int q, int r) =&gt; ((long)q &lt;&lt; 32) | (uint)r;
+
+// The READABLE form stays, for names and logs only. Neither is derived from the other
+// at runtime, so neither can drift from the other by mistake.
+public string ToIndex() =&gt; $"{Q:x}-{R:x}-{S:x}";</code></pre></div>
+<div lang="en">
+<p>The remaining 40 % of those objects are the coordinate objects themselves: the coordinate type is a class, so every neighbour is an allocation. Turning it into a struct is the real fix, and it was deliberately left for a separate batch. It changes the meaning of <code>null</code> checks, touches the object-relational mapper, crosses server, shared library and client in one go, and it would have to implement <code>IEquatable</code> in the same change: a struct without it boxes on every dictionary comparison, which would make the "optimization" a regression. It will be done if a profile ever shows those objects at the top. Today, that is not demonstrated.</p>
+<p>Likewise, the pathfinding code allocates heavily and was <em>not</em> migrated, because nothing calls it yet. It will be, the day NPCs on foot get movement AI, and that is when it should be optimized: migrating it now would mean optimizing code whose load profile nobody knows.</p>
+</div>
+<div lang="fr">
+<p>Les 40 % d'objets restants sont les objets de coordonnées eux-mêmes : le type de coordonnée est une classe, donc chaque voisin est une allocation. En faire une struct est la vraie correction, et elle a été volontairement laissée pour un lot séparé. Cela change le sens des tests de <code>null</code>, touche le mappeur objet-relationnel, traverse serveur, bibliothèque partagée et client d'un bloc, et il faudrait implémenter <code>IEquatable</code> dans le même changement : une struct sans lui se boxe à chaque comparaison de dictionnaire, ce qui ferait de l'« optimisation » une régression. Ce sera fait si un profil montre un jour ces objets en tête. Aujourd'hui, ce n'est pas démontré.</p>
+<p>De même, le code de recherche de chemin alloue beaucoup et n'a <em>pas</em> été migré, parce que rien ne l'appelle encore. Il le sera le jour où les PNJ à pied auront une IA de déplacement, et c'est à ce moment qu'il faudra l'optimiser : le migrer maintenant, ce serait optimiser du code dont personne ne connaît le régime.</p>
+</div>
+</section>
+
+<section class="sec" id="ownership">
+<div lang="en">
+<h2>Pools and ownership contracts</h2>
+<p>Reusing a buffer that stays inside one method is easy. Reusing memory that <em>travels</em>, from the code that fills it to the code that sends it, needs a contract about who owns it and when. The project uses three levels, each with a stricter contract than the last:</p>
+<ul>
+<li><strong>A free-list pool for game objects</strong> (bullets). The pool knows nothing about what it holds; the caller must re-initialize every field that matters on reuse, since a recycled bullet would otherwise carry state from its previous life. It is not thread-safe, by design: every use is on the tick thread.</li>
+<li><strong>Rented byte arrays for short-lived work</strong>: encryption and framing borrow buffers from the shared array pool and give them back within the same method.</li>
+<li><strong>A rented buffer that crosses threads</strong>: the per-player snapshot.</li>
+</ul>
+<p>The last one is where the contract becomes delicate. Once every other allocation of the snapshot build had been removed, the final framed <code>byte[]</code> remained: kilobytes, per player, 25 times per second, forever. Framing now writes into a buffer rented from the pool, and the method that returns it states its contract in its name and its documentation: the buffer is pool-owned, <strong>longer than the data</strong>, the caller must return it, and must never use its <code>.Length</code>.</p>
+</div>
+<div lang="fr">
+<h2>Pools et contrats de propriété</h2>
+<p>Réutiliser un tampon qui reste dans une seule méthode, c'est facile. Réutiliser de la mémoire qui <em>voyage</em>, du code qui la remplit au code qui l'envoie, demande un contrat sur qui la possède et quand. Le projet utilise trois niveaux, chacun avec un contrat plus strict que le précédent :</p>
+<ul>
+<li><strong>Un pool à liste libre pour des objets de jeu</strong> (les balles). Le pool ne sait rien de ce qu'il contient ; l'appelant doit réinitialiser chaque champ qui compte à la réutilisation, sans quoi une balle recyclée porterait l'état de sa vie précédente. Il n'est pas sûr entre threads, par conception : chaque usage a lieu sur le thread de tick.</li>
+<li><strong>Des tableaux d'octets loués pour le travail bref</strong> : le chiffrement et le cadrage empruntent des tampons au pool partagé et les rendent dans la même méthode.</li>
+<li><strong>Un tampon loué qui traverse les threads</strong> : le snapshot de chaque joueur.</li>
+</ul>
+<p>C'est avec le dernier que le contrat devient délicat. Une fois toutes les autres allocations de la construction du snapshot retirées, il restait le <code>byte[]</code> final cadré : des kilo-octets, par joueur, 25 fois par seconde, pour toujours. Le cadrage écrit maintenant dans un tampon loué au pool, et la méthode qui le rend annonce son contrat dans son nom et sa documentation : le tampon appartient au pool, il est <strong>plus long que les données</strong>, l'appelant doit le rendre, et ne doit jamais utiliser son <code>.Length</code>.</p>
+</div>
+<figure class="fig fig-scroll">
+<svg viewBox="0 0 760 200" role="img" aria-label="The snapshot buffer's life: rented from the pool by the snapshot thread, published to the player as one immutable reference holding buffer and length, claimed exclusively by the send loop, sent synchronously, then returned to the pool">
+  <defs><marker id="al-arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="currentColor" opacity="0.7"/></marker></defs>
+  <rect x="20" y="70" width="120" height="60" rx="8" class="dg-box-2"/>
+  <text class="dg-text" x="80" y="96" text-anchor="middle" font-weight="700"><tspan lang="en">array pool</tspan><tspan lang="fr">pool</tspan></text>
+  <text class="dg-small" x="80" y="114" text-anchor="middle"><tspan lang="en">shared</tspan><tspan lang="fr">partagé</tspan></text>
+  <rect x="190" y="70" width="150" height="60" rx="8" class="dg-box"/>
+  <text class="dg-text" x="265" y="96" text-anchor="middle" font-weight="700"><tspan lang="en">build + frame</tspan><tspan lang="fr">bâtir + cadrer</tspan></text>
+  <text class="dg-small" x="265" y="114" text-anchor="middle"><tspan lang="en">snapshot thread</tspan><tspan lang="fr">thread des snapshots</tspan></text>
+  <rect x="390" y="70" width="160" height="60" rx="8" class="dg-hot"/>
+  <text class="dg-text" x="470" y="94" text-anchor="middle" font-weight="700"><tspan lang="en">pending (buffer, length)</tspan><tspan lang="fr">en attente (tampon, longueur)</tspan></text>
+  <text class="dg-small" x="470" y="114" text-anchor="middle"><tspan lang="en">one immutable reference</tspan><tspan lang="fr">une référence immuable</tspan></text>
+  <rect x="600" y="70" width="140" height="60" rx="8" class="dg-box"/>
+  <text class="dg-text" x="670" y="96" text-anchor="middle" font-weight="700"><tspan lang="en">claim, send</tspan><tspan lang="fr">prendre, envoyer</tspan></text>
+  <text class="dg-small" x="670" y="114" text-anchor="middle"><tspan lang="en">send loop</tspan><tspan lang="fr">boucle d'envoi</tspan></text>
+  <line x1="140" y1="100" x2="186" y2="100" class="dg-line" marker-end="url(#al-arr)"/>
+  <text class="dg-small" x="163" y="92" text-anchor="middle"><tspan lang="en">rent</tspan><tspan lang="fr">louer</tspan></text>
+  <line x1="340" y1="100" x2="386" y2="100" class="dg-line" marker-end="url(#al-arr)"/>
+  <text class="dg-small" x="363" y="92" text-anchor="middle"><tspan lang="en">publish</tspan><tspan lang="fr">publier</tspan></text>
+  <line x1="550" y1="100" x2="596" y2="100" class="dg-line" marker-end="url(#al-arr)"/>
+  <text class="dg-small" x="573" y="92" text-anchor="middle"><tspan lang="en">take</tspan><tspan lang="fr">prendre</tspan></text>
+  <path d="M 670 130 Q 670 176 400 176 Q 80 176 80 134" class="dg-line" marker-end="url(#al-arr)"/>
+  <text class="dg-small" x="400" y="194" text-anchor="middle"><tspan lang="en">return, only after the synchronous send has copied the bytes</tspan><tspan lang="fr">rendre, seulement après que l'envoi synchrone a copié les octets</tspan></text>
+  <text class="dg-small" x="80" y="40" text-anchor="start"><tspan lang="en">One owner at a time: whoever holds the reference owns the buffer.</tspan><tspan lang="fr">Un propriétaire à la fois : celui qui tient la référence possède le tampon.</tspan></text>
+</svg>
+<figcaption><span lang="en"><strong>The snapshot buffer's round trip.</strong> The buffer and its length travel together in one immutable object, so a reader can never pair a new buffer with an old length.</span><span lang="fr"><strong>L'aller-retour du tampon de snapshot.</strong> Le tampon et sa longueur voyagent ensemble dans un seul objet immuable : un lecteur ne peut jamais associer un tampon neuf à une ancienne longueur.</span></figcaption>
+</figure>
+<div lang="en">
+<p>Three details make the handoff safe. The buffer and its real length travel in <strong>one immutable object</strong> published through a single reference: two separate fields could be observed torn, a new buffer with the old length, which would send pool garbage to a client. That wrapper is itself a tiny allocation per tick, a deliberate trade: a few bytes of generation-0 garbage instead of kilobytes. The send loop <strong>claims</strong> the pending snapshot exclusively, so only one party ever holds it. And it returns the buffer right after sending, which is only correct because the send is <strong>synchronous</strong>: by the time it returns, the bytes have been encrypted into another pooled buffer and copied into the transport's own packet, and nothing downstream still points at ours.</p>
+<p>The price of such a contract is paid by every future call site, which is why it exists on one path only. Every other packet still uses the ordinary method that returns a fresh array.</p>
+<div class="note rule"><p class="note-label">Rule</p><p>An ownership rule is a tax on every future caller. Levy it only where the savings pay for it, and keep the ordinary, allocating version for everything else.</p></div>
+<div class="note measured"><p class="note-label">Measured</p><p>Use-after-return bugs do not crash where they happen. A buffer returned twice, or read after its return, shows up as <em>deferred</em> corruption: nonsensical packets on the client long after the action that caused them. So the performance pass that introduced pooled buffers came with a specific acceptance test: a long session, ten minutes or more of mining and firing. Ten minutes of active play without a single absurd packet is what says the ownership contract holds.</p></div>
+</div>
+<div lang="fr">
+<p>Trois détails rendent la passation sûre. Le tampon et sa longueur réelle voyagent dans <strong>un seul objet immuable</strong> publié par une seule référence : deux champs séparés pourraient être observés déchirés, un tampon neuf avec l'ancienne longueur, ce qui enverrait des déchets du pool à un client. Cette enveloppe est elle-même une petite allocation par tick, un échange voulu : quelques octets de génération 0 au lieu de kilo-octets. La boucle d'envoi <strong>prend</strong> le snapshot en attente de façon exclusive, pour qu'une seule partie le tienne à la fois. Et elle rend le tampon juste après l'envoi, ce qui n'est correct que parce que l'envoi est <strong>synchrone</strong> : quand il rend la main, les octets ont été chiffrés dans un autre tampon du pool et copiés dans le paquet propre au transport, et plus rien en aval ne pointe vers le nôtre.</p>
+<p>Le prix d'un tel contrat est payé par chaque futur site d'appel, et c'est pourquoi il n'existe que sur un seul chemin. Tous les autres paquets utilisent toujours la méthode ordinaire, qui rend un tableau neuf.</p>
+<div class="note rule"><p class="note-label">Règle</p><p>Une règle de propriété est un impôt sur chaque futur appelant. Ne la prélever que là où l'économie la paie, et garder la version ordinaire, qui alloue, pour tout le reste.</p></div>
+<div class="note measured"><p class="note-label">Mesuré</p><p>Les bugs d'utilisation après retour ne plantent pas là où ils se produisent. Un tampon rendu deux fois, ou lu après avoir été rendu, se manifeste en corruption <em>différée</em> : des paquets absurdes chez le client bien après l'action qui les a causés. La passe de performance qui a introduit les tampons loués est donc venue avec un test d'acceptation précis : une longue session, dix minutes ou plus à miner et tirer. Dix minutes de jeu actif sans un seul paquet absurde, c'est ce qui dit que le contrat de propriété tient.</p></div>
+</div>
+</section>
+
+<section class="sec" id="gc-settings">
+<div lang="en">
+<h2>GC settings for a 25 Hz server</h2>
+<p>The single most effective runtime setting of the whole performance effort was two lines in the server's project file:</p>
+</div>
+<div lang="fr">
+<h2>Réglages du GC pour un serveur à 25 Hz</h2>
+<p>Le réglage d'exécution le plus efficace de tout le travail de performance tient en deux lignes dans le fichier de projet du serveur :</p>
+</div>
+<div class="code"><div class="code-head"><span class="file">GameServer/GameServer.csproj</span></div><pre><code data-lang="xml">&lt;!-- Server GC: per-core heaps and background collections. The workstation default
+     optimizes for a desktop UI; a tick loop wants throughput and predictable pauses. --&gt;
+&lt;ServerGarbageCollection&gt;true&lt;/ServerGarbageCollection&gt;
+&lt;ConcurrentGarbageCollection&gt;true&lt;/ConcurrentGarbageCollection&gt;</code></pre></div>
+<div lang="en">
+<p>A console application uses the <strong>workstation</strong> garbage collector by default, tuned for interactive desktop programs. <strong>Server GC</strong> gives each core its own heap and collects in parallel; <strong>concurrent</strong> (background) collection lets most of a full collection run alongside the application instead of stopping it. The cost is memory: larger heaps, so a server at rest uses noticeably more RAM. That is the intended trade, not a leak, and the check after the change was the right one: memory at rest goes up, garbage collections per second under load go down.</p>
+<div class="note tradeoff"><p class="note-label">Trade-off</p><p>Server GC sizes itself for a machine that runs one server. When a node agent packs several game server processes onto one machine (chapter <a href="node-agents.html">7.3</a>), each one brings its own set of heaps. Recent .NET versions (9 and later) enable dynamic adaptation of the heap count by default for Server GC, which softens this; it remains the first thing to look at if memory per process becomes the limit on how many servers a machine can host.</p></div>
+</div>
+<div lang="fr">
+<p>Une application console utilise par défaut le ramasse-miettes <strong>station de travail</strong>, réglé pour des programmes de bureau interactifs. Le <strong>GC serveur</strong> donne à chaque cœur son propre tas et collecte en parallèle ; la collecte <strong>concurrente</strong> (en arrière-plan) laisse l'essentiel d'une collecte complète tourner à côté de l'application au lieu de l'arrêter. Le coût est la mémoire : des tas plus gros, donc un serveur au repos qui utilise nettement plus de RAM. C'est l'échange voulu, pas une fuite, et la vérification après le changement était la bonne : la mémoire au repos monte, les collectes par seconde sous charge baissent.</p>
+<div class="note tradeoff"><p class="note-label">Compromis</p><p>Le GC serveur se dimensionne pour une machine qui fait tourner un serveur. Quand un agent de machine loge plusieurs processus de serveur de jeu sur une même machine (chapitre <a href="node-agents.html">7.3</a>), chacun apporte son propre jeu de tas. Les versions récentes de .NET (9 et suivantes) activent par défaut une adaptation dynamique du nombre de tas pour le GC serveur, ce qui atténue le problème ; cela reste la première chose à regarder si la mémoire par processus devient la limite du nombre de serveurs qu'une machine peut héberger.</p></div>
+</div>
+</section>
+
+<section class="sec" id="guilty">
+<div lang="en">
+<h2>Is the GC guilty? Measure the pause on the same span</h2>
+<p>"It must be the GC" is the most common guess about a slow tick, and the easiest to check badly. The server samples the total GC pause time and the collection counts <strong>at the same point of every tick</strong>, so that the difference between two samples covers exactly the interval the tick measures; values taken at different instants would compare two different moments. The monitor's report then writes the verdict for the worst tick, so nobody has to redo the reasoning by hand:</p>
+</div>
+<div lang="fr">
+<h2>Le GC est-il coupable ? Mesurer la pause sur le même intervalle</h2>
+<p>« C'est sûrement le GC » est la supposition la plus courante face à un tick lent, et la plus facile à mal vérifier. Le serveur relève le temps total de pause du GC et le nombre de collectes <strong>au même point de chaque tick</strong>, pour que la différence entre deux relevés couvre exactement l'intervalle que mesure le tick ; des valeurs prises à des instants différents compareraient deux moments différents. Le rapport du moniteur écrit ensuite le verdict pour le pire tick, pour que personne n'ait à refaire le raisonnement de tête :</p>
+</div>
+<figure class="fig fig-scroll">
+<svg viewBox="0 0 760 250" role="img" aria-label="Decision tree for the worst tick: if the GC pause covers half the tick or more, the tick was stopped and allocations must go down; otherwise if a collection happened during the tick, background GC stole CPU; otherwise the GC is innocent and the cause is scheduling or real work">
+  <defs><marker id="gc-arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="currentColor" opacity="0.7"/></marker></defs>
+  <rect x="20" y="20" width="200" height="50" rx="8" class="dg-hot"/>
+  <text class="dg-text" x="120" y="42" text-anchor="middle" font-weight="700"><tspan lang="en">worst tick</tspan><tspan lang="fr">pire tick</tspan></text>
+  <text class="dg-small" x="120" y="60" text-anchor="middle"><tspan lang="en">(not an idle one)</tspan><tspan lang="fr">(pas un tick à vide)</tspan></text>
+  <rect x="270" y="20" width="220" height="50" rx="8" class="dg-box"/>
+  <text class="dg-text" x="380" y="42" text-anchor="middle"><tspan lang="en">GC pause ≥ 50 % of it?</tspan><tspan lang="fr">pause GC ≥ 50 % du tick ?</tspan></text>
+  <text class="dg-small" x="380" y="60" text-anchor="middle"><tspan lang="en">threads were suspended</tspan><tspan lang="fr">threads suspendus</tspan></text>
+  <rect x="540" y="20" width="200" height="50" rx="8" class="dg-box dg-crit-stroke"/>
+  <text class="dg-text" x="640" y="42" text-anchor="middle" font-weight="700" style="fill:var(--crit-ink)"><tspan lang="en">STOPPED, not slow</tspan><tspan lang="fr">ARRÊTÉ, pas lent</tspan></text>
+  <text class="dg-small" x="640" y="60" text-anchor="middle"><tspan lang="en">reduce allocations</tspan><tspan lang="fr">réduire les allocations</tspan></text>
+  <rect x="270" y="110" width="220" height="50" rx="8" class="dg-box"/>
+  <text class="dg-text" x="380" y="132" text-anchor="middle"><tspan lang="en">a collection during it?</tspan><tspan lang="fr">une collecte pendant le tick ?</tspan></text>
+  <text class="dg-small" x="380" y="150" text-anchor="middle"><tspan lang="en">without a long pause</tspan><tspan lang="fr">sans longue pause</tspan></text>
+  <rect x="540" y="110" width="200" height="50" rx="8" class="dg-box"/>
+  <text class="dg-text" x="640" y="132" text-anchor="middle" font-weight="700"><tspan lang="en">background GC</tspan><tspan lang="fr">GC en arrière-plan</tspan></text>
+  <text class="dg-small" x="640" y="150" text-anchor="middle"><tspan lang="en">stole CPU: slowed, not blocked</tspan><tspan lang="fr">a volé du CPU : ralenti</tspan></text>
+  <rect x="270" y="190" width="220" height="50" rx="8" class="dg-box" style="stroke:var(--good)"/>
+  <text class="dg-text" x="380" y="212" text-anchor="middle" font-weight="700" style="fill:var(--good-ink)"><tspan lang="en">GC is innocent</tspan><tspan lang="fr">le GC est hors de cause</tspan></text>
+  <text class="dg-small" x="380" y="230" text-anchor="middle"><tspan lang="en">OS scheduling or real work</tspan><tspan lang="fr">ordonnancement ou vrai calcul</tspan></text>
+  <line x1="220" y1="45" x2="266" y2="45" class="dg-line" marker-end="url(#gc-arr)"/>
+  <line x1="490" y1="45" x2="536" y2="45" class="dg-line" marker-end="url(#gc-arr)"/>
+  <text class="dg-small" x="513" y="38" text-anchor="middle"><tspan lang="en">yes</tspan><tspan lang="fr">oui</tspan></text>
+  <line x1="380" y1="70" x2="380" y2="106" class="dg-line" marker-end="url(#gc-arr)"/>
+  <text class="dg-small" x="388" y="92"><tspan lang="en">no</tspan><tspan lang="fr">non</tspan></text>
+  <line x1="490" y1="135" x2="536" y2="135" class="dg-line" marker-end="url(#gc-arr)"/>
+  <text class="dg-small" x="513" y="128" text-anchor="middle"><tspan lang="en">yes</tspan><tspan lang="fr">oui</tspan></text>
+  <line x1="380" y1="160" x2="380" y2="186" class="dg-line" marker-end="url(#gc-arr)"/>
+  <text class="dg-small" x="388" y="178"><tspan lang="en">no</tspan><tspan lang="fr">non</tspan></text>
+</svg>
+<figcaption><span lang="en"><strong>Three exclusive branches, so the report states a conclusion, not a hint.</strong> Total pause time only counts real suspensions; background work shows up in the collection counters instead.</span><span lang="fr"><strong>Trois branches exclusives : le rapport énonce une conclusion, pas une piste.</strong> Le temps de pause total ne compte que les vraies suspensions ; le travail en arrière-plan apparaît plutôt dans les compteurs de collectes.</span></figcaption>
+</figure>
+<div lang="en">
+<p>The pause measurement has a blind spot worth stating: it counts only real suspensions of the threads, not the work a background collection does alongside them. A slow tick with no pause clears the <em>pause</em>, not the background collector, which is why the collection counters sit next to it: a generation 2 collection moving during a slow tick, even without a measurable pause, is a lead.</p>
+<div class="note pitfall"><p class="note-label">Pitfall I hit</p><p>A report once headlined "worst tick observed: 114.7 ms", and two lines below, the load at that instant read 0 maps, 0 hulls, 0 bullets, 0 players, 0 ms of GC. It was an idle server, before the ramp or after the shutdown, whose loop the operating system had simply woken late. The number was true and meant nothing, which is worse than an error, because it took the place of the session's real worst tick. Idle ticks are no longer eligible as the worst tick.</p></div>
+</div>
+<div lang="fr">
+<p>La mesure de pause a un angle mort qu'il faut dire : elle ne compte que les vraies suspensions des threads, pas le travail qu'une collecte en arrière-plan fait à côté d'eux. Un tick lent sans pause innocente la <em>pause</em>, pas le ramasse-miettes d'arrière-plan, et c'est pourquoi les compteurs de collectes sont juste à côté : une collecte de génération 2 qui bouge pendant un tick lent, même sans pause mesurable, est une piste.</p>
+<div class="note pitfall"><p class="note-label">Piège rencontré</p><p>Un rapport a un jour titré « pire tick observé : 114,7 ms », et deux lignes plus bas, la charge à cet instant affichait 0 carte, 0 coque, 0 balle, 0 joueur, 0 ms de GC. C'était un serveur au repos, avant la rampe ou après l'arrêt, dont le système d'exploitation avait simplement réveillé la boucle en retard. Le chiffre était vrai et ne voulait rien dire, ce qui est pire qu'une erreur, parce qu'il prenait la place du vrai pire tick de la session. Les ticks à vide ne peuvent plus être élus pire tick.</p></div>
+</div>
+</section>
+
+<section class="sec" id="left">
+<div lang="en">
+<h2>What was left on purpose</h2>
+<p>An audit that removes everything is as suspicious as one that removes nothing. A few allocations were kept, each with its reason written next to it:</p>
+<ul>
+<li><strong>A copy that must be detached.</strong> A station's threat table is copied once per second for a panel, and only while that panel is open. The copy crosses a lock to be read by the network thread; handing another thread a reused buffer would trade an allocation for a race.</li>
+<li><strong>One closure per tick.</strong> The parallel map loop captures a few variables, one small allocation per tick and only when two or more maps are loaded. Avoiding it would need custom machinery for one allocation; to be revisited if the number of maps per process really grows.</li>
+<li><strong>Code whose load profile is unknown</strong>, like the pathfinding above.</li>
+</ul>
+<p>The client taught the same lesson from the other side. A comment in the carcass effect code said "no pooling: a few pieces per amputation, rare at GC scale". It was honest, reasonable when written, and false under load: a hundred small NPCs dying continuously keep hundreds of carcasses alive at once. Chapter <a href="client-rendering.html">5.4</a> tells how that ended as one mesh with a hard cap, instead of hundreds of objects.</p>
+<div class="note rule"><p class="note-label">Rule</p><p>Write cost assumptions down next to the code, and reopen them when a bench contradicts them.</p><p>An assumption that was true when written is the most dangerous kind: nobody thinks to check it.</p></div>
+</div>
+<div lang="fr">
+<h2>Ce qui a été laissé exprès</h2>
+<p>Un audit qui retire tout est aussi suspect qu'un audit qui ne retire rien. Quelques allocations ont été gardées, chacune avec sa raison écrite à côté :</p>
+<ul>
+<li><strong>Une copie qui doit être détachée.</strong> La table des menaces d'une station est copiée une fois par seconde pour un panneau, et seulement tant que ce panneau est ouvert. La copie traverse un verrou pour être lue par le thread réseau ; confier à un autre thread un tampon réutilisé échangerait une allocation contre une course.</li>
+<li><strong>Une fermeture par tick.</strong> La boucle parallèle des cartes capture quelques variables, une petite allocation par tick et seulement quand au moins deux cartes sont chargées. L'éviter demanderait une machinerie sur mesure pour une allocation ; à revoir si le nombre de cartes par processus grandit vraiment.</li>
+<li><strong>Du code dont le régime est inconnu</strong>, comme la recherche de chemin plus haut.</li>
+</ul>
+<p>Le client a donné la même leçon de l'autre côté. Un commentaire dans le code de l'effet de carcasse disait « pas de pooling : quelques pièces par amputation, rare à l'échelle d'un GC ». Il était honnête, raisonnable quand il a été écrit, et faux sous charge : une centaine de petits PNJ qui meurent en continu gardent des centaines de carcasses vivantes à la fois. Le chapitre <a href="client-rendering.html">5.4</a> raconte comment cela s'est terminé en une seule maille avec un plafond dur, au lieu de centaines d'objets.</p>
+<div class="note rule"><p class="note-label">Règle</p><p>Écrire les hypothèses de coût à côté du code, et les rouvrir quand un banc les contredit.</p><p>Une hypothèse vraie au moment où elle a été écrite est la plus dangereuse : personne ne pense à la vérifier.</p></div>
+</div>
+</section>
+
+<section class="sec" id="takeaways">
+<div class="takeaways">
+<div lang="en"><h2>Key takeaways</h2><ul>
+<li>Rank allocations by frequency and by which thread pays, not by size; work on variance, not only the mean.</li>
+<li>In a tick, fill buffers kept in fields; bound reads by this pass's count, never by the buffer's length.</li>
+<li>Own per-map scratch on the map, so parallelism is safe by construction.</li>
+<li>Prefer numeric keys to formatted strings, and keep the readable form for names and logs only.</li>
+<li>Use ownership contracts only where the savings justify them; publish buffer and length as one immutable reference.</li>
+<li>Run Server GC with background collection, and expect more memory at rest in exchange for fewer collections.</li>
+<li>Blame the GC only after measuring pause and collections on the same span as the tick, and exclude idle ticks.</li>
+</ul></div>
+<div lang="fr"><h2>À retenir</h2><ul>
+<li>Classer les allocations par fréquence et par thread qui paie, pas par taille ; travailler sur la variance, pas seulement la moyenne.</li>
+<li>Dans un tick, remplir des tampons gardés en champs ; borner les lectures par le compte du passage, jamais par la longueur du tampon.</li>
+<li>Posséder les tampons de travail par carte sur la carte, pour que le parallélisme soit sûr par construction.</li>
+<li>Préférer des clés numériques aux chaînes formatées, et garder la forme lisible pour les noms et les journaux.</li>
+<li>N'utiliser des contrats de propriété que là où l'économie les justifie ; publier tampon et longueur en une seule référence immuable.</li>
+<li>Faire tourner le GC serveur avec collecte en arrière-plan, et s'attendre à plus de mémoire au repos en échange de moins de collectes.</li>
+<li>N'accuser le GC qu'après avoir mesuré pause et collectes sur le même intervalle que le tick, en excluant les ticks à vide.</li>
+</ul></div>
+</div>
+</section>
+
+</div>
+<div data-chapter-foot></div>
+</article>
+</main>
+<aside class="rail" id="mq-rail"></aside>
+</div>
+<footer class="site-footer" id="mq-footer"></footer>
+<script src="assets/js/site-data.js" defer></script>
+<script src="assets/js/glossary-data.js" defer></script>
+<script src="assets/js/app.js" defer></script>
+<script src="assets/js/widgets.js" defer></script>
+</body>
+</html>

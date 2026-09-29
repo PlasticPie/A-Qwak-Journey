@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="en" data-lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Rendering thousands of objects · MoonQwak</title>
+<meta name="description" content="ECS for bullets, one mesh for eight hundred debris, and the per-instance traps that only show under load.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Chakra+Petch:wght@500;600&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="assets/css/site.css">
+<script>(function(){var r=document.documentElement,l,t;try{l=localStorage.getItem("mq-lang");t=localStorage.getItem("mq-theme");}catch(e){}if(l!=="en"&&l!=="fr"){l=(navigator.language||"").toLowerCase().indexOf("fr")===0?"fr":"en";}r.setAttribute("data-lang",l);r.setAttribute("lang",l);if(t==="light"||t==="dark")r.setAttribute("data-theme",t);})();</script>
+</head>
+<body data-page="client-rendering">
+<a class="skip-link" href="#main"><span lang="en">Skip to content</span><span lang="fr">Aller au contenu</span></a>
+<header class="site-header" id="mq-header"></header>
+<div class="layout">
+<aside class="sidebar" id="mq-sidebar"></aside>
+<main class="content" id="main">
+<article>
+<header class="chapter-head">
+  <div class="eyebrow" data-auto></div>
+  <h1><span lang="en">Rendering thousands of objects</span><span lang="fr">Afficher des milliers d'objets</span></h1>
+  <p class="dek"><span lang="en">ECS for bullets, one mesh for eight hundred debris, and the per-instance traps that only show under load.</span><span lang="fr">L'ECS pour les balles, une seule maille pour huit cents débris, et les pièges par instance qui n'apparaissent qu'en charge.</span></p>
+  <div class="meta-row" data-auto></div>
+</header>
+
+<div class="prose">
+
+<section class="sec" id="symptom">
+<div lang="en">
+<h2>The server held, the client fell</h2>
+<p>A bench with a hundred NPC ships fighting showed a situation that server-side work alone cannot fix: the server held its 40 ms per tick, and the client dropped to 20 frames per second, with about <strong>1,200 draw calls</strong> per frame. An MMO client does not render a scene designed by an artist, with a known number of objects; it renders whatever the server tells it, and in a fight that is hundreds of transient objects appearing and disappearing every second.</p>
+<div class="note beginner"><p class="note-label">Beginner note</p><p>A <strong>draw call</strong> is one request from the CPU to the GPU to draw something. Each one carries a fixed CPU cost (state changes, validation), so a thousand small objects drawn separately can saturate the CPU while the GPU sits idle. Engines try to <em>batch</em> compatible objects into fewer calls, but only under conditions (same material, compatible renderer types) that per-object code breaks easily.</p></div>
+</div>
+<div lang="fr">
+<h2>Le serveur tenait, le client tombait</h2>
+<p>Un banc avec une centaine de vaisseaux PNJ en combat a montré une situation que le travail côté serveur ne peut pas régler seul : le serveur tenait ses 40 ms par tick, et le client tombait à 20 images par seconde, avec environ <strong>1 200 draw calls</strong> par image. Un client de MMO n'affiche pas une scène conçue par un artiste, avec un nombre d'objets connu ; il affiche ce que le serveur lui dit, et en combat, ce sont des centaines d'objets éphémères qui apparaissent et disparaissent chaque seconde.</p>
+<div class="note beginner"><p class="note-label">Pour débuter</p><p>Un <strong>draw call</strong> est une demande du CPU au GPU de dessiner quelque chose. Chacun porte un coût CPU fixe (changements d'état, validation) : un millier de petits objets dessinés séparément peut saturer le CPU pendant que le GPU se tourne les pouces. Les moteurs essaient de <em>regrouper</em> les objets compatibles en moins d'appels, mais seulement sous conditions (même matériau, types de rendu compatibles), que du code par objet casse facilement.</p></div>
+</div>
+</section>
+
+<section class="sec" id="one-mesh">
+<div lang="en">
+<h2>Eight hundred debris, one draw call</h2>
+<p>Mined-out cargo floats in space as debris, and the bench had 796 pieces alive. Each had its own child object for its outline, its own line renderer and, before a first optimization pass, its own material: roughly half of the 1,200 draw calls.</p>
+<p>The first pass shared the material and merged the per-piece update functions. That was right and not enough. <strong>A shared material removes an obstacle to batching; it does not merge draw calls.</strong> A line renderer regenerates its geometry every frame and submits itself alone to the GPU: eight hundred line renderers are eight hundred draw calls, whatever their material.</p>
+<p>The second pass removed the renderers entirely. One component owns one dynamic mesh, rebuilt every frame: eight vertices per piece (the square outline is a ring of four outer and four inner corners), the tint carried by vertex colours, and a single renderer for the whole field. Eight hundred pieces, one draw call.</p>
+</div>
+<div lang="fr">
+<h2>Huit cents débris, un draw call</h2>
+<p>Le minerai extrait flotte dans l'espace sous forme de débris, et le banc en avait 796 vivants. Chacun avait son propre objet enfant pour son contour, son propre rendu de ligne et, avant une première passe d'optimisation, son propre matériau : à peu près la moitié des 1 200 draw calls.</p>
+<p>La première passe a partagé le matériau et fusionné les fonctions de mise à jour par pièce. C'était juste et insuffisant. <strong>Un matériau partagé lève un obstacle au regroupement ; il ne fusionne pas les draw calls.</strong> Un rendu de ligne régénère sa géométrie à chaque image et se soumet seul au GPU : huit cents rendus de ligne, ce sont huit cents draw calls, quel que soit leur matériau.</p>
+<p>La seconde passe a supprimé entièrement les rendus. Un composant possède une maille dynamique, reconstruite à chaque image : huit sommets par pièce (le contour carré est un anneau de quatre coins extérieurs et quatre intérieurs), la teinte portée par les couleurs de sommet, et un seul rendu pour tout le champ. Huit cents pièces, un draw call.</p>
+</div>
+<figure class="fig fig-scroll">
+<svg viewBox="0 0 760 190" role="img" aria-label="Before: every debris piece is its own object with a line renderer, one draw call each. After: all pieces are rows written into one mesh with vertex colours, drawn by a single renderer in one draw call">
+  <defs><marker id="cr-arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="currentColor" opacity="0.7"/></marker></defs>
+  <text class="dg-label" x="20" y="24"><tspan lang="en">Before: one object per piece</tspan><tspan lang="fr">Avant : un objet par pièce</tspan></text>
+  <g class="dg-box">
+    <rect x="20" y="40" width="96" height="30" rx="5"/><rect x="20" y="78" width="96" height="30" rx="5"/><rect x="20" y="116" width="96" height="30" rx="5"/>
+  </g>
+  <text class="dg-small" x="68" y="59" text-anchor="middle"><tspan lang="en">piece + line</tspan><tspan lang="fr">pièce + ligne</tspan></text>
+  <text class="dg-small" x="68" y="97" text-anchor="middle"><tspan lang="en">piece + line</tspan><tspan lang="fr">pièce + ligne</tspan></text>
+  <text class="dg-small" x="68" y="135" text-anchor="middle"><tspan lang="en">piece + line</tspan><tspan lang="fr">pièce + ligne</tspan></text>
+  <text class="dg-small" x="68" y="168" text-anchor="middle">… × 796</text>
+  <line x1="120" y1="55" x2="218" y2="55" class="dg-line" marker-end="url(#cr-arr)"/>
+  <line x1="120" y1="93" x2="218" y2="93" class="dg-line" marker-end="url(#cr-arr)"/>
+  <line x1="120" y1="131" x2="218" y2="131" class="dg-line" marker-end="url(#cr-arr)"/>
+  <rect x="222" y="40" width="80" height="106" rx="6" class="dg-box" style="stroke:var(--crit);stroke-width:2.5"/>
+  <text class="dg-text" x="262" y="88" text-anchor="middle" font-weight="700">GPU</text>
+  <text class="dg-small" x="262" y="106" text-anchor="middle" style="fill:var(--crit-ink)"><tspan lang="en">796 calls</tspan><tspan lang="fr">796 appels</tspan></text>
+  <line x1="348" y1="20" x2="348" y2="176" class="dg-line dg-dash"/>
+  <text class="dg-label" x="380" y="24"><tspan lang="en">After: rows in one mesh</tspan><tspan lang="fr">Après : des lignes dans une maille</tspan></text>
+  <rect x="380" y="40" width="170" height="106" rx="6" class="dg-box-2"/>
+  <text class="dg-small dg-mono" x="392" y="62">pos · tint → 8 verts</text>
+  <text class="dg-small dg-mono" x="392" y="82">pos · tint → 8 verts</text>
+  <text class="dg-small dg-mono" x="392" y="102">pos · tint → 8 verts</text>
+  <text class="dg-small dg-mono" x="392" y="122">… 6 400 verts</text>
+  <text class="dg-small" x="465" y="168" text-anchor="middle"><tspan lang="en">rebuilt every frame</tspan><tspan lang="fr">reconstruite à chaque image</tspan></text>
+  <line x1="554" y1="93" x2="620" y2="93" class="dg-line" marker-end="url(#cr-arr)"/>
+  <rect x="624" y="40" width="116" height="106" rx="6" class="dg-box" style="stroke:var(--good);stroke-width:2.5"/>
+  <text class="dg-text" x="682" y="88" text-anchor="middle" font-weight="700">GPU</text>
+  <text class="dg-small" x="682" y="106" text-anchor="middle" style="fill:var(--good-ink)"><tspan lang="en">1 call</tspan><tspan lang="fr">1 appel</tspan></text>
+</svg>
+<figcaption><span lang="en"><strong>From objects to rows.</strong> The CPU still writes every piece's vertices, but it submits them once. Rebuilding about 6,400 vertices costs a fraction of a millisecond, what any particle system does every frame.</span><span lang="fr"><strong>Des objets aux lignes.</strong> Le CPU écrit toujours les sommets de chaque pièce, mais il les soumet une seule fois. Reconstruire environ 6 400 sommets coûte une fraction de milliseconde, ce que fait n'importe quel système de particules à chaque image.</span></figcaption>
+</figure>
+<div lang="en">
+<div class="note tradeoff"><p class="note-label">Trade-off</p><p>GPU instancing would send one matrix per piece instead of eight vertices, which is cheaper on the CPU. But a per-instance tint needs a shader compiled for instancing, and the default sprite shader is not reliably one; it would have meant a custom shader whose behaviour could not be measured before shipping. A rebuilt mesh with vertex colours was the lower-risk choice when the API risk could not be measured, and it removed the eight hundred submissions all the same. The index buffer is 32-bit: with 16-bit indices and eight vertices per piece, the ceiling would be around 8,000 debris, and a ceiling nobody chose is a production surprise.</p></div>
+</div>
+<div lang="fr">
+<div class="note tradeoff"><p class="note-label">Compromis</p><p>L'instanciation GPU enverrait une matrice par pièce au lieu de huit sommets, ce qui est moins cher pour le CPU. Mais une teinte par instance exige un shader compilé pour l'instanciation, et le shader de sprites par défaut ne l'est pas de façon fiable ; il aurait fallu un shader maison dont on ne pouvait pas mesurer le comportement avant de livrer. Une maille reconstruite avec couleurs de sommet était le choix le moins risqué quand le risque d'API ne pouvait pas être mesuré, et elle supprimait tout autant les huit cents soumissions. Le tampon d'indices est en 32 bits : en 16 bits, à huit sommets par pièce, le plafond serait vers 8 000 débris, et un plafond que personne n'a choisi est une surprise de production.</p></div>
+</div>
+</section>
+
+<section class="sec" id="carcasses">
+<div lang="en">
+<h2>A useful lie, made cheap</h2>
+<p>When a hull loses hexes, the server deletes them at once: there is no simulated wreckage. But a piece of ship vanishing from one frame to the next reads as a bug. So the client tells a story: the lost hex inherits the ship's velocity, gets a radial push, drifts and spins for a second or two while darkening, flashes orange and dies. Nobody can touch it, collect it or target it; it does not exist, it is told.</p>
+<p>The first version created, per lost hex, a game object, a mesh filter, a mesh renderer, a new material and a component with its own update. Its comment justified this: "no pooling needed: a few pieces per amputation, a rare event". The hypothesis was reasonable, and false under load. A hundred NPCs of five hexes dying continuously is not "a few pieces, rarely": it is hundreds of carcasses alive at the same time (each lasts up to 2.7 s), hence hundreds of objects and as many draw calls, more than the debris had cost. Two more mistakes hid inside:</p>
+<ul>
+<li>Assigning the mesh through the filter's per-instance property instead of its shared one made Unity treat the "shared" mesh as owned by that filter and destroy it with it. The first carcass to die destroyed the mesh, the next one rebuilt it, in a loop.</li>
+<li>A new material per piece: the third occurrence of the same mistake in the client, after the bullet renderer (see below) and the old debris renderer.</li>
+</ul>
+<p>A carcass is now a row in an array, drawn by the same pattern as the debris field: one renderer, a mesh rebuilt each frame (seven vertices per piece, a hexagon as a triangle fan), and vertex colours for the three effects the per-instance material used to provide: the darkening, the orange flash and the alpha fade. A hard cap of 2,048 pieces keeps a massive amputation from inflating the mesh without bound: past it, one more carcass is invisible, while a memory spike is not.</p>
+<div class="note rule"><p class="note-label">Rule</p><p>"This is rare" is a load-test hypothesis, not a design fact.</p><p>Write it down next to the code that relies on it, with the numbers that would break it, and let the next bench confirm or refute it.</p></div>
+</div>
+<div lang="fr">
+<h2>Un mensonge utile, rendu bon marché</h2>
+<p>Quand une coque perd des hex, le serveur les supprime aussitôt : il n'y a pas d'épave simulée. Mais un morceau de vaisseau qui disparaît d'une image à l'autre se lit comme un bug. Le client raconte donc une histoire : l'hex perdu hérite de la vitesse du vaisseau, reçoit une poussée radiale, dérive et tourne une seconde ou deux en s'assombrissant, flashe en orange et meurt. Personne ne peut le toucher, le ramasser ni le viser ; il n'existe pas, il se raconte.</p>
+<p>La première version créait, par hex perdu, un objet de jeu, un filtre de maille, un rendu de maille, un nouveau matériau et un composant avec sa propre mise à jour. Son commentaire le justifiait : « pas besoin de réserve : quelques pièces par amputation, un événement rare ». L'hypothèse était raisonnable, et fausse en charge. Cent PNJ de cinq hex qui meurent en continu, ce n'est pas « quelques pièces, rarement » : ce sont des centaines de carcasses vivantes en même temps (chacune dure jusqu'à 2,7 s), donc des centaines d'objets et autant de draw calls, plus que ce qu'avaient coûté les débris. Deux autres erreurs s'y cachaient :</p>
+<ul>
+<li>Affecter la maille par la propriété propre à l'instance du filtre plutôt que par sa propriété partagée faisait croire à Unity que la maille « partagée » appartenait à ce filtre, et il la détruisait avec lui. La première carcasse morte détruisait la maille, la suivante la reconstruisait, en boucle.</li>
+<li>Un nouveau matériau par pièce : la troisième occurrence de la même erreur dans le client, après le rendu des balles (voir plus bas) et l'ancien rendu des débris.</li>
+</ul>
+<p>Une carcasse est maintenant une ligne dans un tableau, dessinée selon le même motif que le champ de débris : un seul rendu, une maille reconstruite à chaque image (sept sommets par pièce, un hexagone en éventail de triangles), et les couleurs de sommet pour les trois effets que fournissait le matériau par instance : l'assombrissement, le flash orange et le fondu. Un plafond dur de 2 048 pièces empêche une amputation massive de gonfler la maille sans limite : au-delà, une carcasse de plus est invisible, alors qu'un pic de mémoire ne l'est pas.</p>
+<div class="note rule"><p class="note-label">Règle</p><p>« C'est rare » est une hypothèse de banc de charge, pas un fait de conception.</p><p>L'écrire à côté du code qui en dépend, avec les chiffres qui la casseraient, et laisser le prochain banc la confirmer ou la réfuter.</p></div>
+</div>
+</section>
+
+<section class="sec" id="ecs">
+<div lang="en">
+<h2>Bullets under ECS</h2>
+<p>Bullets are the extreme case: thousands alive, each living about a second. A classic engine object per bullet means thousands of objects scattered in memory, each with its own transform and update call, and every frame the CPU jumps from one unrelated address to the next. Pooling hides the allocation cost; it does not remove the jumps.</p>
+<p>The client moved bullets to Unity's entity-component system (ECS). An entity is just an id; its components are plain structs stored contiguously, per type, in small chunks; systems process those arrays linearly, compiled to vectorized native code and spread over worker threads. Three levers combine: contiguous memory (cache), native compilation (Burst), real parallelism (jobs). The movement system is the ECS equivalent of dead reckoning: position plus velocity times elapsed time, for every bullet not yet tagged as hit.</p>
+<p>The migration was done side by side with the old path, behind a switch, to compare in real play rather than on an isolated test bench. It brought its own lessons, each a one-line fix after a long search:</p>
+<ul>
+<li>Bullets invisible although the triangle counter went up: the generated quad faced away from the orthographic camera, and the pipeline's unlit shader culls back faces by default, unlike the sprite shader every other object used.</li>
+<li>"Invalid entity" errors: the prototype entity used as a template for instantiation had received real component data, so the systems treated it as a live bullet, aged it and destroyed it. Tagging it as a prefab excludes it from every query.</li>
+<li>Setting the material colour did nothing: the pipeline's shaders read <code>_BaseColor</code>, not the legacy <code>_Color</code>; and a fading alpha needs the transparent surface configuration that the editor sets behind a single dropdown.</li>
+</ul>
+<p>Then the first measurement: 1,000 bullets per shot at a fire rate of 10 still produced 160 ms frames on the network update. Applying each bullet one by one into the ECS during packet parsing (an instantiate per new bullet, reads and writes per known bullet) made thousands of individual engine calls. Batching fixed part of it: parse into a list, then instantiate all new bullets in one call at the end of the snapshot, and keep the last state in a managed dictionary instead of reading it back from the engine.</p>
+<p>But ~100 ms spikes remained, and the real unlock was not on the client at all. The server was re-sending every live bullet's unchanged state in every snapshot. The delta protocol (chapter <a href="snapshots.html#lifetimes">4.2</a>) cut the client's work from O(live bullets) to O(new bullets) per snapshot, and the bullet's end of life moved to the client, which expires it from shared range and speed data.</p>
+<div class="note rule"><p class="note-label">Rule</p><p>Before making the per-item cost cheaper, ask whether the items need to be there at all.</p><p>ECS made each bullet cheap; the delta protocol made most of them unnecessary. Volume beats unit cost.</p></div>
+</div>
+<div lang="fr">
+<h2>Les balles sous ECS</h2>
+<p>Les balles sont le cas extrême : des milliers en vie, chacune vivant environ une seconde. Un objet moteur classique par balle, ce sont des milliers d'objets éparpillés en mémoire, chacun avec son transform et son appel de mise à jour, et à chaque image le CPU saute d'une adresse sans rapport à la suivante. La réserve d'objets cache le coût d'allocation ; elle ne supprime pas les sauts.</p>
+<p>Le client a fait passer les balles au système entité-composant (ECS) d'Unity. Une entité n'est qu'un identifiant ; ses composants sont de simples structures stockées contiguës, par type, dans de petits blocs ; des systèmes parcourent ces tableaux linéairement, compilés en code natif vectorisé et répartis sur des threads ouvriers. Trois leviers se combinent : la mémoire contiguë (cache), la compilation native (Burst), le vrai parallélisme (jobs). Le système de mouvement est l'équivalent ECS de l'estime : position plus vitesse fois temps écoulé, pour chaque balle pas encore marquée comme ayant touché.</p>
+<p>La migration s'est faite à côté de l'ancien chemin, derrière un interrupteur, pour comparer en vraie partie plutôt que sur un banc isolé. Elle a apporté ses propres leçons, chacune une correction d'une ligne après une longue recherche :</p>
+<ul>
+<li>Des balles invisibles alors que le compteur de triangles montait : le quad généré tournait le dos à la caméra orthographique, et le shader non éclairé du pipeline élimine les faces arrière par défaut, contrairement au shader de sprites qu'utilisaient tous les autres objets.</li>
+<li>Des erreurs « entité invalide » : l'entité prototype servant de modèle à l'instanciation avait reçu de vraies données de composant ; les systèmes la traitaient comme une balle vivante, la faisaient vieillir et la détruisaient. La marquer comme prefab l'exclut de toutes les requêtes.</li>
+<li>Changer la couleur du matériau ne faisait rien : les shaders du pipeline lisent <code>_BaseColor</code>, pas l'ancien <code>_Color</code> ; et un alpha qui s'estompe exige la configuration de surface transparente que l'éditeur règle derrière un seul menu.</li>
+</ul>
+<p>Puis la première mesure : 1 000 balles par tir à une cadence de 10 produisaient encore des images de 160 ms sur la mise à jour réseau. Appliquer chaque balle une par une dans l'ECS pendant l'analyse du paquet (une instanciation par nouvelle balle, des lectures et écritures par balle connue) faisait des milliers d'appels moteur individuels. Le regroupement en a réglé une partie : analyser dans une liste, puis instancier toutes les nouvelles balles en un seul appel à la fin du snapshot, et garder le dernier état dans un dictionnaire managé au lieu de le relire dans le moteur.</p>
+<p>Mais des pics d'environ 100 ms restaient, et le vrai déblocage n'était pas du tout côté client. Le serveur renvoyait dans chaque snapshot l'état inchangé de chaque balle vivante. Le protocole delta (chapitre <a href="snapshots.html#lifetimes">4.2</a>) a fait passer le travail du client de O(balles vivantes) à O(nouvelles balles) par snapshot, et la fin de vie de la balle est passée au client, qui la fait expirer à partir des données de portée et de vitesse partagées.</p>
+<div class="note rule"><p class="note-label">Règle</p><p>Avant de rendre le coût par élément moins cher, se demander si les éléments doivent être là du tout.</p><p>L'ECS a rendu chaque balle bon marché ; le protocole delta a rendu la plupart d'entre elles inutiles. Le volume bat le coût unitaire.</p></div>
+</div>
+</section>
+
+<section class="sec" id="traps">
+<div lang="en">
+<h2>Per-instance traps that only show under load</h2>
+<p>Most of what hurt the client was not an algorithm but a small per-object habit, harmless with ten objects and ruinous with ten thousand:</p>
+<div class="table-wrap"><table>
+<thead><tr><th>Habit</th><th>What it cost</th><th>Fix</th></tr></thead>
+<tbody>
+<tr><td>A new material per instance</td><td>Shader lookup and material construction are among the engine's pricier calls; pre-warming a pool of thousands of bullets turned into a synchronous stall of hundreds of milliseconds.</td><td>One shared material, created once.</td></tr>
+<tr><td>Looking up a component on every state update</td><td>For bullets, tens of thousands of pointless lookups per second, on the path that processes snapshots.</td><td>Look it up once when the object is created; an object's components never change afterwards.</td></tr>
+<tr><td>Assigning a mesh through the per-instance property</td><td>The engine destroys the mesh with its owner: the "shared" mesh was destroyed and rebuilt in a loop.</td><td>Use the shared-mesh property for shared meshes.</td></tr>
+<tr><td>Finding a shader by name at runtime</td><td>A shader referenced by no scene is stripped from the build, and the lookup returns nothing in the shipped game only.</td><td>Keep a fallback shader; white debris is better than an exception.</td></tr>
+<tr><td>Static references to engine objects</td><td>With fast "enter play mode" settings, static fields survive between editor sessions but the engine objects they point to are destroyed.</td><td>Destroy and reset them at the start of each session, before dropping the reference.</td></tr>
+</tbody></table></div>
+</div>
+<div lang="fr">
+<h2>Les pièges par instance qui n'apparaissent qu'en charge</h2>
+<p>L'essentiel de ce qui a fait souffrir le client n'était pas un algorithme mais une petite habitude par objet, inoffensive avec dix objets et ruineuse avec dix mille :</p>
+<div class="table-wrap"><table>
+<thead><tr><th>Habitude</th><th>Ce qu'elle coûtait</th><th>Correction</th></tr></thead>
+<tbody>
+<tr><td>Un nouveau matériau par instance</td><td>La recherche de shader et la construction de matériau comptent parmi les appels les plus chers du moteur ; préchauffer une réserve de milliers de balles tournait à un blocage synchrone de centaines de millisecondes.</td><td>Un seul matériau partagé, créé une fois.</td></tr>
+<tr><td>Chercher un composant à chaque mise à jour d'état</td><td>Pour les balles, des dizaines de milliers de recherches inutiles par seconde, sur le chemin qui traite les snapshots.</td><td>Le chercher une fois à la création de l'objet ; les composants d'un objet ne changent plus ensuite.</td></tr>
+<tr><td>Affecter une maille par la propriété propre à l'instance</td><td>Le moteur détruit la maille avec son propriétaire : la maille « partagée » était détruite et reconstruite en boucle.</td><td>Utiliser la propriété de maille partagée pour les mailles partagées.</td></tr>
+<tr><td>Chercher un shader par son nom à l'exécution</td><td>Un shader qu'aucune scène ne référence est retiré de la version compilée, et la recherche ne rend rien dans le jeu livré seulement.</td><td>Garder un shader de repli ; des débris blancs valent mieux qu'une exception.</td></tr>
+<tr><td>Des références statiques vers des objets du moteur</td><td>Avec les réglages rapides « d'entrée en jeu », les champs statiques survivent entre deux sessions de l'éditeur, mais les objets du moteur qu'ils désignent sont détruits.</td><td>Les détruire et les remettre à zéro au début de chaque session, avant de lâcher la référence.</td></tr>
+</tbody></table></div>
+</div>
+</section>
+
+<section class="sec" id="takeaways">
+<div class="takeaways">
+<div lang="en"><h2>Key takeaways</h2><ul>
+<li>Count draw calls under load: a sharing optimization removes obstacles, only merging geometry removes calls.</li>
+<li>Turn swarms of short-lived visuals into rows in one mesh with vertex colours, with a hard cap.</li>
+<li>Use a data-oriented layout (ECS) for thousands of identical objects, and batch structural changes per snapshot.</li>
+<li>Fix volume before unit cost: the best object is the one the server never sent.</li>
+<li>Hunt per-instance habits (materials, lookups, mesh ownership) with a load test; they are invisible at small scale.</li>
+</ul></div>
+<div lang="fr"><h2>À retenir</h2><ul>
+<li>Compter les draw calls en charge : une optimisation de partage lève des obstacles, seule la fusion de géométrie supprime des appels.</li>
+<li>Transformer les essaims de visuels éphémères en lignes d'une seule maille à couleurs de sommet, avec un plafond dur.</li>
+<li>Utiliser une disposition orientée données (ECS) pour des milliers d'objets identiques, et regrouper les changements structurels par snapshot.</li>
+<li>Régler le volume avant le coût unitaire : le meilleur objet est celui que le serveur n'a jamais envoyé.</li>
+<li>Traquer les habitudes par instance (matériaux, recherches, propriété des mailles) avec un banc de charge ; elles sont invisibles à petite échelle.</li>
+</ul></div>
+</div>
+</section>
+
+</div>
+<div data-chapter-foot></div>
+</article>
+</main>
+<aside class="rail" id="mq-rail"></aside>
+</div>
+<footer class="site-footer" id="mq-footer"></footer>
+<script src="assets/js/site-data.js" defer></script>
+<script src="assets/js/glossary-data.js" defer></script>
+<script src="assets/js/app.js" defer></script>
+<script src="assets/js/widgets.js" defer></script>
+</body>
+</html>

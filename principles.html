@@ -1,0 +1,280 @@
+<!doctype html>
+<html lang="en" data-lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Making mistakes impossible · MoonQwak</title>
+<meta name="description" content="Invariants held by code instead of comments: exhaustive switches, coverage tests, and compiler warnings promoted from real incidents.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Chakra+Petch:wght@500;600&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="assets/css/site.css">
+<script>(function(){var r=document.documentElement,l,t;try{l=localStorage.getItem("mq-lang");t=localStorage.getItem("mq-theme");}catch(e){}if(l!=="en"&&l!=="fr"){l=(navigator.language||"").toLowerCase().indexOf("fr")===0?"fr":"en";}r.setAttribute("data-lang",l);r.setAttribute("lang",l);if(t==="light"||t==="dark")r.setAttribute("data-theme",t);})();</script>
+</head>
+<body data-page="principles">
+<a class="skip-link" href="#main"><span lang="en">Skip to content</span><span lang="fr">Aller au contenu</span></a>
+<header class="site-header" id="mq-header"></header>
+<div class="layout">
+<aside class="sidebar" id="mq-sidebar"></aside>
+<main class="content" id="main">
+<article>
+<header class="chapter-head">
+  <div class="eyebrow" data-auto></div>
+  <h1><span lang="en">Making mistakes impossible</span><span lang="fr">Rendre les erreurs impossibles</span></h1>
+  <p class="dek"><span lang="en">Invariants held by code instead of comments: exhaustive switches, coverage tests, and compiler warnings promoted from real incidents.</span><span lang="fr">Des invariants tenus par le code plutôt que par des commentaires : switchs exhaustifs, tests de couverture, et avertissements promus en erreurs à partir de vrais incidents.</span></p>
+  <div class="meta-row" data-auto></div>
+</header>
+
+<div class="prose">
+
+<section class="sec" id="comments">
+<div lang="en">
+<h2>A comment does not hold an invariant</h2>
+<p>A game server is full of rules that span files: "every place that draws from the station warehouse must also show it", "this list is filled once per tick, before the parallel phase", "this timestamp is in milliseconds". The natural way to record such a rule is a comment next to the code. The history of this project says that is not enough, and it says so with receipts:</p>
+<ul>
+<li>A list of the interaction points that give access to a station's warehouse carried the comment "add yourself here". It was forgotten twice, identically: first for the market counter, then for the post office. Each time the symptom was the most alarming of the whole game: a screen announcing "warehouse empty" over an intact warehouse, with everything "coming back" when the player walked to the storage terminal.</li>
+<li>Three comments in the snapshot code asserted the exact invariant that a race violated at 780 players (chapter <a href="bench-journal.html#scaling">10.4</a>). They read like a proof; nothing checked any of them.</li>
+<li>A comment documented the safety premise of a network delta. The project invalidated that premise twice, with two unrelated changes, without anyone reopening the comment (chapter <a href="deltas.html">4.4</a>).</li>
+</ul>
+<p>None of these were careless people writing bad comments. The comments were right when written. What fails is the assumption that the next person, or the same person three months later, will read the right comment at the right moment.</p>
+<div class="note rule"><p class="note-label">Rule</p><p>An invariant held from memory breaks silently. An invariant held by code breaks immediately, and where it is violated.</p></div>
+</div>
+<div lang="fr">
+<h2>Un commentaire ne tient pas un invariant</h2>
+<p>Un serveur de jeu est plein de règles qui traversent les fichiers : « tout endroit qui puise dans l'entrepôt de la station doit aussi le montrer », « cette liste est remplie une fois par tick, avant la phase parallèle », « cet horodatage est en millisecondes ». La façon naturelle de noter une telle règle est un commentaire à côté du code. L'histoire de ce projet dit que ça ne suffit pas, et elle le dit pièces à l'appui :</p>
+<ul>
+<li>Une liste des points d'interaction qui donnent accès à l'entrepôt d'une station portait le commentaire « il faut s'ajouter ici ». Elle a été oubliée deux fois, à l'identique : d'abord pour le comptoir du marché, puis pour le bureau de poste. Chaque fois, le symptôme était le plus alarmant de tout le jeu : un écran annonçant « entrepôt vide » sur un entrepôt intact, et tout qui « revenait » quand le joueur marchait jusqu'au terminal de stockage.</li>
+<li>Trois commentaires du code des snapshots affirmaient l'invariant exact qu'une course a violé à 780 joueurs (chapitre <a href="bench-journal.html#scaling">10.4</a>). Ils se lisaient comme une preuve ; rien n'en vérifiait aucun.</li>
+<li>Un commentaire documentait la prémisse de sûreté d'un delta réseau. Le projet a invalidé cette prémisse deux fois, par deux changements sans rapport, sans que personne ne rouvre le commentaire (chapitre <a href="deltas.html">4.4</a>).</li>
+</ul>
+<p>Aucun de ces cas n'était le fait de gens négligents écrivant de mauvais commentaires. Les commentaires étaient justes quand ils ont été écrits. Ce qui échoue, c'est l'hypothèse que la personne suivante, ou la même trois mois plus tard, lira le bon commentaire au bon moment.</p>
+<div class="note rule"><p class="note-label">Règle</p><p>Un invariant tenu de mémoire casse en silence. Un invariant tenu par le code casse tout de suite, et là où il est violé.</p></div>
+</div>
+</section>
+
+<section class="sec" id="ladder">
+<div lang="en">
+<h2>A ladder of enforcement</h2>
+<p>Between "a comment" and "impossible to write" there are several rungs, and each one fails earlier and louder than the one below. The practical question for any rule is: what is the highest rung I can afford for it?</p>
+</div>
+<div lang="fr">
+<h2>Une échelle de contrainte</h2>
+<p>Entre « un commentaire » et « impossible à écrire », il y a plusieurs barreaux, et chacun échoue plus tôt et plus fort que celui du dessous. La question pratique, pour chaque règle, est : quel est le barreau le plus haut que je peux me permettre pour elle ?</p>
+</div>
+<figure class="fig fig-scroll">
+<svg viewBox="0 0 760 350" role="img" aria-label="Enforcement ladder from weakest to strongest: comment, name, runtime guard, test, boot check, compiler error, structure; each rung fails earlier and louder">
+  <defs><marker id="pr-arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="currentColor" opacity="0.7"/></marker></defs>
+  <line x1="34" y1="332" x2="34" y2="22" class="dg-line" marker-end="url(#pr-arr)"/>
+  <text class="dg-small" x="24" y="176" text-anchor="middle" transform="rotate(-90 24 176)"><tspan lang="en">fails earlier and louder</tspan><tspan lang="fr">échoue plus tôt et plus fort</tspan></text>
+  <g class="dg-small">
+    <rect x="54" y="14" width="690" height="38" rx="6" class="dg-hot"/>
+    <text x="70" y="38" class="dg-text" font-weight="700"><tspan lang="en">Structure</tspan><tspan lang="fr">Structure</tspan></text>
+    <text x="230" y="38"><tspan lang="en">the API cannot express the wrong order</tspan><tspan lang="fr">l'API ne peut pas exprimer le mauvais ordre</tspan></text>
+    <text x="732" y="38" text-anchor="end"><tspan lang="en">cannot be written</tspan><tspan lang="fr">ne s'écrit pas</tspan></text>
+    <rect x="54" y="60" width="690" height="38" rx="6" class="dg-box"/>
+    <text x="70" y="84" class="dg-text" font-weight="700"><tspan lang="en">Compiler error</tspan><tspan lang="fr">Erreur de compilation</tspan></text>
+    <text x="230" y="84"><tspan lang="en">warnings promoted, nullability, types</tspan><tspan lang="fr">avertissements promus, nullabilité, types</tspan></text>
+    <text x="732" y="84" text-anchor="end"><tspan lang="en">the build fails</tspan><tspan lang="fr">la build échoue</tspan></text>
+    <rect x="54" y="106" width="690" height="38" rx="6" class="dg-box"/>
+    <text x="70" y="130" class="dg-text" font-weight="700"><tspan lang="en">Boot check</tspan><tspan lang="fr">Contrôle au démarrage</tspan></text>
+    <text x="230" y="130"><tspan lang="en">exhaustive switch verified at startup</tspan><tspan lang="fr">switch exhaustif vérifié au démarrage</tspan></text>
+    <text x="732" y="130" text-anchor="end"><tspan lang="en">the server refuses to start</tspan><tspan lang="fr">le serveur refuse de démarrer</tspan></text>
+    <rect x="54" y="152" width="690" height="38" rx="6" class="dg-box"/>
+    <text x="70" y="176" class="dg-text" font-weight="700"><tspan lang="en">Test</tspan><tspan lang="fr">Test</tspan></text>
+    <text x="230" y="176"><tspan lang="en">coverage guards found by reflection</tspan><tspan lang="fr">gardes de couverture trouvées par réflexion</tspan></text>
+    <text x="732" y="176" text-anchor="end"><tspan lang="en">before the change lands</tspan><tspan lang="fr">avant que le changement n'entre</tspan></text>
+    <rect x="54" y="198" width="690" height="38" rx="6" class="dg-box"/>
+    <text x="70" y="222" class="dg-text" font-weight="700"><tspan lang="en">Runtime guard</tspan><tspan lang="fr">Garde à l'exécution</tspan></text>
+    <text x="230" y="222"><tspan lang="en">a database call on the tick thread, reported by name</tspan><tspan lang="fr">un appel en base sur le thread de tick, dénoncé par son nom</tspan></text>
+    <text x="732" y="222" text-anchor="end"><tspan lang="en">the first time it happens</tspan><tspan lang="fr">la première fois que ça arrive</tspan></text>
+    <rect x="54" y="244" width="690" height="38" rx="6" class="dg-box-2"/>
+    <text x="70" y="268" class="dg-text" font-weight="700"><tspan lang="en">Name</tspan><tspan lang="fr">Nom</tspan></text>
+    <text x="230" y="268"><tspan lang="en">the unit written into the field's name</tspan><tspan lang="fr">l'unité écrite dans le nom du champ</tspan></text>
+    <text x="732" y="268" text-anchor="end"><tspan lang="en">at every write, if read</tspan><tspan lang="fr">à chaque écriture, si on lit</tspan></text>
+    <rect x="54" y="290" width="690" height="38" rx="6" class="dg-box-2" style="opacity:0.75"/>
+    <text x="70" y="314" class="dg-text" font-weight="700"><tspan lang="en">Comment</tspan><tspan lang="fr">Commentaire</tspan></text>
+    <text x="230" y="314"><tspan lang="en">"add yourself here"</tspan><tspan lang="fr">« il faut s'ajouter ici »</tspan></text>
+    <text x="732" y="314" text-anchor="end"><tspan lang="en">only if someone reads it</tspan><tspan lang="fr">seulement si quelqu'un le lit</tspan></text>
+  </g>
+</svg>
+<figcaption><span lang="en"><strong>Climb as high as the rule allows.</strong> Each rung is an example from this project; the right column says when a mistake gets caught.</span><span lang="fr"><strong>Monter aussi haut que la règle le permet.</strong> Chaque barreau est un exemple tiré de ce projet ; la colonne de droite dit quand une erreur est attrapée.</span></figcaption>
+</figure>
+<div lang="en">
+<p>The lowest rung above a comment costs almost nothing: <strong>put the rule in the name</strong>. The costliest bug of the freshness budget (chapter <a href="freshness-budget.html">4.5</a>) was a field written in ticks and read in milliseconds. The fix renamed it to end in <code>AtMs</code> and made the current time a parameter of the method that writes it: you cannot write into that field without holding, in your hand, the unit its reader expects. A comment explains a unit; a name imposes it.</p>
+</div>
+<div lang="fr">
+<p>Le barreau le plus bas au-dessus du commentaire ne coûte presque rien : <strong>mettre la règle dans le nom</strong>. Le bug le plus cher du budget de fraîcheur (chapitre <a href="freshness-budget.html">4.5</a>) était un champ écrit en ticks et relu en millisecondes. La correction l'a renommé pour qu'il finisse par <code>AtMs</code> et a fait de l'heure courante un paramètre de la méthode qui l'écrit : on ne peut plus écrire dans ce champ sans tenir en main l'unité qu'attend son lecteur. Un commentaire explique une unité ; un nom l'impose.</p>
+</div>
+</section>
+
+<section class="sec" id="warnings">
+<div lang="en">
+<h2>Warnings promoted from real incidents</h2>
+<p>The C# compiler already detects several classes of bugs this project shipped. The problem was never that the check did not exist; it was that the finding arrived as a warning, among dozens of warnings, and scrolled past. One file at the root of the repository, imported automatically by every project, turns a <strong>curated list</strong> of warnings into errors, and each entry is there because of an incident:</p>
+</div>
+<div lang="fr">
+<h2>Des avertissements promus à partir de vrais incidents</h2>
+<p>Le compilateur C# détecte déjà plusieurs classes de bugs que ce projet a livrées. Le problème n'a jamais été que la vérification n'existait pas ; c'est que le constat arrivait sous forme d'avertissement, parmi des dizaines d'avertissements, et défilait sans être lu. Un fichier à la racine du dépôt, importé automatiquement par chaque projet, transforme une <strong>liste choisie</strong> d'avertissements en erreurs, et chaque entrée y est à cause d'un incident :</p>
+</div>
+<div class="code"><div class="code-head"><span class="file">Directory.Build.props</span></div><pre><code data-lang="xml">&lt;!-- Every code below is a bug that actually shipped. When a bug turns out to have been
+     visible as a compiler warning, add its code here instead of only fixing the instance. --&gt;
+&lt;PropertyGroup&gt;
+  &lt;WarningsAsErrors&gt;$(WarningsAsErrors);CS0114;CS0108;CS0162;CS0649;CS0169;
+                    CS8600;CS8602;CS8604;CS8618;CS8625&lt;/WarningsAsErrors&gt;
+&lt;/PropertyGroup&gt;</code></pre></div>
+<div lang="en">
+<div class="table-wrap"><table>
+<thead><tr><th>Code</th><th>What it catches</th><th>The incident</th></tr></thead>
+<tbody>
+<tr><td><code>CS0114</code>, <code>CS0108</code></td><td>A member that <em>hides</em> a base member instead of overriding it</td><td>The player ship's per-tick method was declared without <code>override</code>. The map calls it through an interface whose implementation is the base class's empty method, so every player input was silently dropped, while NPCs, which did override, kept working. It compiled, with a warning. The symptom was "no interaction works at all".</td></tr>
+<tr><td><code>CS0162</code></td><td>Unreachable code</td><td>A branch for zero-radius missiles contained a zero-length ray cast that could never hit anything: dead code that looked like a rule.</td></tr>
+<tr><td><code>CS0649</code>, <code>CS0169</code></td><td>Fields never assigned, or never used</td><td>What a half-finished refactor leaves behind, and what the next reader takes for intentional state.</td></tr>
+<tr><td><code>CS8600</code>…<code>CS8625</code></td><td>Nullability</td><td>About 45 nullability warnings were being reported and ignored, which is how real ones hide. Two in that pile were live defects: a removal from a concurrent dictionary whose result went unchecked before disposal (a crash on concurrent disconnect), and a network receive callback dereferencing a peer that shutdown had just cleared. The rest were real invariants the types did not state, now written with <code>required</code>, nullable annotations or named guards.</td></tr>
+</tbody></table></div>
+<div class="note tradeoff"><p class="note-label">Trade-off</p><p>Blanket "treat all warnings as errors" was deliberately not used. On an existing code base, it produces an instant wall of failures with no way to keep working, so it gets switched off again within a day and buys nothing. A curated list of codes that have actually bitten is enforceable today and stays enforceable. The escape hatch is explicit: a scoped <code>#pragma</code> at one spot, with a comment saying why, never a removal from the list.</p></div>
+<div class="note rule"><p class="note-label">Rule</p><p>When a bug turns out to have been visible as a compiler warning, promote that warning. The list should grow from incidents, not from a style guide.</p></div>
+</div>
+<div lang="fr">
+<div class="table-wrap"><table>
+<thead><tr><th>Code</th><th>Ce qu'il attrape</th><th>L'incident</th></tr></thead>
+<tbody>
+<tr><td><code>CS0114</code>, <code>CS0108</code></td><td>Un membre qui <em>masque</em> un membre de base au lieu de le redéfinir</td><td>La méthode par tick du vaisseau du joueur était déclarée sans <code>override</code>. La carte l'appelle par une interface dont l'implémentation est la méthode vide de la classe de base : chaque entrée du joueur était donc ignorée en silence, pendant que les PNJ, qui redéfinissaient bien, continuaient de fonctionner. Ça compilait, avec un avertissement. Le symptôme était « plus aucune interaction ne marche ».</td></tr>
+<tr><td><code>CS0162</code></td><td>Du code inaccessible</td><td>Une branche pour les missiles de rayon nul contenait un lancer de rayon de longueur nulle qui ne pouvait jamais rien toucher : du code mort qui avait l'air d'une règle.</td></tr>
+<tr><td><code>CS0649</code>, <code>CS0169</code></td><td>Des champs jamais assignés, ou jamais utilisés</td><td>Ce que laisse un refactoring à moitié fini, et que le lecteur suivant prend pour un état voulu.</td></tr>
+<tr><td><code>CS8600</code>…<code>CS8625</code></td><td>La nullabilité</td><td>Environ 45 avertissements de nullabilité étaient signalés et ignorés, et c'est ainsi que les vrais se cachent. Deux dans le tas étaient des défauts réels : un retrait d'un dictionnaire concurrent dont le résultat n'était pas vérifié avant libération (un plantage à la déconnexion concurrente), et un rappel de réception réseau qui déréférençait un pair que l'arrêt venait de remettre à null. Les autres étaient de vrais invariants que les types ne disaient pas, désormais écrits avec <code>required</code>, des annotations de nullabilité ou des gardes nommées.</td></tr>
+</tbody></table></div>
+<div class="note tradeoff"><p class="note-label">Compromis</p><p>Le « tous les avertissements en erreurs » global n'a volontairement pas été utilisé. Sur une base de code existante, il produit un mur instantané d'échecs sans moyen de continuer à travailler : il est désactivé dans la journée et ne rapporte rien. Une liste choisie de codes qui ont réellement mordu est applicable aujourd'hui et le reste. La porte de sortie est explicite : un <code>#pragma</code> limité à un endroit, avec un commentaire qui dit pourquoi, jamais un retrait de la liste.</p></div>
+<div class="note rule"><p class="note-label">Règle</p><p>Quand un bug se révèle avoir été visible comme avertissement du compilateur, promouvoir cet avertissement. La liste doit grandir à partir des incidents, pas d'un guide de style.</p></div>
+</div>
+</section>
+
+<section class="sec" id="exhaustive">
+<div lang="en">
+<h2>Exhaustive answers, checked at boot</h2>
+<p>The warehouse list that was forgotten twice is now a function that answers, for <em>every</em> kind of interaction point, whether it reaches the warehouse. Every value of the enumeration has its own line, the "no" answers included, and each "no" is justified in a short comment: the justification is what forces the question to be asked when a new kind is added.</p>
+</div>
+<div lang="fr">
+<h2>Des réponses exhaustives, vérifiées au démarrage</h2>
+<p>La liste de l'entrepôt oubliée deux fois est maintenant une fonction qui répond, pour <em>chaque</em> type de point d'interaction, s'il atteint l'entrepôt. Chaque valeur de l'énumération a sa propre ligne, réponses « non » comprises, et chaque « non » est justifié par un court commentaire : c'est la justification qui force à se poser la question quand un nouveau type est ajouté.</p>
+</div>
+<div class="code"><div class="code-head"><span class="file">SharedData/Props/InteractionRules.cs · abridged</span></div><pre><code data-lang="cs">public static bool ReachesWarehouse(InteractionType interaction) =&gt; interaction switch
+{
+    InteractionType.Storage    =&gt; true,   // the terminal itself
+    InteractionType.Merchant   =&gt; true,   // the counter escrows from the warehouse (1st miss)
+    InteractionType.PostOffice =&gt; true,   // parcels leave from and arrive in it (2nd miss)
+    InteractionType.Seat       =&gt; false,  // you sit down, you store nothing
+    InteractionType.Airlock    =&gt; false,  // a door, not a counter
+    // … one line for every other value, yes or no …
+    _ =&gt; throw new InvalidOperationException(
+        $"InteractionType.{interaction} has no line in ReachesWarehouse: decide.")
+};
+
+// Called at server startup, next to the other catalog checks.
+public static void AssertCatalogueIsSane()
+{
+    foreach (InteractionType t in Enum.GetValues(typeof(InteractionType)))
+        _ = ReachesWarehouse(t);  // throws on a value without a line
+}</code></pre></div>
+<div lang="en">
+<p>The last arm matters, and so does a subtlety of C#. For an enumeration, a switch expression is considered complete once it has a discard arm, so the compiler will never point out that a <em>new</em> member has no line. The check therefore happens at startup: the server walks every value of the enumeration and asks the question, and a missing answer stops the boot with a message that names the value. A test calls the same check, so the suite fails before the server is ever started.</p>
+<p>The test does not verify that the answers are <em>right</em>; only a review can say that. It verifies that every answer <em>exists</em>. That is the whole trick: you can no longer forget, you can only decide, and a wrong decision is one visible line in a review.</p>
+<div class="note rule"><p class="note-label">Rule</p><p>For any rule of the form "every X must declare Y", make the absence of Y a startup failure. Forgetting becomes impossible; only deciding is left.</p></div>
+</div>
+<div lang="fr">
+<p>La dernière branche compte, et une subtilité de C# aussi. Pour une énumération, une expression switch est considérée complète dès qu'elle a une branche par défaut : le compilateur ne signalera donc jamais qu'un <em>nouveau</em> membre n'a pas de ligne. La vérification a donc lieu au démarrage : le serveur parcourt chaque valeur de l'énumération et pose la question, et une réponse manquante arrête le démarrage avec un message qui nomme la valeur. Un test appelle la même vérification, et la suite échoue avant même que le serveur ne démarre.</p>
+<p>Le test ne vérifie pas que les réponses sont <em>justes</em> ; seule une relecture peut le dire. Il vérifie que chaque réponse <em>existe</em>. C'est tout le principe : on ne peut plus oublier, on peut seulement décider, et une mauvaise décision est une ligne visible à la relecture.</p>
+<div class="note rule"><p class="note-label">Règle</p><p>Pour toute règle de la forme « chaque X doit déclarer Y », faire de l'absence de Y un échec au démarrage. L'oubli devient impossible ; il ne reste que la décision.</p></div>
+</div>
+</section>
+
+<section class="sec" id="coverage">
+<div lang="en">
+<h2>Tests that cannot go stale</h2>
+<p>A test suite you have to remember to extend protects you exactly until the day you forget. The wire protocol's round-trip suite (chapter <a href="protocol-testing.html#round-trip">1.6</a>) is therefore not allowed to be optional. Its coverage tests discover packet types by reflection over the protocol assembly and fail when one has no sample, naming it. They also check the other direction (a sample naming a type that no longer exists would quietly test nothing) and that each sample builds the type it claims (a copy-pasted entry would leave one type uncovered and another tested twice).</p>
+<p>The failure message itself carries a rule: populate every field with a <em>non-default</em> value. A field left at zero round-trips perfectly even when nothing writes or reads it, so a lazy sample is a test that reports success on a field it never checked. The same idea protects the input flags. A byte of flags is not one field but eight, handed out one at a time as features arrive, so a single sample only checks the combination someone happened to write down. The test runs all 65,536 combinations of the input packet's two flag bytes in under a second, and checks the decoded booleans too: a bit that survives the wire but is read with the wrong mask is a control that does the wrong thing.</p>
+</div>
+<div lang="fr">
+<h2>Des tests qui ne peuvent pas vieillir</h2>
+<p>Une suite de tests qu'il faut penser à étendre protège exactement jusqu'au jour où l'on oublie. La suite d'aller-retour du protocole réseau (chapitre <a href="protocol-testing.html#round-trip">1.6</a>) n'a donc pas le droit d'être facultative. Ses tests de couverture découvrent les types de paquets par réflexion sur l'assembly du protocole et échouent quand l'un d'eux n'a pas d'échantillon, en le nommant. Ils vérifient aussi l'autre sens (un échantillon qui nomme un type qui n'existe plus ne testerait rien, en silence) et que chaque échantillon construit bien le type qu'il annonce (une entrée copiée-collée laisserait un type sans couverture et un autre testé deux fois).</p>
+<p>Le message d'échec porte lui-même une règle : remplir chaque champ avec une valeur <em>non par défaut</em>. Un champ laissé à zéro fait un aller-retour parfait même quand rien ne l'écrit ni ne le lit : un échantillon paresseux est un test qui annonce un succès sur un champ qu'il n'a jamais vérifié. La même idée protège les drapeaux d'entrée. Un octet de drapeaux n'est pas un champ mais huit, attribués un par un à mesure que les fonctionnalités arrivent : un seul échantillon ne vérifie que la combinaison que quelqu'un a pensé à écrire. Le test parcourt les 65 536 combinaisons des deux octets de drapeaux du paquet d'entrée en moins d'une seconde, et vérifie aussi les booléens décodés : un bit qui survit au réseau mais se lit avec le mauvais masque est une commande qui fait la mauvaise chose.</p>
+</div>
+</section>
+
+<section class="sec" id="runtime">
+<div lang="en">
+<h2>Guards at runtime</h2>
+<p>Some rules cannot be checked before running, because they depend on which thread calls what. The rule "no database access on the tick thread" is the example (chapter <a href="no-db-in-tick.html#guard">3.4</a>): a thread-local flag marks the tick threads, the factory that creates database contexts checks it, and a violation is reported once per call site, by name. In its first session the guard denounced four periodic sweeps that had been left on the tick because they "only" ran once a minute. A stutter every sixty seconds is still a stutter, and a regular one teaches players to expect it.</p>
+<p>A runtime guard is only as good as its coverage, and this one has a documented hole: the flag is per thread, and the helper threads of a parallel loop do not inherit it. Writing the hole down next to the guard is itself part of the discipline; a guard that silently covers less than it seems is a comment with extra steps.</p>
+</div>
+<div lang="fr">
+<h2>Des gardes à l'exécution</h2>
+<p>Certaines règles ne peuvent pas être vérifiées avant l'exécution, parce qu'elles dépendent de quel thread appelle quoi. La règle « aucun accès à la base sur le thread de tick » en est l'exemple (chapitre <a href="no-db-in-tick.html#guard">3.4</a>) : un drapeau local au thread marque les threads de tick, la fabrique qui crée les contextes de base le vérifie, et une violation est dénoncée une fois par site d'appel, par son nom. Dès sa première session, le garde a dénoncé quatre balayages périodiques laissés sur le tick parce qu'ils ne tournaient « qu'une fois par minute ». Une saccade toutes les soixante secondes reste une saccade, et une saccade régulière apprend aux joueurs à l'attendre.</p>
+<p>Un garde à l'exécution ne vaut que par sa couverture, et celui-ci a un trou documenté : le drapeau est par thread, et les threads auxiliaires d'une boucle parallèle n'en héritent pas. Écrire le trou à côté du garde fait partie de la discipline ; un garde qui couvre en silence moins qu'il n'y paraît est un commentaire avec des étapes en plus.</p>
+</div>
+</section>
+
+<section class="sec" id="shape">
+<div lang="en">
+<h2>Shape the code so the wrong thing cannot be written</h2>
+<p>The top rung is structural: arrange types and signatures so that the mistake has no syntax. Most chapters of this site contain one, and they are easy to overlook precisely because they work:</p>
+<ul>
+<li><strong>A safe default.</strong> The first value of the player-state enumeration is "loading", so a player can never exist "already arrived" by default (chapter <a href="login-flow.html#arrival">2.2</a>).</li>
+<li><strong>A signature that takes the lock.</strong> Loading an inventory row for modification acquires its lock itself, so "load, then lock" cannot be written (chapter <a href="transactions.html#locks">6.2</a>).</li>
+<li><strong>One judge.</strong> A single function decides whether a path from the network stays inside the installation, and a single function converts disk paths to manifest paths (chapter <a href="updater.html#trust">8.1</a>).</li>
+<li><strong>One atomic reference.</strong> A pooled buffer and its length travel as one immutable object, so they cannot be read torn (chapter <a href="allocations.html#ownership">10.2</a>).</li>
+<li><strong>A pure function.</strong> After the race of bench 19, the fallback serialization of a hull was made pure: it no longer mutates shared state, so running it from many threads at once is harmless by construction (chapter <a href="serialize-once.html">4.3</a>).</li>
+<li><strong>Ownership by construction.</strong> Per-map scratch buffers live on the map, so two maps ticking in parallel cannot share one (chapter <a href="allocations.html#fill">10.2</a>).</li>
+</ul>
+<div class="note rule"><p class="note-label">Rule</p><p>A signature that makes the wrong thing natural is a bug in the signature.</p><p>When a rule keeps being broken, the fix is rarely a louder comment. It is a shape of code in which the broken version no longer compiles, or no longer exists.</p></div>
+</div>
+<div lang="fr">
+<h2>Donner au code une forme où l'erreur ne s'écrit pas</h2>
+<p>Le barreau le plus haut est structurel : arranger les types et les signatures pour que l'erreur n'ait pas de syntaxe. La plupart des chapitres de ce site en contiennent un, et ils passent facilement inaperçus justement parce qu'ils fonctionnent :</p>
+<ul>
+<li><strong>Un défaut sûr.</strong> La première valeur de l'énumération d'état du joueur est « en chargement » : un joueur ne peut jamais exister « déjà arrivé » par défaut (chapitre <a href="login-flow.html#arrival">2.2</a>).</li>
+<li><strong>Une signature qui prend le verrou.</strong> Charger une ligne d'inventaire pour la modifier acquiert elle-même son verrou : « charger, puis verrouiller » ne peut pas s'écrire (chapitre <a href="transactions.html#locks">6.2</a>).</li>
+<li><strong>Un seul juge.</strong> Une seule fonction décide si un chemin venu du réseau reste dans l'installation, et une seule fonction convertit les chemins du disque en chemins de manifeste (chapitre <a href="updater.html#trust">8.1</a>).</li>
+<li><strong>Une seule référence atomique.</strong> Un tampon loué et sa longueur voyagent en un seul objet immuable : ils ne peuvent pas être lus déchirés (chapitre <a href="allocations.html#ownership">10.2</a>).</li>
+<li><strong>Une fonction pure.</strong> Après la course du banc 19, la sérialisation de repli d'une coque est devenue pure : elle ne modifie plus d'état partagé, et l'exécuter depuis beaucoup de threads à la fois est inoffensif par construction (chapitre <a href="serialize-once.html">4.3</a>).</li>
+<li><strong>La propriété par construction.</strong> Les tampons de travail par carte vivent sur la carte : deux cartes qui tiquent en parallèle ne peuvent pas en partager un (chapitre <a href="allocations.html#fill">10.2</a>).</li>
+</ul>
+<div class="note rule"><p class="note-label">Règle</p><p>Une signature qui rend naturelle la mauvaise façon de faire est un bug dans la signature.</p><p>Quand une règle continue d'être enfreinte, la correction est rarement un commentaire plus fort. C'est une forme de code dans laquelle la version fautive ne compile plus, ou n'existe plus.</p></div>
+</div>
+</section>
+
+<section class="sec" id="takeaways">
+<div class="takeaways">
+<div lang="en"><h2>Key takeaways</h2><ul>
+<li>Comments do not hold invariants; the right comment is rarely read at the right moment.</li>
+<li>For each rule, climb as high as you can: name, runtime guard, test, boot check, compiler error, structure.</li>
+<li>Put units and ownership in names and signatures; a name imposes what a comment only explains.</li>
+<li>Promote compiler warnings that have bitten you, one code at a time, with a scoped escape hatch.</li>
+<li>Turn "every X must declare Y" into an exhaustive answer checked at startup and by a test.</li>
+<li>Make test suites discover what they cover, and fill samples with non-default values.</li>
+<li>Document the holes of your guards next to the guards.</li>
+</ul></div>
+<div lang="fr"><h2>À retenir</h2><ul>
+<li>Les commentaires ne tiennent pas les invariants ; le bon commentaire est rarement lu au bon moment.</li>
+<li>Pour chaque règle, monter aussi haut que possible : nom, garde à l'exécution, test, contrôle au démarrage, erreur de compilation, structure.</li>
+<li>Mettre les unités et la propriété dans les noms et les signatures ; un nom impose ce qu'un commentaire ne fait qu'expliquer.</li>
+<li>Promouvoir les avertissements du compilateur qui ont mordu, un code à la fois, avec une porte de sortie limitée.</li>
+<li>Transformer « chaque X doit déclarer Y » en une réponse exhaustive vérifiée au démarrage et par un test.</li>
+<li>Faire découvrir aux suites de tests ce qu'elles couvrent, et remplir les échantillons avec des valeurs non par défaut.</li>
+<li>Documenter les trous des gardes à côté des gardes.</li>
+</ul></div>
+</div>
+</section>
+
+</div>
+<div data-chapter-foot></div>
+</article>
+</main>
+<aside class="rail" id="mq-rail"></aside>
+</div>
+<footer class="site-footer" id="mq-footer"></footer>
+<script src="assets/js/site-data.js" defer></script>
+<script src="assets/js/glossary-data.js" defer></script>
+<script src="assets/js/app.js" defer></script>
+<script src="assets/js/widgets.js" defer></script>
+</body>
+</html>

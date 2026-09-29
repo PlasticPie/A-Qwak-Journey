@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="en" data-lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Where to start · MoonQwak</title>
+<meta name="description" content="The order I would build an MMO backend in today, what to postpone, and how to tell that a stage is finished.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Chakra+Petch:wght@500;600&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="assets/css/site.css">
+<script>(function(){var r=document.documentElement,l,t;try{l=localStorage.getItem("mq-lang");t=localStorage.getItem("mq-theme");}catch(e){}if(l!=="en"&&l!=="fr"){l=(navigator.language||"").toLowerCase().indexOf("fr")===0?"fr":"en";}r.setAttribute("data-lang",l);r.setAttribute("lang",l);if(t==="light"||t==="dark")r.setAttribute("data-theme",t);})();</script>
+</head>
+<body data-page="start-here">
+<a class="skip-link" href="#main"><span lang="en">Skip to content</span><span lang="fr">Aller au contenu</span></a>
+<header class="site-header" id="mq-header"></header>
+<div class="layout">
+<aside class="sidebar" id="mq-sidebar"></aside>
+<main class="content" id="main">
+<article>
+<header class="chapter-head">
+  <div class="eyebrow" data-auto></div>
+  <h1><span lang="en">Where to start</span><span lang="fr">Par où commencer</span></h1>
+  <p class="dek"><span lang="en">The order I would build an MMO backend in today, what to postpone, and how to tell that a stage is finished.</span><span lang="fr">L'ordre dans lequel je construirais un backend de MMO aujourd'hui, ce qu'il faut repousser, et comment savoir qu'une étape est finie.</span></p>
+  <div class="meta-row" data-auto></div>
+</header>
+
+<div class="prose">
+
+<section class="sec" id="what-this-is">
+<div lang="en">
+<h2>What these notes are</h2>
+<p class="lead">MoonQwak is a top-down space game whose ships are built out of hexagonal parts, and an ongoing project built by one developer, self-taught in MMO architecture, to find out how far one person can go. Behind the game sits a server architecture inspired by what large online games are known to use: a gateway, many game servers, a fleet of machines that sizes itself, a database used as a journal, and a launcher that patches the client. These notes describe how that architecture was built, the problems it ran into, and the decisions that came out of them. They are shared for educational purposes: my choices, not the way it must be done (see <a href="index.html#about">About this project</a>).</p>
+<p>It is not a recipe. Most chapters describe one problem, the options I considered, what I chose, and what the measurements said afterwards. Several of the choices were wrong the first time, and those stories are kept in, because the wrong turn is usually where the lesson is. When a number appears, it comes from a real measurement on this project, usually a load test with hundreds of bot clients. Those tests ran on a single development machine, so read the absolute figures as orders of magnitude and the before/after ratios as the real information.</p>
+<p>The game itself barely appears. Ships, bullets and maps show up in the examples because they are what the server moves around, but every chapter is about architecture: how bytes travel, how a world advances in time, what each player is told, how data stays consistent, and how the whole thing runs on more than one machine.</p>
+<h3>How to read a chapter</h3>
+<p>Each chapter has a level shown as hexagons: one for <strong>Foundation</strong> (start here if networked games are new to you), two for <strong>Core</strong>, three for <strong>Advanced</strong>. On wide screens, the right column shows where the chapter sits in the system. The callouts always mean the same thing:</p>
+</div>
+<div lang="fr">
+<h2>Ce que sont ces notes</h2>
+<p class="lead">MoonQwak est un jeu spatial vu de dessus dont les vaisseaux se construisent avec des pièces hexagonales, et un projet en cours mené par un seul développeur, autodidacte en architecture de MMO, pour savoir jusqu'où une personne seule peut aller. Derrière le jeu, il y a une architecture serveur inspirée de ce que l'on sait des grands jeux en ligne : une gateway, de nombreux serveurs de jeu, un parc de machines qui se dimensionne tout seul, une base de données utilisée comme un journal, et un launcher qui met le client à jour. Ces notes racontent comment cette architecture a été construite, les problèmes rencontrés et les décisions qui en sont sorties. Elles sont partagées dans un but éducatif : mes choix, pas la façon dont il faut faire (voir <a href="index.html#about">À propos de ce projet</a>).</p>
+<p>Ce n'est pas une recette. La plupart des chapitres décrivent un problème, les options envisagées, ce que j'ai choisi, et ce que les mesures ont dit ensuite. Plusieurs choix étaient faux la première fois, et ces histoires sont gardées, parce que la leçon se trouve souvent dans le mauvais virage. Quand un chiffre apparaît, il vient d'une vraie mesure sur ce projet, en général un banc de charge avec des centaines de clients robots. Ces bancs ont tourné sur une seule machine de développement : lisez les valeurs absolues comme des ordres de grandeur, et les rapports avant/après comme la vraie information.</p>
+<p>Le jeu lui-même apparaît peu. Vaisseaux, balles et cartes servent d'exemples parce que c'est ce que le serveur déplace, mais chaque chapitre parle d'architecture : comment voyagent les octets, comment un monde avance dans le temps, ce qu'on dit à chaque joueur, comment les données restent cohérentes, et comment le tout tourne sur plusieurs machines.</p>
+<h3>Comment lire un chapitre</h3>
+<p>Chaque chapitre a un niveau représenté par des hexagones : un pour <strong>Fondation</strong> (commencez ici si les jeux en réseau sont nouveaux pour vous), deux pour <strong>Cœur</strong>, trois pour <strong>Avancé</strong>. Sur grand écran, la colonne de droite montre où le chapitre se situe dans le système. Les encadrés ont toujours le même sens :</p>
+</div>
+
+<div lang="en">
+<div class="note beginner"><p class="note-label">Beginner note</p><p>Background that an experienced reader can skip: what a term means, or why a problem exists at all.</p></div>
+<div class="note project"><p class="note-label">In MoonQwak</p><p>What this project actually does, with the names used in its code.</p></div>
+<div class="note pitfall"><p class="note-label">Pitfall I hit</p><p>A bug or wrong decision that really happened, and what it cost.</p></div>
+<div class="note measured"><p class="note-label">Measured</p><p>A number from a benchmark or a live session, with its context.</p></div>
+<div class="note tradeoff"><p class="note-label">Trade-off</p><p>A choice that gives something up on purpose, and what it gives up.</p></div>
+<div class="note rule sample"><p class="note-label">Rule</p><p>A rule of thumb that came out of the chapter.</p><p>Every rule is also collected on the Rules of thumb page, so the whole set can be read in one place.</p></div>
+</div>
+<div lang="fr">
+<div class="note beginner"><p class="note-label">Pour débuter</p><p>Du contexte qu'un lecteur expérimenté peut sauter : ce que veut dire un terme, ou pourquoi un problème existe.</p></div>
+<div class="note project"><p class="note-label">Dans MoonQwak</p><p>Ce que fait réellement ce projet, avec les noms utilisés dans son code.</p></div>
+<div class="note pitfall"><p class="note-label">Piège rencontré</p><p>Un bug ou une mauvaise décision qui a vraiment eu lieu, et ce qu'il a coûté.</p></div>
+<div class="note measured"><p class="note-label">Mesuré</p><p>Un chiffre issu d'un banc d'essai ou d'une session réelle, avec son contexte.</p></div>
+<div class="note tradeoff"><p class="note-label">Compromis</p><p>Un choix qui renonce à quelque chose volontairement, et à quoi.</p></div>
+<div class="note rule sample"><p class="note-label">Règle</p><p>Une règle pratique tirée du chapitre.</p><p>Toutes les règles sont aussi réunies sur la page Règles d'or, pour pouvoir les lire d'un seul tenant.</p></div>
+</div>
+</section>
+
+<section class="sec" id="mindset">
+<div lang="en">
+<h2>Three ideas that shaped everything</h2>
+<h3>1. The server decides, on a fixed clock</h3>
+<p>An MMO server is authoritative. The client sends intentions (keys held, where the mouse points, "I want to dock") and the server decides what actually happens. The world advances in fixed steps called <a class="term" data-term="tick">ticks</a>, 25 per second here, and every decision happens inside one of them. Almost every chapter is a consequence of this: the tick has a time budget (40 ms), nothing inside it may wait for anything slow, and what players see is a copy of the server's state sent after each tick.</p>
+<h3>2. Shapes versus constants</h3>
+<p>An optimization is either a <strong>constant</strong> or a <strong>shape</strong>. A constant is a function that is twice too slow, an allocation that could be avoided: you fix it locally when a measurement shows it hurts, and waiting costs nothing. A shape is <code>O(players × objects)</code> work, a global lock on a parallel path, a collection that mixes three hundred bullets with four ships. Shapes get built into the architecture, other code starts depending on them, and changing them later costs ten times more. "It's cheap today" is a fine argument for a constant and a bad one for a shape: with three objects on screen, nothing is expensive.</p>
+<h3>3. Measure before you believe, including your instruments</h3>
+<p>The most expensive lessons in this project came from reading a number that did not measure what its label said: a "tick duration" that was really the interval between ticks, a "pre-step" timer that included three other phases, a profiler that only fired on abnormal ticks. Chapter 10.1 is entirely about this. The short version: build the instrument before the optimization, and check that two numbers measure the same thing before you look for the difference between them.</p>
+</div>
+<div lang="fr">
+<h2>Trois idées qui ont tout façonné</h2>
+<h3>1. Le serveur décide, sur une horloge fixe</h3>
+<p>Un serveur de MMO fait autorité. Le client envoie des intentions (touches enfoncées, direction de la souris, « je veux m'amarrer ») et le serveur décide de ce qui se passe réellement. Le monde avance par pas fixes appelés <a class="term" data-term="tick">ticks</a>, 25 par seconde ici, et chaque décision se prend à l'intérieur de l'un d'eux. Presque chaque chapitre en découle : le tick a un budget de temps (40 ms), rien à l'intérieur n'a le droit d'attendre quoi que ce soit de lent, et ce que voient les joueurs est une copie de l'état du serveur envoyée après chaque tick.</p>
+<h3>2. Les formes contre les constantes</h3>
+<p>Une optimisation est soit une <strong>constante</strong>, soit une <strong>forme</strong>. Une constante, c'est une fonction deux fois trop lente, une allocation évitable : on la corrige localement quand une mesure montre qu'elle fait mal, et attendre ne coûte rien. Une forme, c'est un travail en <code>O(joueurs × objets)</code>, un verrou global sur un chemin parallèle, une collection qui mélange trois cents balles et quatre vaisseaux. Les formes se coulent dans l'architecture, du code finit par en dépendre, et les changer plus tard coûte dix fois plus. « Ce n'est pas cher aujourd'hui » est un bon argument pour une constante et un mauvais pour une forme : avec trois objets à l'écran, rien n'est cher.</p>
+<h3>3. Mesurer avant de croire, y compris ses instruments</h3>
+<p>Les leçons les plus chères de ce projet sont venues de chiffres qui ne mesuraient pas ce que disait leur étiquette : une « durée de tick » qui était en fait l'intervalle entre deux ticks, un chronomètre « pre-step » qui englobait trois autres phases, un profileur qui ne se déclenchait que sur les ticks anormaux. Le chapitre 10.1 ne parle que de ça. En bref : construire l'instrument avant l'optimisation, et vérifier que deux nombres mesurent la même chose avant de chercher l'écart entre eux.</p>
+</div>
+<div lang="en">
+<div class="note rule"><p class="note-label">Rule</p><p>Fix constants when a measurement says they hurt. Fix shapes before anything depends on them.</p><p>An O(n²) loop or a global lock on a parallel path is invisible with three test objects and fatal with four hundred. Waiting for proof is fine for a slow function, not for a structure other code will be built on.</p></div>
+</div>
+<div lang="fr">
+<div class="note rule"><p class="note-label">Règle</p><p>Corriger les constantes quand une mesure dit qu'elles font mal. Corriger les formes avant que quoi que ce soit n'en dépende.</p><p>Une boucle en O(n²) ou un verrou global sur un chemin parallèle est invisible avec trois objets de test et fatal avec quatre cents. Attendre une preuve convient à une fonction lente, pas à une structure sur laquelle on va bâtir.</p></div>
+</div>
+</section>
+
+<section class="sec" id="build-order">
+<div lang="en">
+<h2>The build order</h2>
+<p>If I started again, this is the order I would follow. Each stage ends with a concrete test. Moving on before that test passes is how a project ends up with a gateway before it has a working tick loop, or with six hundred players and no way to see where the time goes.</p>
+<ol>
+<li><strong>A connection and a message.</strong> Pick a transport, frame typed packets, and dispatch them to handlers. <em>Done when:</em> two processes exchange typed messages, and a malformed packet costs one dropped packet instead of a crashed server. <a href="transport.html">1.1</a>, <a href="packet-format.html">1.2</a>, <a href="receiving.html">1.5</a>.</li>
+<li><strong>Protect the protocol.</strong> Write round-trip tests for every packet, and a version number checked at login. This comes early on purpose: a field added on one side only is the most expensive bug in a hand-written protocol, and it gets more expensive with every packet you add. <em>Done when:</em> adding a packet without a test fails the build. <a href="protocol-testing.html">1.6</a>.</li>
+<li><strong>Identity.</strong> A gateway that registers, logs in and issues tokens, and game servers that prove who they are to the gateway. <em>Done when:</em> a client logs in, picks a character, and enters a game server with a token issued by the gateway. <a href="gateway.html">2.1</a>, <a href="login-flow.html">2.2</a>.</li>
+<li><strong>One authoritative world.</strong> A fixed-rate tick, one map, inputs in, snapshots out. <em>Done when:</em> two clients see each other move, the server decides everything, and the tick rate you configured is the rate you get. <a href="tick-loop.html">3.1</a>, <a href="tick-anatomy.html">3.2</a>, <a href="snapshots.html">4.2</a>.</li>
+<li><strong>Make it feel right.</strong> Interpolate remote objects, predict your own movement, reconcile with the server. <em>Done when:</em> remote ships look smooth at 25 snapshots a second and your own character responds instantly at 150 ms of round trip. <a href="interpolation.html">5.2</a>, <a href="prediction.html">5.3</a>.</li>
+<li><strong>Instruments and bots.</strong> A monitor that shows where each millisecond of the tick goes, and a load test that runs real clients. Earlier than feels necessary: every stage after this one is a performance question. <em>Done when:</em> you can start 100 bots and read the cost of each tick phase. <a href="observability.html">10.1</a>, <a href="load-testing.html">10.3</a>.</li>
+<li><strong>Tell each player only what matters.</strong> Area of interest, serialization shared between viewers, deltas, a per-player budget. <em>Done when:</em> doubling the number of players on a map does not quadruple the bandwidth. Part 4.</li>
+<li><strong>Durable, and never duplicated.</strong> Decide what lives in RAM and when it is written, and make every transfer of goods between players atomic. <em>Done when:</em> killing the server at any moment loses at most a minute of progress and never duplicates an item. Part 6.</li>
+<li><strong>Many maps, then many servers.</strong> Load maps on demand, move players between processes, then let the fleet size itself. <em>Done when:</em> a player can cross from a map hosted on one process to a map hosted on another, and a new server appears when the existing ones are full. Parts 2.3 and 7.</li>
+<li><strong>Ship it.</strong> An updater that downloads only what changed, and a launcher that can replace itself. <em>Done when:</em> a friend with a stale install gets the new build in one click. Part 8.</li>
+</ol>
+</div>
+<div lang="fr">
+<h2>L'ordre de construction</h2>
+<p>Si je recommençais, voici l'ordre que je suivrais. Chaque étape se termine par un test concret. Passer à la suite avant que ce test ne passe, c'est comme ça qu'un projet se retrouve avec une gateway avant d'avoir une boucle de tick qui marche, ou avec six cents joueurs et aucun moyen de voir où passe le temps.</p>
+<ol>
+<li><strong>Une connexion et un message.</strong> Choisir un transport, encadrer des paquets typés, les distribuer à des gestionnaires. <em>Fini quand :</em> deux processus échangent des messages typés, et un paquet malformé coûte un paquet perdu au lieu d'un serveur planté. <a href="transport.html">1.1</a>, <a href="packet-format.html">1.2</a>, <a href="receiving.html">1.5</a>.</li>
+<li><strong>Protéger le protocole.</strong> Écrire des tests aller-retour pour chaque paquet, et un numéro de version vérifié au login. C'est tôt exprès : un champ ajouté d'un seul côté est le bug le plus cher d'un protocole écrit à la main, et il coûte plus cher à chaque paquet ajouté. <em>Fini quand :</em> ajouter un paquet sans test casse le build. <a href="protocol-testing.html">1.6</a>.</li>
+<li><strong>L'identité.</strong> Une gateway qui inscrit, connecte et délivre des jetons, et des serveurs de jeu qui prouvent leur identité à la gateway. <em>Fini quand :</em> un client se connecte, choisit un personnage et entre sur un serveur de jeu avec un jeton délivré par la gateway. <a href="gateway.html">2.1</a>, <a href="login-flow.html">2.2</a>.</li>
+<li><strong>Un monde autoritaire.</strong> Un tick à cadence fixe, une carte, des entrées qui arrivent, des snapshots qui partent. <em>Fini quand :</em> deux clients se voient bouger, le serveur décide de tout, et la cadence configurée est la cadence obtenue. <a href="tick-loop.html">3.1</a>, <a href="tick-anatomy.html">3.2</a>, <a href="snapshots.html">4.2</a>.</li>
+<li><strong>Rendre le jeu agréable.</strong> Interpoler les objets distants, prédire son propre mouvement, se réconcilier avec le serveur. <em>Fini quand :</em> les vaisseaux distants sont fluides à 25 snapshots par seconde et votre personnage répond instantanément avec 150 ms d'aller-retour. <a href="interpolation.html">5.2</a>, <a href="prediction.html">5.3</a>.</li>
+<li><strong>Instruments et robots.</strong> Un moniteur qui montre où passe chaque milliseconde du tick, et un banc de charge qui lance de vrais clients. Plus tôt que ça ne semble nécessaire : chaque étape suivante est une question de performance. <em>Fini quand :</em> vous lancez 100 robots et lisez le coût de chaque phase du tick. <a href="observability.html">10.1</a>, <a href="load-testing.html">10.3</a>.</li>
+<li><strong>Ne dire à chaque joueur que ce qui compte.</strong> Zone d'intérêt, sérialisation partagée entre spectateurs, deltas, budget par joueur. <em>Fini quand :</em> doubler le nombre de joueurs sur une carte ne quadruple pas la bande passante. Partie 4.</li>
+<li><strong>Durable, et jamais dupliqué.</strong> Décider de ce qui vit en RAM et quand c'est écrit, et rendre atomique chaque transfert de biens entre joueurs. <em>Fini quand :</em> tuer le serveur à n'importe quel moment perd au plus une minute de progression et ne duplique jamais un objet. Partie 6.</li>
+<li><strong>Plusieurs cartes, puis plusieurs serveurs.</strong> Charger les cartes à la demande, déplacer les joueurs entre processus, puis laisser le parc se dimensionner. <em>Fini quand :</em> un joueur passe d'une carte hébergée par un processus à une carte hébergée par un autre, et un nouveau serveur apparaît quand les autres sont pleins. Parties 2.3 et 7.</li>
+<li><strong>Livrer.</strong> Un système de mise à jour qui ne télécharge que ce qui a changé, et un launcher capable de se remplacer lui-même. <em>Fini quand :</em> un ami avec une vieille installation reçoit le nouveau build en un clic. Partie 8.</li>
+</ol>
+</div>
+</section>
+
+<section class="sec" id="postpone">
+<div lang="en">
+<h2>What to postpone</h2>
+<p>An MMO invites you to solve problems you do not have yet. These are the ones I deliberately left for later, and I would leave them for later again:</p>
+<ul>
+<li><strong>Splitting one map across several servers.</strong> Every map in MoonQwak lives in exactly one process. The limit this creates (how many players fit on one map) was measured at several hundred, and players spread over many maps anyway. Seamless world partitioning is a large project of its own, and it makes everything else harder.</li>
+<li><strong>Microservices.</strong> The architecture has a handful of processes, each with a clear owner for its data. More processes means more messages that can be lost, reordered or duplicated.</li>
+<li><strong>A custom physics engine.</strong> Box2D, driven carefully, handled 600 ships on one map. The problems were in how it was fed, not in the engine.</li>
+<li><strong>Clever compression before measuring.</strong> Two optimizations in this project were aimed at the wrong target because nobody had measured what the bytes were made of. A trace that breaks a snapshot down by object type came later than it should have.</li>
+<li><strong>A second database, a cache cluster, a message bus.</strong> One MySQL instance, used as a journal and never on the hot path, was enough. Chapter 6.1 explains the rule that makes that possible.</li>
+</ul>
+</div>
+<div lang="fr">
+<h2>Ce qu'il faut repousser</h2>
+<p>Un MMO pousse à résoudre des problèmes qu'on n'a pas encore. Voici ceux que j'ai volontairement laissés pour plus tard, et que je laisserais encore pour plus tard :</p>
+<ul>
+<li><strong>Découper une carte sur plusieurs serveurs.</strong> Chaque carte de MoonQwak vit dans exactement un processus. La limite que ça crée (combien de joueurs tiennent sur une carte) a été mesurée à plusieurs centaines, et les joueurs se répartissent de toute façon sur beaucoup de cartes. Le partitionnement continu du monde est un gros projet à lui seul, et il complique tout le reste.</li>
+<li><strong>Les microservices.</strong> L'architecture compte une poignée de processus, chacun propriétaire clair de ses données. Plus de processus, c'est plus de messages qui peuvent se perdre, arriver dans le désordre ou en double.</li>
+<li><strong>Un moteur physique maison.</strong> Box2D, bien alimenté, a tenu 600 vaisseaux sur une carte. Les problèmes venaient de la façon de le nourrir, pas du moteur.</li>
+<li><strong>Une compression astucieuse avant de mesurer.</strong> Deux optimisations de ce projet visaient la mauvaise cible parce que personne n'avait mesuré de quoi étaient faits les octets. Une trace qui décompose un snapshot par type d'objet est arrivée plus tard qu'elle n'aurait dû.</li>
+<li><strong>Une seconde base, un cluster de cache, un bus de messages.</strong> Une seule instance MySQL, utilisée comme journal et jamais sur le chemin chaud, a suffi. Le chapitre 6.1 explique la règle qui le permet.</li>
+</ul>
+</div>
+</section>
+
+<section class="sec" id="stack">
+<div lang="en">
+<h2>The stack, for context</h2>
+<div class="table-wrap"><table>
+<thead><tr><th>Layer</th><th>Choice</th><th>Why it mattered</th></tr></thead>
+<tbody>
+<tr><td>Language</td><td>C# everywhere: .NET 10 on the server, Unity on the client</td><td>Packet formats, game data catalogs, physics settings and hex math are compiled once and shared. Two implementations of the same format would drift.</td></tr>
+<tr><td>Transport</td><td>LiteNetLib (reliable UDP)</td><td>Reliable and unreliable channels over one socket, with connection management already solved.</td></tr>
+<tr><td>Encryption</td><td>X25519 + HKDF + AES-256-GCM, per connection</td><td>The standard .NET <code>AesGcm</code> on the server, a small hand-written implementation for Unity's older runtime.</td></tr>
+<tr><td>Physics</td><td>Box2D v3 through a C# binding, one world per map</td><td>Mature engine, independent worlds that can be stepped in parallel.</td></tr>
+<tr><td>Database</td><td>MySQL with Entity Framework Core</td><td>Used as a durability journal, never inside the game loop.</td></tr>
+<tr><td>Tools</td><td>WPF desktop apps</td><td>The Monitor (live tick metrics and fleet view), the launcher, and a game data editor with hot reload.</td></tr>
+</tbody></table></div>
+<p>Shared libraries target both <code>netstandard2.1</code> (what Unity loads) and <code>net10.0</code> (the servers). A build script copies the compiled DLLs into the Unity project, so the client and the server always run the same serialization code.</p>
+</div>
+<div lang="fr">
+<h2>La pile technique, pour le contexte</h2>
+<div class="table-wrap"><table>
+<thead><tr><th>Couche</th><th>Choix</th><th>Pourquoi ça a compté</th></tr></thead>
+<tbody>
+<tr><td>Langage</td><td>C# partout : .NET 10 côté serveur, Unity côté client</td><td>Formats de paquets, catalogues de données de jeu, réglages physiques et maths hexagonales sont compilés une fois et partagés. Deux implémentations du même format finiraient par diverger.</td></tr>
+<tr><td>Transport</td><td>LiteNetLib (UDP fiable)</td><td>Des canaux fiables et non fiables sur une seule socket, avec la gestion des connexions déjà résolue.</td></tr>
+<tr><td>Chiffrement</td><td>X25519 + HKDF + AES-256-GCM, par connexion</td><td>L'<code>AesGcm</code> standard de .NET côté serveur, une petite implémentation écrite à la main pour le runtime plus ancien d'Unity.</td></tr>
+<tr><td>Physique</td><td>Box2D v3 via un binding C#, un monde par carte</td><td>Moteur mature, des mondes indépendants qu'on peut faire avancer en parallèle.</td></tr>
+<tr><td>Base de données</td><td>MySQL avec Entity Framework Core</td><td>Utilisée comme journal de durabilité, jamais dans la boucle de jeu.</td></tr>
+<tr><td>Outils</td><td>Applications de bureau WPF</td><td>Le Monitor (métriques de tick en direct et vue du parc), le launcher, et un éditeur de données de jeu avec rechargement à chaud.</td></tr>
+</tbody></table></div>
+<p>Les bibliothèques partagées ciblent à la fois <code>netstandard2.1</code> (ce que charge Unity) et <code>net10.0</code> (les serveurs). Un script de build copie les DLL compilées dans le projet Unity : client et serveur exécutent toujours le même code de sérialisation.</p>
+</div>
+</section>
+
+<section class="sec" id="reading-paths">
+<div lang="en">
+<h2>Reading paths</h2>
+<p>The curriculum is numbered in build order, but you do not have to read it in order. Some shorter paths:</p>
+<ul>
+<li><strong>New to networked games:</strong> <a href="big-picture.html">0.2</a>, <a href="transport.html">1.1</a>, <a href="packet-format.html">1.2</a>, <a href="tick-loop.html">3.1</a>, <a href="aoi.html">4.1</a>, <a href="snapshots.html">4.2</a>, <a href="interpolation.html">5.2</a>, <a href="prediction.html">5.3</a>.</li>
+<li><strong>Performance:</strong> <a href="tick-anatomy.html">3.2</a>, <a href="threading.html">3.3</a>, <a href="serialize-once.html">4.3</a>, <a href="freshness-budget.html">4.5</a>, then all of Part 10.</li>
+<li><strong>Infrastructure and operations:</strong> <a href="gateway.html">2.1</a>, <a href="handover.html">2.3</a>, Part 7, Part 8.</li>
+<li><strong>Data integrity:</strong> <a href="no-db-in-tick.html">3.4</a>, then Part 6.</li>
+</ul>
+<p>The <a href="topics.html">topics page</a> filters chapters by subject and level, and the search (<kbd>Ctrl</kbd> <kbd>K</kbd>) covers every chapter in both languages.</p>
+</div>
+<div lang="fr">
+<h2>Parcours de lecture</h2>
+<p>Le parcours est numéroté dans l'ordre de construction, mais rien n'oblige à le lire dans l'ordre. Quelques chemins plus courts :</p>
+<ul>
+<li><strong>Nouveau dans les jeux en réseau :</strong> <a href="big-picture.html">0.2</a>, <a href="transport.html">1.1</a>, <a href="packet-format.html">1.2</a>, <a href="tick-loop.html">3.1</a>, <a href="aoi.html">4.1</a>, <a href="snapshots.html">4.2</a>, <a href="interpolation.html">5.2</a>, <a href="prediction.html">5.3</a>.</li>
+<li><strong>Performance :</strong> <a href="tick-anatomy.html">3.2</a>, <a href="threading.html">3.3</a>, <a href="serialize-once.html">4.3</a>, <a href="freshness-budget.html">4.5</a>, puis toute la partie 10.</li>
+<li><strong>Infrastructure et exploitation :</strong> <a href="gateway.html">2.1</a>, <a href="handover.html">2.3</a>, partie 7, partie 8.</li>
+<li><strong>Intégrité des données :</strong> <a href="no-db-in-tick.html">3.4</a>, puis la partie 6.</li>
+</ul>
+<p>La <a href="topics.html">page des thèmes</a> filtre les chapitres par sujet et par niveau, et la recherche (<kbd>Ctrl</kbd> <kbd>K</kbd>) couvre chaque chapitre dans les deux langues.</p>
+</div>
+</section>
+
+<section class="sec" id="takeaways">
+<div class="takeaways">
+<div lang="en"><h2>Key takeaways</h2><ul>
+<li>Build in the order that lets you test each stage: connection, protocol tests, identity, one world, feel, instruments, interest, durability, scale, shipping.</li>
+<li>Put protocol tests and instruments early. Both get more expensive to add with every feature built before them.</li>
+<li>Treat structural costs (shapes) differently from local slowness (constants).</li>
+<li>Postpone map partitioning, microservices and speculative compression until a measurement asks for them.</li>
+</ul></div>
+<div lang="fr"><h2>À retenir</h2><ul>
+<li>Construire dans l'ordre qui permet de tester chaque étape : connexion, tests du protocole, identité, un monde, ressenti, instruments, intérêt, durabilité, échelle, livraison.</li>
+<li>Mettre les tests du protocole et les instruments tôt. Les deux coûtent plus cher à ajouter à chaque fonctionnalité bâtie avant eux.</li>
+<li>Traiter les coûts structurels (les formes) autrement que les lenteurs locales (les constantes).</li>
+<li>Repousser le partitionnement des cartes, les microservices et la compression spéculative jusqu'à ce qu'une mesure les réclame.</li>
+</ul></div>
+</div>
+</section>
+
+</div>
+<div data-chapter-foot></div>
+</article>
+</main>
+<aside class="rail" id="mq-rail"></aside>
+</div>
+<footer class="site-footer" id="mq-footer"></footer>
+<script src="assets/js/site-data.js" defer></script>
+<script src="assets/js/glossary-data.js" defer></script>
+<script src="assets/js/app.js" defer></script>
+<script src="assets/js/widgets.js" defer></script>
+</body>
+</html>

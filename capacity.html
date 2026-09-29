@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en" data-lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>The capacity controller · MoonQwak</title>
+<meta name="description" content="A desired server count per world, rules to grow and shrink, placement scoring, draining and pardons.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Chakra+Petch:wght@500;600&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="assets/css/site.css">
+<script>(function(){var r=document.documentElement,l,t;try{l=localStorage.getItem("mq-lang");t=localStorage.getItem("mq-theme");}catch(e){}if(l!=="en"&&l!=="fr"){l=(navigator.language||"").toLowerCase().indexOf("fr")===0?"fr":"en";}r.setAttribute("data-lang",l);r.setAttribute("lang",l);if(t==="light"||t==="dark")r.setAttribute("data-theme",t);})();</script>
+</head>
+<body data-page="capacity">
+<a class="skip-link" href="#main"><span lang="en">Skip to content</span><span lang="fr">Aller au contenu</span></a>
+<header class="site-header" id="mq-header"></header>
+<div class="layout">
+<aside class="sidebar" id="mq-sidebar"></aside>
+<main class="content" id="main">
+<article>
+<header class="chapter-head">
+  <div class="eyebrow" data-auto></div>
+  <h1><span lang="en">The capacity controller</span><span lang="fr">Le contrôleur de capacité</span></h1>
+  <p class="dek"><span lang="en">A desired server count per world, rules to grow and shrink, placement scoring, draining and pardons.</span><span lang="fr">Un nombre de serveurs désiré par monde, des règles pour monter et descendre, un score de placement, des retraits et des grâces.</span></p>
+  <div class="meta-row" data-auto></div>
+</header>
+
+<div class="prose">
+
+<section class="sec" id="a-number">
+<div lang="en">
+<h2>The gateway writes a number, and orders nothing</h2>
+<p>How many game servers does a world need right now? Only the gateway can answer, because only it sees both terms: the maps actually hosted on each server, and the maps waiting for a host. A node agent sees its own machine; a server sees itself.</p>
+<p>So every five seconds, the gateway computes one number per world, <strong>Desired</strong>, and writes it into a table. That is all it does. It launches no process and addresses no machine; the node agents read the number and converge towards it (chapter <a href="node-agents.html">7.3</a>). This split took the launching of processes away from the only component exposed to the Internet, and it means the capacity loop never needs to know which machines exist or whether one of them just died.</p>
+<div class="note beginner"><p class="note-label">Beginner note</p><p>This is the <em>desired state</em> pattern that orchestrators such as Kubernetes are built on. Instead of sending commands ("start a server on machine B"), a controller publishes what should be true ("world 1 needs 4 servers"), and independent workers keep comparing reality with that statement and closing the gap. A lost message, a duplicated one, or a worker that restarts mid-way cannot break it: the next comparison repairs everything.</p></div>
+</div>
+<div lang="fr">
+<h2>La gateway écrit un nombre, et n'ordonne rien</h2>
+<p>De combien de serveurs de jeu un monde a-t-il besoin maintenant ? Seule la gateway peut répondre, parce qu'elle seule voit les deux termes : les cartes réellement hébergées sur chaque serveur, et les cartes qui attendent un hôte. Un agent de machine voit sa propre machine ; un serveur se voit lui-même.</p>
+<p>Toutes les cinq secondes, la gateway calcule donc un nombre par monde, <strong>Desired</strong>, et l'écrit dans une table. C'est tout ce qu'elle fait. Elle ne lance aucun processus et ne s'adresse à aucune machine ; les agents de machine lisent le nombre et convergent vers lui (chapitre <a href="node-agents.html">7.3</a>). Ce partage a retiré le lancement de processus au seul composant exposé à Internet, et il fait que la boucle de capacité n'a jamais besoin de savoir quelles machines existent, ni si l'une d'elles vient de tomber.</p>
+<div class="note beginner"><p class="note-label">Pour débuter</p><p>C'est le motif de l'<em>état désiré</em> sur lequel sont bâtis des orchestrateurs comme Kubernetes. Au lieu d'envoyer des commandes (« démarre un serveur sur la machine B »), un contrôleur publie ce qui devrait être vrai (« le monde 1 a besoin de 4 serveurs »), et des ouvriers indépendants comparent sans cesse la réalité à cet énoncé et comblent l'écart. Un message perdu, un message en double, ou un ouvrier qui redémarre en plein milieu ne peut rien casser : la comparaison suivante répare tout.</p></div>
+</div>
+</section>
+
+<section class="sec" id="grow">
+<div lang="en">
+<h2>Growing: look at the right server</h2>
+<p>Every rule below was written after a bench showed the previous one wrong, and each correction came from the same fact: <strong>a loaded map never migrates, and its players do not move with it</strong>.</p>
+<ul>
+<li><strong>Maps: the emptiest server decides.</strong> The first version computed ⌈total maps / MapsPerServer⌉. It assumes maps can be redistributed, and they cannot. A fleet at 106 / 86 / 85 maps gave ⌈277 / 90⌉ = 4 and launched a reinforcement, while no server had reached its threshold and the emptiest still had 35 free places. Since a new map goes to the least loaded server, the fleet has room as long as that server has room. One more server is needed only when the emptiest one is itself at the threshold.</li>
+<li><strong>Players: the busiest server decides.</strong> By analogy I first took the minimum here too, and the analogy breaks: a map is <em>placed</em>, a player is not; they follow their map. With 600 players on one server and 99 on another, the minimum said "not crowded" while one server carried six times its threshold. The question is not "does the emptiest have room" but "is one of them sinking", and the maximum answers it.</li>
+<li><strong>A waiting map is proof.</strong> A map that no existing server could take forces one more server, whatever the thresholds say.</li>
+</ul>
+<div class="note measured"><p class="note-label">Measured</p><p>Seven hundred bots loaded their 111 maps in twenty seconds, and a game server takes about fifteen seconds to start. The first server had everything before the second one existed; the next ones were born empty and stayed so, while the player threshold kept shouting (363 players on one server). The fleet climbed to six servers, five of them useless. A guard now refuses to ask for more while any live server has carried zero maps for thirty seconds: that server is proof the fleet does not know what to give it, so one more would only be another process in the same state.</p></div>
+<div class="note rule"><p class="note-label">Rule</p><p>A reactive controller over an irreversible placement always acts after the load has settled somewhere.</p><p>When demand arrives faster than servers start, only capacity placed in advance can spread it. The reactive rules can only avoid flailing in the meantime, and they should say so in the logs rather than stay silent.</p></div>
+</div>
+<div lang="fr">
+<h2>Monter : regarder le bon serveur</h2>
+<p>Chaque règle ci-dessous a été écrite après qu'un banc a montré que la précédente était fausse, et chaque correction est venue du même fait : <strong>une carte chargée ne migre jamais, et ses joueurs ne bougent pas avec elle</strong>.</p>
+<ul>
+<li><strong>Les cartes : le serveur le plus vide décide.</strong> La première version calculait ⌈total des cartes / MapsPerServer⌉. Elle suppose qu'on peut redistribuer les cartes, et on ne le peut pas. Un parc à 106 / 86 / 85 cartes donnait ⌈277 / 90⌉ = 4 et lançait un renfort, alors qu'aucun serveur n'avait atteint son seuil et que le plus vide avait encore 35 places. Puisqu'une carte neuve va au serveur le moins chargé, le parc a de la place tant que ce serveur en a. Il ne faut un serveur de plus que quand le plus vide est lui-même au seuil.</li>
+<li><strong>Les joueurs : le serveur le plus peuplé décide.</strong> Par analogie, j'avais d'abord pris le minimum ici aussi, et l'analogie casse : une carte se <em>place</em>, un joueur non ; il suit sa carte. Avec 600 joueurs sur un serveur et 99 sur un autre, le minimum disait « pas encombré » pendant qu'un serveur portait six fois son seuil. La question n'est pas « le plus vide a-t-il de la place » mais « l'un d'eux est-il en train de couler », et c'est le maximum qui y répond.</li>
+<li><strong>Une carte en attente est une preuve.</strong> Une carte qu'aucun serveur existant n'a pu prendre impose un serveur de plus, quoi que disent les seuils.</li>
+</ul>
+<div class="note measured"><p class="note-label">Mesuré</p><p>Sept cents bots ont chargé leurs 111 cartes en vingt secondes, et un serveur de jeu met environ quinze secondes à démarrer. Le premier serveur avait tout avant que le deuxième n'existe ; les suivants sont nés vides et le sont restés, pendant que le seuil de joueurs continuait de crier (363 joueurs sur un serveur). Le parc est monté à six serveurs, dont cinq inutiles. Une garde refuse maintenant d'en demander davantage tant qu'un serveur vivant porte zéro carte depuis trente secondes : ce serveur prouve que le parc ne sait pas quoi lui donner, et un de plus ne serait qu'un processus de plus dans le même état.</p></div>
+<div class="note rule"><p class="note-label">Règle</p><p>Un contrôleur réactif sur un placement irréversible agit toujours après que la charge s'est fixée quelque part.</p><p>Quand la demande arrive plus vite que les serveurs ne démarrent, seule la capacité posée d'avance peut la répartir. Les règles réactives ne peuvent qu'éviter de s'agiter en attendant, et elles doivent le dire dans les journaux plutôt que se taire.</p></div>
+</div>
+</section>
+
+<section class="sec" id="shrink">
+<div lang="en">
+<h2>Shrinking: without it, the controller is a ratchet</h2>
+<p>The first version started from the current server count and could only go up. A nineteen-minute bench showed it plainly: maps fell from 415 to 175 at constant population, and the fleet stayed at five servers, three of which had become useless. The number was not just unreachable, it was false: it claimed a need that no longer existed.</p>
+<p>The shrink question cannot be "let us redistribute" either, since maps do not move. It is about <em>totals</em>: would all of this load fit on one server fewer? Two safeguards make the answer stable:</p>
+<ul>
+<li><strong>A 20 % margin.</strong> A server is removed only if the load would fit on one fewer <em>with room to spare</em> (below 0.8 of the thresholds). Without the margin, the fleet would settle exactly on the threshold, and the next round, the threshold being reached, would ask again for the server it had just given back. Grow fast, shrink carefully: the two errors do not cost the same (growing for nothing costs a process, not growing costs players).</li>
+<li><strong>One step per round.</strong> Each five-second round re-evaluates with one server fewer on its way out, so a passing dip cannot cost half the fleet.</li>
+</ul>
+<div class="note measured"><p class="note-label">Measured</p><p>Players in the middle of a map transition are on no server: they have left the old one and not yet arrived on the new one. On a 2,500-bot bench, a wave of simultaneous transitions left the gateway holding 2,504 sessions while the servers carried 1,586: 918 players in flight. The shrink divided 1,586 by nine, found 176, compared it with a margin of 240, and condemned a server. With the real total the figure was 278: there was no surplus, and the fleet shed a server right before receiving the wave. It is the worst possible error for this computation, because it happens precisely when load is highest. The shrink now counts the larger of "players on servers" and "sessions the gateway holds".</p></div>
+</div>
+<div lang="fr">
+<h2>Descendre : sans ça, le contrôleur est un cliquet</h2>
+<p>La première version partait du nombre courant de serveurs et ne pouvait que monter. Un banc de dix-neuf minutes l'a montré clairement : les cartes sont tombées de 415 à 175 à population constante, et le parc est resté à cinq serveurs, dont trois étaient devenus inutiles. Le nombre n'était pas seulement inatteignable, il était faux : il affirmait un besoin qui n'existait plus.</p>
+<p>La question de la décrue ne peut pas non plus être « redistribuons », puisque les cartes ne bougent pas. Elle porte sur les <em>totaux</em> : toute cette charge tiendrait-elle sur un serveur de moins ? Deux garde-fous rendent la réponse stable :</p>
+<ul>
+<li><strong>Une marge de 20 %.</strong> Un serveur n'est retiré que si la charge tiendrait sur un de moins <em>avec de la réserve</em> (sous 0,8 des seuils). Sans cette marge, le parc se poserait exactement sur le seuil, et au tour suivant, le seuil étant atteint, il redemanderait le serveur qu'il venait de rendre. Monter vite, descendre prudemment : les deux erreurs ne coûtent pas la même chose (monter pour rien coûte un processus, ne pas monter coûte des joueurs).</li>
+<li><strong>Un seul pas par tour.</strong> Chaque tour de cinq secondes réévalue la situation avec un serveur de moins en train de partir : un creux passager ne peut pas coûter la moitié du parc.</li>
+</ul>
+<div class="note measured"><p class="note-label">Mesuré</p><p>Les joueurs en pleine transition de carte ne sont sur aucun serveur : ils ont quitté l'ancien et ne sont pas encore arrivés sur le nouveau. Sur un banc à 2 500 bots, une vague de transitions simultanées a laissé la gateway tenir 2 504 sessions pendant que les serveurs en portaient 1 586 : 918 joueurs en vol. La décrue a divisé 1 586 par neuf, trouvé 176, comparé à une marge de 240, et condamné un serveur. Avec le vrai total, le chiffre valait 278 : il n'y avait aucun surplus, et le parc s'est délesté d'un serveur juste avant de recevoir la vague. C'est la pire erreur possible pour ce calcul, parce qu'elle survient précisément quand la charge est la plus forte. La décrue compte maintenant le plus grand de « joueurs sur des serveurs » et « sessions tenues par la gateway ».</p></div>
+</div>
+</section>
+
+<section class="sec" id="retire">
+<div lang="en">
+<h2>Condemn one, pardon all</h2>
+<p>A lower number did not make the fleet smaller. The agents only know how to <em>launch</em>: they fill a gap, and a global number designates nobody. The fleet climbed to the peak and stayed there; a fifteen-minute bench showed six servers, load down for ten minutes, and no movement at all. The missing link is a named decision: the gateway <strong>condemns</strong> one server by marking it as draining.</p>
+<p>A condemned server receives no new map (chapter <a href="map-hosting.html#placement">7.1</a>). Its maps switch themselves off as their players leave, and its agent stops it once it carries nothing (chapter <a href="node-agents.html#retire">7.3</a>). Until then, the decision is reversible.</p>
+<ul>
+<li><strong>Who condemns: the one who sees.</strong> I first put this decision in the agents, with a database lock to serialize them. That solved a problem I had just created: an agent sees neither maps nor players, so it would have decided on numbers that are not its own, and it would have needed a distributed lock because agents are many. The gateway has neither problem: it is alone, the round is sequential, and both numbers are its own. The lock disappeared with the wrong placement.</li>
+<li><strong>Which one: the least populated.</strong> I first chose the server with the fewest maps, reasoning that a server empties at the pace of its maps. Wrong, and a bench showed it in three minutes: a map with players never unloads, so players, not maps, decide when a server can die. The server condemned for its 22 maps carried 116 players and after three minutes had lost only empty maps; its neighbour with 32 maps and 69 players would have died much faster. Worse, a draining server loses its empty maps and keeps its full ones, so its density rises, and sorting by maps drifts towards the slowest servers to die. Maps now only break ties between equal populations.</li>
+<li><strong>Pardon as soon as the surplus is gone.</strong> When load comes back during a drain, every condemned server is pardoned at once. Otherwise a returning peak would find a live server nobody wants, and the controller, seeing too little capacity, would launch one more next to a perfectly available one.</li>
+</ul>
+<div class="note pitfall"><p class="note-label">Pitfall I hit</p><p>The placement code reads an in-memory mirror of each server, not the database rows. The mirror's "draining" flag is therefore copied from the rows on every round, not only when the decision is made: a gateway that restarts finds condemned rows and fresh in-memory records where "draining" is false. It would keep feeding a server nobody could pardon any more (a pending condemnation blocks new ones): a frozen fleet, for a reason visible nowhere.</p></div>
+</div>
+<div lang="fr">
+<h2>Condamner un serveur, gracier tous les autres</h2>
+<p>Un nombre plus bas ne rendait pas le parc plus petit. Les agents ne savent que <em>lancer</em> : ils comblent un manque, et un nombre global ne désigne personne. Le parc montait jusqu'à la pointe et y restait ; un banc de quinze minutes a montré six serveurs, une charge redescendue depuis dix minutes, et aucun mouvement. Le chaînon manquant est une décision nominative : la gateway <strong>condamne</strong> un serveur en le marquant comme en retrait.</p>
+<p>Un serveur condamné ne reçoit plus de carte neuve (chapitre <a href="map-hosting.html#placement">7.1</a>). Ses cartes s'éteignent à mesure que leurs joueurs partent, et son agent l'arrête quand il ne porte plus rien (chapitre <a href="node-agents.html#retire">7.3</a>). Jusque-là, la décision est réversible.</p>
+<ul>
+<li><strong>Qui condamne : celui qui voit.</strong> J'avais d'abord placé cette décision chez les agents, avec un verrou en base pour les sérialiser. C'était résoudre un problème que je venais de créer : un agent ne voit ni cartes ni joueurs, il aurait donc décidé sur des chiffres qui ne sont pas les siens, et il lui aurait fallu un verrou distribué puisque les agents sont plusieurs. La gateway n'a aucun de ces problèmes : elle est seule, le tour est séquentiel, et les deux chiffres sont à elle. Le verrou a disparu avec la mauvaise place.</li>
+<li><strong>Lequel : le moins peuplé.</strong> J'avais d'abord choisi le serveur ayant le moins de cartes, en raisonnant qu'un serveur se vide au rythme de ses cartes. Faux, et un banc l'a montré en trois minutes : une carte occupée ne se décharge jamais, ce sont donc les joueurs, pas les cartes, qui décident quand un serveur peut mourir. Le serveur condamné pour ses 22 cartes portait 116 joueurs et n'avait perdu, trois minutes plus tard, que des cartes vides ; son voisin à 32 cartes et 69 joueurs serait mort bien plus vite. Pire, un serveur en retrait perd ses cartes vides et garde ses pleines : sa densité monte, et trier par cartes dérive vers les serveurs les plus lents à mourir. Les cartes ne départagent plus que des populations égales.</li>
+<li><strong>Gracier dès que le surplus a disparu.</strong> Quand la charge revient pendant un retrait, tous les serveurs condamnés sont graciés d'un coup. Sinon une pointe qui revient trouverait un serveur vivant dont personne ne veut, et le contrôleur, voyant trop peu de capacité, en lancerait un de plus à côté d'un serveur parfaitement disponible.</li>
+</ul>
+<div class="note pitfall"><p class="note-label">Piège rencontré</p><p>Le code de placement lit un miroir en mémoire de chaque serveur, pas les lignes en base. Le drapeau « en retrait » du miroir est donc recopié depuis les lignes à chaque tour, et pas seulement au moment de la décision : une gateway qui redémarre trouve des lignes condamnées et des enregistrements en mémoire tout neufs où « en retrait » est faux. Elle continuerait d'alimenter un serveur que personne ne pourrait plus gracier (une condamnation en cours bloque les nouvelles) : un parc figé, pour une raison visible nulle part.</p></div>
+</div>
+</section>
+
+<section class="sec" id="levers">
+<div lang="en">
+<h2>Min is the lever, Max is the belt</h2>
+<p>Each world carries a minimum and a maximum server count. They are not symmetric. The <strong>minimum</strong> is the primary lever: capacity placed <em>before</em> the population, so that busy maps are spread across servers at birth, which no reactive rule can do after the fact. The <strong>maximum</strong> is a safety belt: whatever the rules compute, the fleet never goes past it. Try the gateway's two decisions with its real formulas:</p>
+</div>
+<div lang="fr">
+<h2>Min est le levier, Max est la ceinture</h2>
+<p>Chaque monde porte un nombre minimal et maximal de serveurs. Ils ne sont pas symétriques. Le <strong>minimum</strong> est le levier principal : de la capacité posée <em>avant</em> la population, pour que les cartes chargées se répartissent entre les serveurs dès leur naissance, ce qu'aucune règle réactive ne peut faire après coup. Le <strong>maximum</strong> est une ceinture de sécurité : quoi que calculent les règles, le parc ne le dépasse jamais. Essayez les deux décisions de la gateway avec ses vraies formules :</p>
+</div>
+<div data-widget="fleet"></div>
+<div lang="en">
+<p>The calculator simplifies two things: it assumes a minimum of one server and a maximum of eight, and it leaves out the idle-server guard described above. Everything else (the placement score, the 110-map barrier, the order of fallbacks, the 0.8 shrink margin, the forced growth when a map is waiting) follows the gateway's code.</p>
+</div>
+<div lang="fr">
+<p>Le calculateur simplifie deux choses : il suppose un minimum d'un serveur et un maximum de huit, et il omet la garde du serveur inactif décrite plus haut. Tout le reste (le score de placement, la barrière des 110 cartes, l'ordre des replis, la marge de décrue de 0,8, la montée forcée quand une carte attend) suit le code de la gateway.</p>
+</div>
+</section>
+
+<section class="sec" id="takeaways">
+<div class="takeaways">
+<div lang="en"><h2>Key takeaways</h2><ul>
+<li>Publish a desired count and let independent workers converge; never send orders to machines.</li>
+<li>Grow when the emptiest server is full on maps or the busiest is crowded on players, and whenever a map waits.</li>
+<li>Shrink on totals, one step at a time, with a margin, counting players in flight.</li>
+<li>Designate the server to retire (the least populated), and pardon every condemned server the moment the surplus disappears.</li>
+<li>Place capacity in advance with the minimum; keep the maximum as a safety belt.</li>
+</ul></div>
+<div lang="fr"><h2>À retenir</h2><ul>
+<li>Publier un nombre désiré et laisser des ouvriers indépendants converger ; ne jamais envoyer d'ordres aux machines.</li>
+<li>Monter quand le serveur le plus vide est plein en cartes ou que le plus peuplé déborde en joueurs, et chaque fois qu'une carte attend.</li>
+<li>Descendre sur les totaux, un pas à la fois, avec une marge, en comptant les joueurs en vol.</li>
+<li>Désigner le serveur à retirer (le moins peuplé), et gracier chaque condamné dès que le surplus disparaît.</li>
+<li>Poser la capacité d'avance avec le minimum ; garder le maximum comme ceinture de sécurité.</li>
+</ul></div>
+</div>
+</section>
+
+</div>
+<div data-chapter-foot></div>
+</article>
+</main>
+<aside class="rail" id="mq-rail"></aside>
+</div>
+<footer class="site-footer" id="mq-footer"></footer>
+<script src="assets/js/site-data.js" defer></script>
+<script src="assets/js/glossary-data.js" defer></script>
+<script src="assets/js/app.js" defer></script>
+<script src="assets/js/widgets.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,248 @@
+<!doctype html>
+<html lang="en" data-lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>The tick never waits · MoonQwak</title>
+<meta name="description" content="No database call inside the loop, ever: a guard that watches for it, and three ways to do without.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Chakra+Petch:wght@500;600&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="assets/css/site.css">
+<script>(function(){var r=document.documentElement,l,t;try{l=localStorage.getItem("mq-lang");t=localStorage.getItem("mq-theme");}catch(e){}if(l!=="en"&&l!=="fr"){l=(navigator.language||"").toLowerCase().indexOf("fr")===0?"fr":"en";}r.setAttribute("data-lang",l);r.setAttribute("lang",l);if(t==="light"||t==="dark")r.setAttribute("data-theme",t);})();</script>
+</head>
+<body data-page="no-db-in-tick">
+<a class="skip-link" href="#main"><span lang="en">Skip to content</span><span lang="fr">Aller au contenu</span></a>
+<header class="site-header" id="mq-header"></header>
+<div class="layout">
+<aside class="sidebar" id="mq-sidebar"></aside>
+<main class="content" id="main">
+<article>
+<header class="chapter-head">
+  <div class="eyebrow" data-auto></div>
+  <h1><span lang="en">The tick never waits</span><span lang="fr">Le tick n'attend jamais</span></h1>
+  <p class="dek"><span lang="en">No database call inside the loop, ever: a guard that watches for it, and three ways to do without.</span><span lang="fr">Aucun appel à la base dans la boucle, jamais : un garde qui la surveille, et trois façons de s'en passer.</span></p>
+  <div class="meta-row" data-auto></div>
+</header>
+
+<div class="prose">
+
+<section class="sec" id="why">
+<div lang="en">
+<h2>Why this is a rule and not a preference</h2>
+<p>A round trip to the database costs milliseconds, often tens of them once an ORM and a fresh context are involved, when all is well. And it has no upper bound when things are not well: a row lock held by someone else, a network hiccup, a query plan that changed. The tick, meanwhile, has 40 ms to share between every player on every map of the process. One query inside the tick is a bet that nothing will ever go wrong with the database, placed on behalf of everyone on the server.</p>
+<div class="note measured"><p class="note-label">Measured</p><p>The Monitor reported a worst tick of <strong>121.7 ms</strong>, of which 119.5 ms in the object tick, for <strong>six objects</strong>, with zero garbage-collection pauses and a trivial load. That is 19.9 ms per object: not computation, waiting. A ship's jump saved its parts and reloaded its hull from the database, inside the object tick. One player changing maps froze every other player on every map of that server.</p></div>
+<p>Waiting has a property that makes it especially dangerous: <strong>it does not show up in a CPU profile.</strong> A profiler shows where cycles are burned; a thread blocked on a socket burns none. What made this one visible was attributing the tick's cost per object: "119 ms" does not distinguish a heavy computation from a wait, "19.9 ms per object for six objects" does.</p>
+</div>
+<div lang="fr">
+<h2>Pourquoi c'est une règle et pas une préférence</h2>
+<p>Un aller-retour en base coûte des millisecondes, souvent des dizaines dès qu'un ORM et un contexte neuf s'en mêlent, quand tout va bien. Et il n'a aucune borne supérieure quand ça va mal : un verrou de ligne tenu par quelqu'un d'autre, un hoquet réseau, un plan de requête qui a changé. Le tick, lui, a 40 ms à partager entre tous les joueurs de toutes les cartes du processus. Une requête dans le tick est un pari que rien n'ira jamais de travers avec la base, pris au nom de tout le monde sur le serveur.</p>
+<div class="note measured"><p class="note-label">Mesuré</p><p>Le Monitor a signalé un pire tick de <strong>121,7 ms</strong>, dont 119,5 ms dans le tick des objets, pour <strong>six objets</strong>, sans aucune pause du ramasse-miettes et avec une charge dérisoire. Soit 19,9 ms par objet : pas du calcul, de l'attente. Le saut d'un vaisseau sauvegardait ses pièces et rechargeait sa coque depuis la base, à l'intérieur du tick des objets. Un joueur qui changeait de carte figeait tous les autres joueurs de toutes les cartes de ce serveur.</p></div>
+<p>L'attente a une propriété qui la rend particulièrement dangereuse : <strong>elle n'apparaît dans aucun profil CPU.</strong> Un profileur montre où les cycles brûlent ; un thread bloqué sur une socket n'en brûle aucun. Ce qui a rendu celle-ci visible, c'est d'attribuer le coût du tick par objet : « 119 ms » ne distingue pas un gros calcul d'une attente, « 19,9 ms par objet pour six objets » si.</p>
+</div>
+</section>
+
+<section class="sec" id="journal">
+<div lang="en">
+<h2>RAM is the authority, the database is the journal</h2>
+<p>The rule rests on a change of roles. During play, the state in memory <em>is</em> the game: positions, health, ammunition, what is on fire. The database is not where the game happens; it is a <strong>durability journal</strong>, the record that lets the game resume after a restart. It is not a communication channel between parts of the server either. Once you see it that way, most database calls in a game loop turn out to be writes that do not need to happen <em>now</em>, only <em>eventually, and in order</em>.</p>
+<div class="note beginner"><p class="note-label">Beginner note</p><p>This inverts the usual web-application habit, where every request reads and writes the database and memory is only a cache. A game server keeps the live state in memory because it changes 25 times per second; the database could not keep up, and nothing needs it to. What matters is deciding, for each piece of state, how much of it you can afford to lose in a crash. Chapter <a href="persistence.html">6.1</a> is about exactly that.</p></div>
+</div>
+<div lang="fr">
+<h2>La RAM fait autorité, la base est le journal</h2>
+<p>La règle repose sur un changement de rôles. Pendant le jeu, l'état en mémoire <em>est</em> le jeu : positions, points de vie, munitions, ce qui est en feu. La base n'est pas l'endroit où le jeu se passe ; c'est un <strong>journal de durabilité</strong>, le registre qui permet au jeu de reprendre après un redémarrage. Ce n'est pas non plus un canal de communication entre les parties du serveur. Vu ainsi, la plupart des appels en base d'une boucle de jeu se révèlent être des écritures qui n'ont pas besoin d'avoir lieu <em>maintenant</em>, seulement <em>tôt ou tard, et dans l'ordre</em>.</p>
+<div class="note beginner"><p class="note-label">Pour débuter</p><p>C'est l'inverse de l'habitude des applications web, où chaque requête lit et écrit la base et où la mémoire n'est qu'un cache. Un serveur de jeu garde l'état vivant en mémoire parce qu'il change 25 fois par seconde ; la base ne suivrait pas, et rien n'en a besoin. Ce qui compte, c'est de décider, pour chaque morceau d'état, combien on peut se permettre d'en perdre dans un plantage. Le chapitre <a href="persistence.html">6.1</a> traite exactement de ça.</p></div>
+</div>
+</section>
+
+<section class="sec" id="three-ways">
+<div lang="en">
+<h2>Three ways to do without</h2>
+<div class="table-wrap"><table>
+<thead><tr><th>Form</th><th>For what</th><th>How</th><th>Cost</th></tr></thead>
+<tbody>
+<tr><td><strong>1. Later</strong></td><td>Position, health, oxygen, ammunition fired, experience</td><td>Capture the values on the tick (a read of fields, no database), write them on the background thread. A checkpoint does this for every player once a minute.</td><td>Low. Worst case: a crash loses up to a minute.</td></tr>
+<tr><td><strong>2. Elsewhere</strong></td><td>Goods changing hands: inventory transfers, market, trade</td><td>Run the operation on a thread that is allowed to wait (the network thread that received the request), under per-character locks, with the database as the authority for that transaction.</td><td>Medium. Rare, player-initiated, and never on the tick. Chapter <a href="transactions.html">6.2</a>.</td></tr>
+<tr><td><strong>3. Split and ordered</strong></td><td>Map transitions, map loading, expiring hulls</td><td>A tick half that reads and mutates memory, a background half that does the I/O, and a continuation that runs only if the I/O succeeded.</td><td>Highest in code, and the only form that removed the spike.</td></tr>
+</tbody></table></div>
+<p>Form 3 deserves a word, because "just write it later" does not work for a map transition. The destination <em>reads</em> the ship from the database when the player arrives. Deferring the write alone would let the reader overtake the writer and load a hull that was not saved yet. The split in chapter <a href="handover.html">2.3</a> works because of its ordering: the client is released only in the continuation, after the write has completed, so the reader cannot start before the writer is done.</p>
+</div>
+<div lang="fr">
+<h2>Trois façons de s'en passer</h2>
+<div class="table-wrap"><table>
+<thead><tr><th>Forme</th><th>Pour quoi</th><th>Comment</th><th>Coût</th></tr></thead>
+<tbody>
+<tr><td><strong>1. Plus tard</strong></td><td>Position, points de vie, oxygène, munitions tirées, expérience</td><td>Capturer les valeurs sur le tick (une lecture de champs, aucune base), les écrire sur le thread de fond. Un point de sauvegarde le fait pour chaque joueur une fois par minute.</td><td>Faible. Au pire : un plantage perd jusqu'à une minute.</td></tr>
+<tr><td><strong>2. Ailleurs</strong></td><td>Des biens qui changent de mains : transferts d'inventaire, marché, échange</td><td>Exécuter l'opération sur un thread qui a le droit d'attendre (le thread réseau qui a reçu la demande), sous des verrous par personnage, avec la base comme autorité pour cette transaction.</td><td>Moyen. Rare, à l'initiative du joueur, et jamais sur le tick. Chapitre <a href="transactions.html">6.2</a>.</td></tr>
+<tr><td><strong>3. Coupé et ordonné</strong></td><td>Transitions de carte, chargement de carte, coques qui expirent</td><td>Une moitié tick qui lit et modifie la mémoire, une moitié de fond qui fait l'entrée-sortie, et une suite qui ne s'exécute que si l'entrée-sortie a réussi.</td><td>Le plus de code, et la seule forme qui a supprimé le pic.</td></tr>
+</tbody></table></div>
+<p>La forme 3 mérite un mot, parce que « écrire plus tard » ne marche pas pour une transition de carte. La destination <em>lit</em> le vaisseau en base quand le joueur arrive. Différer seulement l'écriture laisserait le lecteur doubler l'écrivain et charger une coque pas encore sauvegardée. Le découpage du chapitre <a href="handover.html">2.3</a> fonctionne grâce à son ordre : le client n'est lâché que dans la suite, une fois l'écriture terminée, donc le lecteur ne peut pas commencer avant que l'écrivain ait fini.</p>
+</div>
+<div lang="en">
+<div class="note measured"><p class="note-label">Measured</p><p>Reads count too. The first version of on-demand map loading handed everything to the tick: the query, the procedural creation of the map row, then the physics world. The Monitor showed a tick at 278 ms with only 28 ms in the measured phases, for ten maps and twelve players. Only the creation of physics bodies needs the tick; the reads now run on the thread that was going to wait for the map anyway, and the tick only builds, within a 3 ms budget.</p></div>
+</div>
+<div lang="fr">
+<div class="note measured"><p class="note-label">Mesuré</p><p>Les lectures comptent aussi. La première version du chargement de cartes à la demande confiait tout au tick : la requête, la création procédurale de la ligne de carte, puis le monde physique. Le Monitor a montré un tick à 278 ms dont 28 seulement dans les phases mesurées, pour dix cartes et douze joueurs. Seule la création des corps physiques a besoin du tick ; les lectures tournent maintenant sur le thread qui allait de toute façon attendre la carte, et le tick ne fait plus que bâtir, dans un budget de 3 ms.</p></div>
+</div>
+</section>
+
+<section class="sec" id="guard">
+<div lang="en">
+<h2>A guard, so the rule survives the next feature</h2>
+<p>A rule that lives in the memory of whoever writes the next feature does not survive. The server makes it checkable instead. A per-thread counter is raised for the duration of every tick, and the factory that creates database contexts is wrapped <em>once</em> at startup: every one of the fifty-odd places that open a context goes through it without knowing, and so will every future one.</p>
+</div>
+<div lang="fr">
+<h2>Un garde, pour que la règle survive à la prochaine fonctionnalité</h2>
+<p>Une règle qui vit dans la mémoire de celui qui écrit la prochaine fonctionnalité ne survit pas. Le serveur la rend vérifiable à la place. Un compteur par thread est levé pendant toute la durée de chaque tick, et la fabrique qui crée les contextes de base est enveloppée <em>une fois</em> au démarrage : chacun des cinquante et quelques endroits qui ouvrent un contexte passe par elle sans le savoir, et tous les futurs aussi.</p>
+</div>
+<div class="code"><div class="code-head"><span class="file">GameServer/Services/TickThread.cs · simplified</span></div><pre><code data-lang="cs">public static class TickThread
+{
+    [ThreadStatic] private static int _depth;  // a counter, not a bool: tick scopes nest
+    public static bool InTick =&gt; _depth &gt; 0;
+
+    // `using var _ = TickThread.Enter();` at every tick entry, including inside each map's tick,
+    // because the maps run on other threads and the flag is per thread.
+    public static Scope Enter() =&gt; new();
+    public readonly struct Scope : IDisposable
+    {
+        public Scope() =&gt; _depth++;
+        public void Dispose() =&gt; _depth--;
+    }
+
+    // Installed once around the EF context factory: every _createDb() is covered.
+    public static Func&lt;QwakDbContext&gt; Guard(Func&lt;QwakDbContext&gt; inner) =&gt; () =&gt;
+    {
+        if (InTick) Report();  // log once per call site, count, throw if Strict
+        return inner();
+    };
+}</code></pre></div>
+<div class="code"><div class="code-head"><span class="file">GameServer console</span></div><pre><code data-lang="txt">[TickDB] VIOLATION : accès base pendant un world tick, depuis GameServer.Player.SaveShipParts.
+         La RAM est l'autorité pendant le jeu, la base est un journal — voir TickThread.</code></pre></div>
+<div lang="en">
+<p>Three design choices in the guard are worth copying:</p>
+<ul>
+<li><strong>It logs, it does not throw, for now.</strong> The violations it found on its first session were real, and the server had to keep running while they were migrated. A guard that breaks the game before the fault can be fixed does not get respected, it gets disabled. A <code>Strict</code> switch turns the log into an exception, to be flipped once real sessions print an empty list at shutdown.</li>
+<li><strong>It reports the list at shutdown.</strong> Each call site is named once, with its count. A rule whose results nobody reads is not a rule.</li>
+<li><strong>It has a budget for stack traces.</strong> The first version captured a stack trace on every violation, which costs tens of microseconds, on the map-transition path: exactly the spike the guard existed to attribute. The next report showed a bigger spike than before. It now names at most 200 sites and only counts beyond that.</li>
+</ul>
+<div class="note rule"><p class="note-label">Rule</p><p>An instrument that moves what it observes does not measure anything.</p><p>Price every diagnostic on the path it watches. The cheapest correct answer is often "identify the first few, count the rest".</p></div>
+<p>The guard also has a documented hole, written down rather than discovered: the flag is per thread, and a parallel loop's helper threads do not inherit it. The paths it does cover (each map's tick, the sequential body of both ticks) are the ones where time is measured.</p>
+<p>One known exception is still on the list. When resource nodes respawn, the pass writes their new subtier to the database synchronously, on the tick thread. It is rare, one small write wrapped in a <code>try</code>/<code>catch</code>, and when it happens the guard counts it like any other violation. That is the point of a guard that reports instead of throwing: the exception stays visible until it moves to the background thread.</p>
+</div>
+<div lang="fr">
+<p>Trois choix de conception du garde méritent d'être copiés :</p>
+<ul>
+<li><strong>Il journalise, il ne lève pas, pour l'instant.</strong> Les violations trouvées à sa première session étaient réelles, et le serveur devait continuer à tourner pendant qu'on les migrait. Un garde qui casse le jeu avant que la faute soit réparable ne se fait pas respecter, il se fait désactiver. Un interrupteur <code>Strict</code> transforme la ligne de journal en exception, à basculer quand de vraies sessions afficheront une liste vide à l'arrêt.</li>
+<li><strong>Il rend la liste à l'arrêt.</strong> Chaque site d'appel est nommé une fois, avec son compte. Une règle dont personne ne lit le résultat n'est pas une règle.</li>
+<li><strong>Il a un budget de piles d'appels.</strong> La première version capturait une pile à chaque violation, ce qui coûte des dizaines de microsecondes, sur le chemin de la transition de carte : exactement le pic que le garde existait pour attribuer. Le rapport suivant a montré un pic plus gros qu'avant. Il nomme maintenant au plus 200 sites et se contente de compter au-delà.</li>
+</ul>
+<div class="note rule"><p class="note-label">Règle</p><p>Un instrument qui déplace ce qu'il observe ne mesure plus rien.</p><p>Chiffrer chaque diagnostic sur le chemin qu'il surveille. La réponse juste la moins chère est souvent « identifier les premiers, compter le reste ».</p></div>
+<p>Le garde a aussi un trou documenté, écrit plutôt que découvert : le drapeau est par thread, et les threads d'aide d'une boucle parallèle n'en héritent pas. Les chemins qu'il couvre (le tick de chaque carte, le corps séquentiel des deux ticks) sont ceux où le temps se mesure.</p>
+<p>Une exception connue reste sur la liste. Quand des nœuds de ressources réapparaissent, la passe écrit leur nouveau sous-tier en base de façon synchrone, sur le thread du tick. C'est rare, une seule petite écriture dans un <code>try</code>/<code>catch</code>, et quand elle se produit, le garde la compte comme n'importe quelle autre violation. C'est tout l'intérêt d'un garde qui signale au lieu de lever : l'exception reste visible jusqu'à ce qu'elle passe sur le thread de fond.</p>
+</div>
+</section>
+
+<section class="sec" id="background">
+<div lang="en">
+<h2>Where the work goes: one thread, a queue, a continuation</h2>
+<p>The rule says what the tick may not do; the background writer is where that work goes. It is deliberately small: a queue, one thread of normal priority, and a continuation.</p>
+</div>
+<div lang="fr">
+<h2>Où va le travail : un thread, une file, une suite</h2>
+<p>La règle dit ce que le tick n'a pas le droit de faire ; l'écrivain de fond est l'endroit où ce travail part. Il est délibérément petit : une file, un thread de priorité normale, et une suite.</p>
+</div>
+<div class="code"><div class="code-head"><span class="file">GameServer/Services/BackgroundWork.cs · simplified</span></div><pre><code data-lang="cs">public static void Post(string name, Action work, Action? then = null)
+    =&gt; _queue.Add(new Job(name, work, then));
+
+private static void Pump()  // one thread, Normal priority
+{
+    foreach (var job in _queue.GetConsumingEnumerable())
+    {
+        try
+        {
+            job.Work();
+            job.Then?.Invoke();  // runs ONLY if the work succeeded
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine($"[Fond] « {job.Name} » a échoué : {e}");  // the queue goes on:
+        }                        // the next jobs belong to other players
+    }
+}</code></pre></div>
+<div lang="en">
+<ul>
+<li><strong>The continuation is the point, not the queue.</strong> A deferred write that you forget about is not deferred, it is lost. Because the continuation runs only when the work succeeded, it is the natural place to send a confirmation, release a lock or disconnect a client after a transition. If the write fails, the client stays where it is rather than arriving somewhere with half-written state.</li>
+<li><strong>One thread gives ordering for free.</strong> Two writes for the same character reach the database in the order the game produced them, which is what a journal needs.</li>
+<li><strong>Nothing in it touches the world.</strong> No physics, no map object table, no spatial index. To come back into the world, a job goes through the map's queued mutations like any other thread.</li>
+<li><strong>At shutdown, it really waits.</strong> The asynchronous console gives itself half a second to flush; this queue gets ten seconds. The difference is what would be lost: three log lines there, someone's inventory here.</li>
+</ul>
+</div>
+<div lang="fr">
+<ul>
+<li><strong>La suite est le point, pas la file.</strong> Une écriture différée qu'on oublie n'est pas différée, elle est perdue. Comme la suite ne s'exécute que si le travail a réussi, c'est l'endroit naturel pour envoyer une confirmation, lever un verrou ou déconnecter un client après une transition. Si l'écriture échoue, le client reste où il est plutôt que d'arriver quelque part avec un état à moitié écrit.</li>
+<li><strong>Un seul thread donne l'ordre gratuitement.</strong> Deux écritures pour le même personnage atteignent la base dans l'ordre où le jeu les a produites, ce dont un journal a besoin.</li>
+<li><strong>Rien là-dedans ne touche au monde.</strong> Pas de physique, pas de table d'objets de carte, pas d'index spatial. Pour revenir dans le monde, un travail passe par les mutations en file de la carte, comme n'importe quel autre thread.</li>
+<li><strong>À l'arrêt, il attend vraiment.</strong> La console asynchrone se donne une demi-seconde pour se vider ; cette file a dix secondes. La différence, c'est ce qu'on perdrait : trois lignes de journal là-bas, l'inventaire de quelqu'un ici.</li>
+</ul>
+</div>
+</section>
+
+<section class="sec" id="patterns">
+<div lang="en">
+<h2>The pattern in three real cases</h2>
+<h3>A checkpoint that cannot overwrite a newer state</h3>
+<p>Once a minute, the tick captures every player's session state (ship position, posture, health, oxygen): a read of fields, a few hundred nanoseconds per player, done before the maps tick so that each player is read in a consistent state without a lock. The list goes to the background writer. A capture can arrive after a newer write (the player disconnected in between, and the disconnection wrote its own state), so the write carries its capture time and the database refuses it if the row already holds a newer one. The most recent state wins, whatever order the writes arrive in.</p>
+<h3>A sweep that runs once a minute is still a stutter</h3>
+<p>The market's expired orders, unclaimed mail, abandoned ships and finished instances were swept from the tick once a minute. "Once a minute" was my excuse for leaving them there. A stutter every sixty seconds is still a stutter, and a regular one is worse: players learn to expect it. The tick now only triggers the heartbeat; the sweeps run on the background writer. Moving them was free because none is urgent: an expired order is already impossible to buy from the second it expires, since the buy query filters on the expiry date. The sweep only returns goods to their owner, which can wait fifty milliseconds.</p>
+<h3>Read here, write there</h3>
+<p>A hull that lingers after its pilot disconnected mid-fight (chapter <a href="handover.html#disconnects">2.3</a>) must have its damage saved when it finally leaves, otherwise twenty seconds of fire on a helpless target would count for nothing. The sweep that removes it runs on the tick, and its first version did a full SQL round trip per expired hull, which the guard reported immediately. The fix splits the persister in two: the part that <em>reads</em> the hull runs on the tick, because the hull is still in the map and only the tick may read it; it returns the <em>write</em> as a closure, posted to the background thread.</p>
+</div>
+<div lang="fr">
+<h2>Le motif dans trois cas réels</h2>
+<h3>Un point de sauvegarde qui ne peut pas écraser un état plus récent</h3>
+<p>Une fois par minute, le tick capture l'état de session de chaque joueur (position du vaisseau, posture, points de vie, oxygène) : une lecture de champs, quelques centaines de nanosecondes par joueur, faite avant que les cartes tickent pour que chaque joueur soit lu dans un état cohérent sans verrou. La liste part à l'écrivain de fond. Une capture peut arriver après une écriture plus récente (le joueur s'est déconnecté entre-temps, et la déconnexion a écrit son propre état) : l'écriture porte donc son heure de capture, et la base la refuse si la ligne en contient déjà une plus récente. L'état le plus récent gagne, quel que soit l'ordre d'arrivée des écritures.</p>
+<h3>Un balayage à la minute reste un à-coup</h3>
+<p>Les ordres échus du marché, le courrier non réclamé, les vaisseaux abandonnés et les instances terminées étaient balayés depuis le tick une fois par minute. « Une fois par minute » était mon excuse pour les y laisser. Un à-coup toutes les soixante secondes reste un à-coup, et un à-coup régulier est pire : les joueurs apprennent à l'attendre. Le tick ne déclenche plus que le battement ; les balayages tournent sur l'écrivain de fond. Les déplacer n'a rien coûté parce qu'aucun n'est urgent : un ordre échu est déjà impossible à acheter dès la seconde de son expiration, puisque la requête d'achat filtre sur la date. Le balayage ne fait que rendre des biens à leur propriétaire, ce qui peut attendre cinquante millisecondes.</p>
+<h3>Lire ici, écrire là-bas</h3>
+<p>Une coque qui reste après que son pilote s'est déconnecté en plein combat (chapitre <a href="handover.html#disconnects">2.3</a>) doit voir ses dégâts sauvegardés quand elle part enfin, sinon vingt secondes de tir sur une cible sans défense ne compteraient pour rien. Le balayage qui la retire tourne sur le tick, et sa première version faisait un aller-retour SQL complet par coque échue, que le garde a signalé aussitôt. La correction coupe le persisteur en deux : la partie qui <em>lit</em> la coque tourne sur le tick, parce que la coque est encore dans la carte et que seul le tick peut la lire ; elle rend l'<em>écriture</em> sous forme de fermeture, postée au thread de fond.</p>
+</div>
+<div lang="en">
+<div class="note rule"><p class="note-label">Rule</p><p>Split every operation into what needs the world and what needs to wait, run the first on the tick and the second elsewhere, and let the continuation run only on success.</p><p>The tick reads and mutates memory. Everything that can block (a query, a file, a socket, the console) belongs to a thread that is allowed to wait.</p></div>
+</div>
+<div lang="fr">
+<div class="note rule"><p class="note-label">Règle</p><p>Couper chaque opération entre ce qui a besoin du monde et ce qui a besoin d'attendre, faire tourner la première sur le tick et la seconde ailleurs, et ne laisser la suite s'exécuter qu'en cas de réussite.</p><p>Le tick lit et modifie la mémoire. Tout ce qui peut bloquer (une requête, un fichier, une socket, la console) appartient à un thread qui a le droit d'attendre.</p></div>
+</div>
+</section>
+
+<section class="sec" id="takeaways">
+<div class="takeaways">
+<div lang="en"><h2>Key takeaways</h2><ul>
+<li>A database call has no upper bound on its latency; the tick has a hard budget shared by everyone. Keep them apart.</li>
+<li>Treat memory as the authority during play and the database as a journal that must be written eventually and in order.</li>
+<li>Replace tick-time I/O with one of three forms: later, elsewhere, or split and ordered with a continuation on success.</li>
+<li>Make the rule checkable with a guard installed once at the context factory, and price the guard on the path it watches.</li>
+<li>Use one ordered background thread for writes, and never let it touch the world directly.</li>
+</ul></div>
+<div lang="fr"><h2>À retenir</h2><ul>
+<li>Un appel en base n'a aucune borne de latence ; le tick a un budget dur partagé par tous. Les garder séparés.</li>
+<li>Traiter la mémoire comme l'autorité pendant le jeu, et la base comme un journal à écrire tôt ou tard, et dans l'ordre.</li>
+<li>Remplacer l'entrée-sortie du tick par l'une de trois formes : plus tard, ailleurs, ou coupée et ordonnée avec une suite en cas de réussite.</li>
+<li>Rendre la règle vérifiable par un garde installé une fois sur la fabrique de contextes, et chiffrer ce garde sur le chemin qu'il surveille.</li>
+<li>Utiliser un seul thread de fond ordonné pour les écritures, et ne jamais le laisser toucher directement au monde.</li>
+</ul></div>
+</div>
+</section>
+
+</div>
+<div data-chapter-foot></div>
+</article>
+</main>
+<aside class="rail" id="mq-rail"></aside>
+</div>
+<footer class="site-footer" id="mq-footer"></footer>
+<script src="assets/js/site-data.js" defer></script>
+<script src="assets/js/glossary-data.js" defer></script>
+<script src="assets/js/app.js" defer></script>
+<script src="assets/js/widgets.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="en" data-lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Smoothing remote objects · MoonQwak</title>
+<meta name="description" content="Interpolation, damped extrapolation, render buffers in tick space, and dead-zones against micro-corrections.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Chakra+Petch:wght@500;600&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="assets/css/site.css">
+<script>(function(){var r=document.documentElement,l,t;try{l=localStorage.getItem("mq-lang");t=localStorage.getItem("mq-theme");}catch(e){}if(l!=="en"&&l!=="fr"){l=(navigator.language||"").toLowerCase().indexOf("fr")===0?"fr":"en";}r.setAttribute("data-lang",l);r.setAttribute("lang",l);if(t==="light"||t==="dark")r.setAttribute("data-theme",t);})();</script>
+</head>
+<body data-page="interpolation">
+<a class="skip-link" href="#main"><span lang="en">Skip to content</span><span lang="fr">Aller au contenu</span></a>
+<header class="site-header" id="mq-header"></header>
+<div class="layout">
+<aside class="sidebar" id="mq-sidebar"></aside>
+<main class="content" id="main">
+<article>
+<header class="chapter-head">
+  <div class="eyebrow" data-auto></div>
+  <h1><span lang="en">Smoothing remote objects</span><span lang="fr">Lisser les objets distants</span></h1>
+  <p class="dek"><span lang="en">Interpolation, damped extrapolation, render buffers in tick space, and dead-zones against micro-corrections.</span><span lang="fr">Interpolation, extrapolation amortie, tampons de rendu en espace de ticks, et zones mortes contre les micro-corrections.</span></p>
+  <div class="meta-row" data-auto></div>
+</header>
+
+<div class="prose">
+
+<section class="sec" id="gap">
+<div lang="en">
+<h2>Between two snapshots</h2>
+<p>The server describes a remote ship 25 times per second at best, and less often when it is far away (chapter <a href="freshness-budget.html">4.5</a>). The screen refreshes 60 times per second or more. Packets arrive with jitter, some late, some not at all. Drawing a remote object is the art of deciding where it is <em>between</em> the samples you have.</p>
+<div class="note beginner"><p class="note-label">Beginner note</p><p>There are two families. <strong>Interpolation</strong> renders slightly in the past, between two samples you already have: perfectly smooth, but everything is shown late by the buffer's delay. <strong>Extrapolation</strong> (dead reckoning) projects the latest sample forward using its velocity: no added delay, but it guesses, and every wrong guess must be corrected. Most games mix them, and the mix is what this chapter is about.</p></div>
+<p>Try the four strategies in the lab. Snapping to the latest sample stutters; pure extrapolation overshoots every turn; buffered interpolation is smooth but visibly behind the dashed circle; smoothing toward an extrapolated target sits in between.</p>
+</div>
+<div lang="fr">
+<h2>Entre deux snapshots</h2>
+<p>Le serveur décrit un vaisseau distant 25 fois par seconde au mieux, et moins souvent quand il est loin (chapitre <a href="freshness-budget.html">4.5</a>). L'écran se rafraîchit 60 fois par seconde ou plus. Les paquets arrivent avec de la gigue, certains en retard, d'autres pas du tout. Dessiner un objet distant, c'est l'art de décider où il est <em>entre</em> les échantillons dont on dispose.</p>
+<div class="note beginner"><p class="note-label">Pour débuter</p><p>Il existe deux familles. L'<strong>interpolation</strong> affiche légèrement dans le passé, entre deux échantillons qu'on possède déjà : parfaitement fluide, mais tout est montré en retard du délai du tampon. L'<strong>extrapolation</strong> (estime) projette le dernier échantillon vers l'avant avec sa vitesse : aucun délai ajouté, mais elle devine, et chaque mauvaise estimation doit être corrigée. La plupart des jeux mélangent les deux, et c'est ce mélange que traite ce chapitre.</p></div>
+<p>Essayez les quatre stratégies dans le labo. Coller au dernier échantillon saccade ; l'extrapolation pure dépasse chaque virage ; l'interpolation tamponnée est fluide mais visiblement en retard sur le cercle pointillé ; lisser vers une cible extrapolée se place entre les deux.</p>
+</div>
+<div data-widget="interp"></div>
+</section>
+
+<section class="sec" id="three-modes">
+<div lang="en">
+<h2>Three render modes for three kinds of motion</h2>
+<p>One component renders every networked object in MoonQwak, and it has three modes, because a ship, a bullet and a walking person do not move the same way:</p>
+<div class="table-wrap"><table>
+<thead><tr><th>Mode</th><th>How</th><th>Used for</th></tr></thead>
+<tbody>
+<tr><td><strong>Smooth toward extrapolation</strong> (default)</td><td>Extrapolate the latest sample forward (with damping, see below), and chase that target with a critically damped spring (Unity's <code>SmoothDamp</code>, about two snapshot ticks of smoothing).</td><td>Ships and stations: responsive, no added delay, corrections absorbed smoothly.</td></tr>
+<tr><td><strong>Linear render in tick space</strong></td><td>Keep a small buffer of samples tagged with their server tick; read it at "newest tick minus 60 ms", interpolating between consecutive ticks.</td><td>Kept as an option for objects that must never jump (constant velocity between ticks, at the cost of a fixed delay); no object type uses it today.</td></tr>
+<tr><td><strong>Predictive render</strong></td><td>Pure dead reckoning from the spawn state, recomputed every frame; corrections accepted only if they do not move the object backwards.</td><td>Bullets: constant velocity, short life, a continuous path matters more than pixel-perfect sync.</td></tr>
+</tbody></table></div>
+<p>Characters are a fourth case: the component can hand the transform over to another owner. The player's own walking character is driven by prediction (chapter <a href="prediction.html">5.3</a>), and other players' characters are carried by the hull they stand on.</p>
+</div>
+<div lang="fr">
+<h2>Trois modes de rendu pour trois genres de mouvement</h2>
+<p>Un seul composant affiche chaque objet réseau de MoonQwak, et il a trois modes, parce qu'un vaisseau, une balle et une personne qui marche ne bougent pas de la même façon :</p>
+<div class="table-wrap"><table>
+<thead><tr><th>Mode</th><th>Comment</th><th>Pour</th></tr></thead>
+<tbody>
+<tr><td><strong>Lisser vers l'extrapolation</strong> (par défaut)</td><td>Extrapoler le dernier échantillon vers l'avant (avec amortissement, voir plus bas), et poursuivre cette cible avec un ressort critique (le <code>SmoothDamp</code> d'Unity, environ deux ticks de snapshot de lissage).</td><td>Vaisseaux et stations : réactif, sans délai ajouté, corrections absorbées en douceur.</td></tr>
+<tr><td><strong>Rendu linéaire en espace de ticks</strong></td><td>Garder un petit tampon d'échantillons étiquetés par leur tick serveur ; le lire à « tick le plus récent moins 60 ms », en interpolant entre ticks consécutifs.</td><td>Gardé en option pour les objets qui ne doivent jamais sauter (vitesse constante entre les ticks, au prix d'un délai fixe) ; aucun type d'objet ne l'utilise aujourd'hui.</td></tr>
+<tr><td><strong>Rendu prédictif</strong></td><td>Estime pure depuis l'état de départ, recalculée à chaque image ; corrections acceptées seulement si elles ne font pas reculer l'objet.</td><td>Balles : vitesse constante, vie courte, une trajectoire continue compte plus qu'une synchronisation au pixel près.</td></tr>
+</tbody></table></div>
+<p>Les personnages sont un quatrième cas : le composant peut céder le transform à un autre propriétaire. Le personnage à pied du joueur est piloté par la prédiction (chapitre <a href="prediction.html">5.3</a>), et ceux des autres joueurs sont portés par la coque sur laquelle ils se tiennent.</p>
+</div>
+<div lang="en">
+<div class="note project"><p class="note-label">In MoonQwak</p><p>The linear mode samples in <strong>tick space</strong>, not in arrival time. Server ticks are exactly one tick apart, so the interpolation factor between two consecutive samples is just the fractional part of the read cursor, uniform whatever the network did to their arrival times. The cursor advances at the snapshot rate and is clamped so it never reaches the newest sample, which is what removes jumps between snapshots.</p></div>
+</div>
+<div lang="fr">
+<div class="note project"><p class="note-label">Dans MoonQwak</p><p>Le mode linéaire échantillonne en <strong>espace de ticks</strong>, pas en temps d'arrivée. Les ticks serveur sont espacés d'exactement un tick : le facteur d'interpolation entre deux échantillons consécutifs est simplement la partie fractionnaire du curseur de lecture, uniforme quoi que le réseau ait fait à leurs heures d'arrivée. Le curseur avance à la cadence des snapshots et reste bridé pour ne jamais atteindre l'échantillon le plus récent, ce qui supprime les sauts entre snapshots.</p></div>
+</div>
+</section>
+
+<section class="sec" id="damping">
+<div lang="en">
+<h2>Extrapolate like the server simulates</h2>
+<p>Ships in MoonQwak have linear damping: when the pilot releases the thrusters, the velocity decays exponentially instead of staying constant. Extrapolating with <code>position + velocity × time</code> therefore <em>overshoots</em> whenever a ship is coasting: each new snapshot landed slightly behind the prediction, and the renderer produced a steady stream of small backward corrections. It read as a light rollback jitter during otherwise smooth flight, worse on ships than on characters precisely because only ships carry meaningful damping.</p>
+<p>The fix is to extrapolate with the same law the server simulates. For a velocity decaying as v₀·e<sup>−λt</sup>, the displacement is v₀·(1 − e<sup>−λt</sup>)/λ:</p>
+</div>
+<div lang="fr">
+<h2>Extrapoler comme le serveur simule</h2>
+<p>Les vaisseaux de MoonQwak ont un amortissement linéaire : quand le pilote relâche les propulseurs, la vitesse décroît exponentiellement au lieu de rester constante. Extrapoler avec <code>position + vitesse × temps</code> <em>dépasse</em> donc la vraie position chaque fois qu'un vaisseau file sur son élan : chaque nouveau snapshot tombait un peu derrière la prédiction, et le rendu produisait un flot régulier de petites corrections vers l'arrière. Cela se lisait comme une légère gigue de retour en arrière pendant un vol par ailleurs fluide, pire sur les vaisseaux que sur les personnages justement parce que seuls les vaisseaux portent un amortissement notable.</p>
+<p>La correction consiste à extrapoler avec la même loi que celle que simule le serveur. Pour une vitesse qui décroît en v₀·e<sup>−λt</sup>, le déplacement vaut v₀·(1 − e<sup>−λt</sup>)/λ :</p>
+</div>
+<div class="code"><div class="code-head"><span class="file">QwakClient/Scripts/Core/RemotePhysicsController.cs</span></div><pre><code data-lang="cs">private Vector2 ExtrapolatePosition(Vector2 pos, Vector2 vel, float t)
+{
+    if (_cachedShip != null)
+    {
+        var damping = (float)PhysicsConfig.I.HexLinearDamping;  // the SAME value Box2D uses
+        if (damping &gt; 1e-4f)
+            return pos + vel * ((1f - Mathf.Exp(-damping * t)) / damping);
+    }
+    return pos + vel * t;                                       // bullets: no damping at all
+}</code></pre></div>
+<div lang="en">
+<div class="note rule"><p class="note-label">Rule</p><p>Your client's model of motion should be the server's model of motion, fed with the same constants.</p><p>Every difference between the two laws becomes a correction the player sees. Sharing the configuration file between client and server makes that agreement a matter of reading the same number.</p></div>
+</div>
+<div lang="fr">
+<div class="note rule"><p class="note-label">Règle</p><p>Le modèle de mouvement du client doit être celui du serveur, nourri des mêmes constantes.</p><p>Chaque différence entre les deux lois devient une correction que le joueur voit. Partager le fichier de configuration entre client et serveur réduit cet accord à la lecture d'un même nombre.</p></div>
+</div>
+</section>
+
+<section class="sec" id="deadzone">
+<div lang="en">
+<h2>Dead-zones: do not chase noise</h2>
+<p>Even with the right law, a curving ship's new sample rarely lands <em>exactly</em> where the previous extrapolation said. The first version rebased the extrapolation onto every raw sample, so any tiny disagreement, even sub-centimetre quantization noise, moved the target every tick, and the spring dutifully chased each micro-correction: a small constant "bounce" in flight.</p>
+<p>The answer is a dead-zone sized from the physics, not from float noise. The server applies an input for a whole tick, so the moment it recognizes a change can differ from the client's by up to one tick, that is up to <em>speed / tick rate</em> of distance. The tolerance is that, plus 20 %. Inside it, the correction is not ignored outright either: the baseline is pulled a quarter of the way toward the authoritative sample. Adopting the prediction unchanged let sub-threshold errors compound during long accelerations until they crossed the threshold all at once, a periodic hitch out of nowhere. The partial pull keeps every correction invisible while bounding the drift.</p>
+</div>
+<div lang="fr">
+<h2>Zones mortes : ne pas courir après le bruit</h2>
+<p>Même avec la bonne loi, le nouvel échantillon d'un vaisseau qui vire tombe rarement <em>exactement</em> là où l'extrapolation précédente l'attendait. La première version recalait l'extrapolation sur chaque échantillon brut : le moindre désaccord, même un bruit de quantification sous le centimètre, déplaçait la cible à chaque tick, et le ressort poursuivait consciencieusement chaque micro-correction : un petit « rebond » constant en vol.</p>
+<p>La réponse est une zone morte dimensionnée par la physique, pas par le bruit des flottants. Le serveur applique une entrée pendant un tick entier : l'instant où il reconnaît un changement peut différer de celui du client d'un tick au plus, soit jusqu'à <em>vitesse / cadence</em> de distance. La tolérance vaut cela, plus 20 %. À l'intérieur, la correction n'est pas ignorée pour autant : la référence est tirée d'un quart du chemin vers l'échantillon qui fait autorité. Adopter la prédiction telle quelle laissait les erreurs sous le seuil s'accumuler pendant les longues accélérations, jusqu'à franchir le seuil d'un coup : un à-coup périodique sorti de nulle part. La traction partielle garde chaque correction invisible tout en bornant la dérive.</p>
+</div>
+<div class="code"><div class="code-head"><span class="file">QwakClient/Scripts/Core/RemotePhysicsController.cs · ApplyState, simplified</span></div><pre><code data-lang="cs">float elapsed = Mathf.Min(Time.time - _snapshotTime, MaxExtrapolationTime);
+Vector2 predictedNow = ExtrapolatePosition(_snapshotPos, _snapshotVel, elapsed);
+float epsilon = speed / WorldTps * 1.2f;  // one tick of quantization, plus margin
+
+if (Vector2.Distance(predictedNow, position) &gt; epsilon)
+    _snapshotPos = position;              // real disagreement: rebase fully
+else
+    _snapshotPos = Vector2.Lerp(predictedNow, position, 0.25f);  // noise: pull a quarter
+
+_snapshotVel = velocity;
+_snapshotTime = Time.time;                // always refresh, even inside the zone</code></pre></div>
+<div lang="en">
+<p>The last line matters as much as the others. The baseline time is refreshed on every sample, not only on real corrections; otherwise a ship cruising in a long straight line, every sample inside the dead-zone, would let its extrapolation age run out to the maximum and freeze in place.</p>
+</div>
+<div lang="fr">
+<p>La dernière ligne compte autant que les autres. L'heure de référence est rafraîchie à chaque échantillon, pas seulement lors des vraies corrections ; sinon un vaisseau qui file en ligne droite, chaque échantillon dans la zone morte, laisserait l'âge de son extrapolation atteindre le maximum et se figerait sur place.</p>
+</div>
+</section>
+
+<section class="sec" id="units">
+<div lang="en">
+<h2>Smoothing constants in ticks, not seconds</h2>
+<p>The smoothing time and the maximum extrapolation used to be fixed durations, 0.1 s and 0.5 s. They "felt right", and it turned out they felt right by accident: they had been tuned while the server's timer bug (chapter <a href="tick-loop.html#timer-traps">3.1</a>) silently capped the real tick rate around 21 Hz. Once the server delivered its configured rate, the fixed durations no longer matched the real interval between new states. Both are now expressed in snapshot ticks (2 and 10) and converted with the live snapshot rate, so the renderer keeps the same relative behaviour at any configured rate.</p>
+</div>
+<div lang="fr">
+<h2>Des constantes de lissage en ticks, pas en secondes</h2>
+<p>Le temps de lissage et l'extrapolation maximale étaient des durées fixes, 0,1 s et 0,5 s. Elles « semblaient justes », et elles l'étaient par accident : elles avaient été réglées pendant que le bug de minuterie du serveur (chapitre <a href="tick-loop.html#timer-traps">3.1</a>) plafonnait en silence la cadence réelle vers 21 Hz. Une fois que le serveur a livré sa cadence configurée, les durées fixes ne correspondaient plus à l'intervalle réel entre deux nouveaux états. Les deux sont maintenant exprimées en ticks de snapshot (2 et 10) et converties avec la cadence en vigueur, pour que le rendu garde le même comportement relatif à n'importe quelle cadence configurée.</p>
+</div>
+<div lang="en">
+<div class="note tradeoff"><p class="note-label">Trade-off</p><p>This looks like it contradicts the rule of chapter <a href="snapshots.html#absence">4.2</a> ("any constant whose comment names a tick rate is in the wrong unit"). It does not: that rule is about contracts between two ends and durations that matter to a human, like a grace period. These constants describe the signal itself: "smooth over two samples" is naturally counted in samples.</p></div>
+</div>
+<div lang="fr">
+<div class="note tradeoff"><p class="note-label">Compromis</p><p>Cela semble contredire la règle du chapitre <a href="snapshots.html#absence">4.2</a> (« toute constante dont le commentaire nomme une cadence est dans la mauvaise unité »). Ce n'est pas le cas : cette règle vise les contrats entre deux bouts et les durées qui comptent pour un humain, comme une grâce. Ces constantes décrivent le signal lui-même : « lisser sur deux échantillons » se compte naturellement en échantillons.</p></div>
+</div>
+</section>
+
+<section class="sec" id="order">
+<div lang="en">
+<h2>The order in which things are drawn</h2>
+<p>A subtle stutter, "sometimes", had nothing to do with networking. Unity runs every component's late update in an unspecified order that depends on creation order. The walking character is carried by its hull's transform; the camera follows the character; both read transforms written by the remote renderer. Depending on the session, they read the position from <em>one frame ago</em>.</p>
+<p>The order is now a written contract, enforced by explicit execution-order attributes: remote physics renderer first (−100), then the local character controller that stands on it (−50), then the character renderer (−20), and the camera last (+100). Each stage reads the previous one's output of the same frame.</p>
+<div class="note rule"><p class="note-label">Rule</p><p>When several components read each other's output in the same frame, make their order explicit.</p><p>Implicit ordering works until the day objects are created in a different order, and then produces the hardest kind of bug to report: "it stutters a little, sometimes".</p></div>
+</div>
+<div lang="fr">
+<h2>L'ordre dans lequel on dessine</h2>
+<p>Un léger à-coup, « parfois », n'avait rien à voir avec le réseau. Unity exécute la mise à jour tardive de chaque composant dans un ordre non spécifié, qui dépend de l'ordre de création. Le personnage à pied est porté par le transform de sa coque ; la caméra suit le personnage ; tous deux lisent des transforms écrits par le rendu distant. Selon la session, ils lisaient la position d'<em>il y a une image</em>.</p>
+<p>L'ordre est maintenant un contrat écrit, imposé par des attributs explicites d'ordre d'exécution : le rendu physique distant d'abord (−100), puis le contrôleur du personnage local qui se tient dessus (−50), puis le rendu du personnage (−20), et la caméra en dernier (+100). Chaque étape lit la sortie de la précédente de la même image.</p>
+<div class="note rule"><p class="note-label">Règle</p><p>Quand plusieurs composants lisent la sortie les uns des autres dans la même image, rendre leur ordre explicite.</p><p>Un ordre implicite marche jusqu'au jour où les objets sont créés dans un autre ordre, et produit alors le genre de bug le plus dur à signaler : « ça saccade un peu, parfois ».</p></div>
+</div>
+</section>
+
+<section class="sec" id="bullets">
+<div lang="en">
+<h2>Bullets: forward only, except on impact</h2>
+<p>A bullet's velocity never changes in flight, so the client can simulate it almost exactly from its spawn state. Corrections are accepted only if they do not require drawing the bullet <em>behind</em> where it already is: for a fast, short-lived object, a continuous path matters more than resynchronizing every tick, and a backward correction reads as an ugly one-frame hitch. The one case where "behind" is right is a hit: the bullet genuinely stopped, often short of where free flight would have carried it. Fed through the forward-only rule, the impact was dropped and the bullet kept flying through the target. A hit therefore rebases unconditionally, to the impact point with zero velocity.</p>
+</div>
+<div lang="fr">
+<h2>Les balles : en avant seulement, sauf à l'impact</h2>
+<p>La vitesse d'une balle ne change jamais en vol : le client peut la simuler presque exactement depuis son état de départ. Les corrections ne sont acceptées que si elles n'obligent pas à dessiner la balle <em>derrière</em> l'endroit où elle est déjà : pour un objet rapide et éphémère, une trajectoire continue compte plus que de se resynchroniser à chaque tick, et une correction vers l'arrière se lit comme un vilain à-coup d'une image. Le seul cas où « derrière » est juste est l'impact : la balle s'est vraiment arrêtée, souvent en deçà de l'endroit où le vol libre l'aurait portée. Passé par la règle « en avant seulement », l'impact était ignoré et la balle continuait de voler à travers la cible. Un impact recale donc la balle sans condition, au point d'impact avec une vitesse nulle.</p>
+</div>
+</section>
+
+<section class="sec" id="takeaways">
+<div class="takeaways">
+<div lang="en"><h2>Key takeaways</h2><ul>
+<li>Choose the render strategy per kind of motion: extrapolate-and-smooth for ships, dead reckoning for bullets, buffered interpolation where jumps are unacceptable.</li>
+<li>Extrapolate with the server's own motion law and constants, damping included.</li>
+<li>Size dead-zones from one tick of simulation quantization, and pull partially inside them instead of ignoring or chasing.</li>
+<li>Interpolate in tick space so arrival jitter cannot disturb the spacing.</li>
+<li>Make the frame's update order explicit, and let impacts override forward-only rules.</li>
+</ul></div>
+<div lang="fr"><h2>À retenir</h2><ul>
+<li>Choisir la stratégie de rendu selon le genre de mouvement : extrapoler et lisser pour les vaisseaux, estime pour les balles, interpolation tamponnée là où les sauts sont inacceptables.</li>
+<li>Extrapoler avec la loi de mouvement et les constantes du serveur, amortissement compris.</li>
+<li>Dimensionner les zones mortes sur un tick de quantification de la simulation, et tirer partiellement à l'intérieur au lieu d'ignorer ou de poursuivre.</li>
+<li>Interpoler en espace de ticks pour que la gigue d'arrivée ne puisse pas perturber l'espacement.</li>
+<li>Rendre explicite l'ordre de mise à jour de l'image, et laisser les impacts passer outre les règles « en avant seulement ».</li>
+</ul></div>
+</div>
+</section>
+
+</div>
+<div data-chapter-foot></div>
+</article>
+</main>
+<aside class="rail" id="mq-rail"></aside>
+</div>
+<footer class="site-footer" id="mq-footer"></footer>
+<script src="assets/js/site-data.js" defer></script>
+<script src="assets/js/glossary-data.js" defer></script>
+<script src="assets/js/app.js" defer></script>
+<script src="assets/js/widgets.js" defer></script>
+</body>
+</html>

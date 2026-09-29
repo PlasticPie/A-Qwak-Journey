@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en" data-lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!-- 1. Title and description: same text as the chapter's entry in assets/js/site-data.js. -->
+<title>Chapter title · MoonQwak</title>
+<meta name="description" content="One-sentence summary, the same as the registry's `d`.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Chakra+Petch:wght@500;600&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="assets/css/site.css">
+<!-- Picks the language and theme before first paint. Keep it inline and unchanged. -->
+<script>(function(){var r=document.documentElement,l,t;try{l=localStorage.getItem("mq-lang");t=localStorage.getItem("mq-theme");}catch(e){}if(l!=="en"&&l!=="fr"){l=(navigator.language||"").toLowerCase().indexOf("fr")===0?"fr":"en";}r.setAttribute("data-lang",l);r.setAttribute("lang",l);if(t==="light"||t==="dark")r.setAttribute("data-theme",t);})();</script>
+</head>
+<!-- 2. data-page must equal the chapter's id in site-data.js: it drives the sidebar, the
+        eyebrow ("Part N / … / N.M"), the reading time, prerequisites and the pager. -->
+<body data-page="template">
+<a class="skip-link" href="#main"><span lang="en">Skip to content</span><span lang="fr">Aller au contenu</span></a>
+<header class="site-header" id="mq-header"></header>
+<div class="layout">
+<aside class="sidebar" id="mq-sidebar"></aside>
+<main class="content" id="main">
+<article>
+<header class="chapter-head">
+  <div class="eyebrow" data-auto></div>
+  <h1><span lang="en">Chapter title</span><span lang="fr">Titre du chapitre</span></h1>
+  <p class="dek"><span lang="en">One-sentence summary.</span><span lang="fr">Résumé en une phrase.</span></p>
+  <div class="meta-row" data-auto></div>
+</header>
+
+<div class="prose">
+
+<!-- 3. One <section class="sec" id="…"> per heading. The id becomes the anchor, the entry in the
+        "On this page" rail, and a search record. Each language lives in its own block;
+        CSS hides the inactive one, so both must say the same thing. -->
+<section class="sec" id="first-section">
+<div lang="en">
+<h2>First section</h2>
+<p>Explain the concept from first principles, then how the project did it. Link other chapters with their number: chapter <a href="tick-loop.html">3.1</a>. Link a glossary term like this: <a class="term" data-term="tick">tick</a>.</p>
+
+<!-- Callouts. The label text is fixed per type (translate it in the fr block):
+     beginner "Beginner note" · pitfall "Pitfall I hit" · measured "Measured"
+     tradeoff "Trade-off" · project "In MoonQwak" · rule "Rule".
+     Rules are collected automatically on the Rules of thumb page: first <p> = the rule,
+     optional second <p> = why. Keep the rule to one sentence. -->
+<div class="note beginner"><p class="note-label">Beginner note</p><p>Background a newcomer needs.</p></div>
+<div class="note pitfall"><p class="note-label">Pitfall I hit</p><p>What went wrong, how it showed, and what fixed it.</p></div>
+<div class="note measured"><p class="note-label">Measured</p><p>A number, with its context and how it was measured.</p></div>
+<div class="note tradeoff"><p class="note-label">Trade-off</p><p>What was given up, and why that was acceptable.</p></div>
+<div class="note rule"><p class="note-label">Rule</p><p>The rule, in one sentence.</p><p>Why it holds.</p></div>
+</div>
+<div lang="fr">
+<h2>Première section</h2>
+<p>Expliquer le concept à partir des principes, puis comment le projet l'a fait. Relier les autres chapitres par leur numéro : chapitre <a href="tick-loop.html">3.1</a>. Relier un terme du glossaire ainsi : <a class="term" data-term="tick">tick</a>.</p>
+<div class="note beginner"><p class="note-label">Pour débuter</p><p>Le contexte dont un débutant a besoin.</p></div>
+<div class="note pitfall"><p class="note-label">Piège rencontré</p><p>Ce qui a mal tourné, comment ça s'est vu, et ce qui l'a corrigé.</p></div>
+<div class="note measured"><p class="note-label">Mesuré</p><p>Un chiffre, avec son contexte et la façon dont il a été mesuré.</p></div>
+<div class="note tradeoff"><p class="note-label">Compromis</p><p>Ce qui a été abandonné, et pourquoi c'était acceptable.</p></div>
+<div class="note rule"><p class="note-label">Règle</p><p>La règle, en une phrase.</p><p>Pourquoi elle tient.</p></div>
+</div>
+
+<!-- 4. Code excerpts are shared by both languages: simplified, translated to English, and short
+        enough (about 85 characters per line) to fit without horizontal scrolling. -->
+<div class="code"><div class="code-head"><span class="file">Project/File.cs · Method, simplified</span></div><pre><code data-lang="cs">// Comments in English. Escape &lt; &gt; &amp; in HTML.
+var example = Compute(input);</code></pre></div>
+
+<!-- 5. Figures: inline SVG, viewBox about 760 wide. Use the dg-* classes (dg-box, dg-box-2,
+        dg-hot, dg-text, dg-small, dg-mono, dg-line, dg-dash…) and theme tokens so both themes
+        work. Bilingual text goes in <tspan lang="en"> / <tspan lang="fr">. -->
+<figure class="fig fig-scroll">
+<svg viewBox="0 0 760 120" role="img" aria-label="What the figure shows, in one sentence">
+  <rect x="20" y="30" width="200" height="56" rx="8" class="dg-box"/>
+  <text class="dg-text" x="120" y="63" text-anchor="middle"><tspan lang="en">A box</tspan><tspan lang="fr">Une boîte</tspan></text>
+</svg>
+<figcaption><span lang="en"><strong>The claim.</strong> One or two sentences.</span><span lang="fr"><strong>L'affirmation.</strong> Une ou deux phrases.</span></figcaption>
+</figure>
+
+<!-- 6. Charts: a data-chart block with JSON. type: "bar" | "hbar" | "line".
+        cats: array, or { en: [...], fr: [...] }; "\n" breaks a label. -->
+<figure class="fig">
+<div data-chart>
+<script type="application/json">
+{
+  "type": "bar",
+  "cats": { "en": ["Before", "After"], "fr": ["Avant", "Après"] },
+  "series": [ { "name": { "en": "Cost", "fr": "Coût" }, "values": [10.9, 1.0] } ],
+  "unit": "ms",
+  "decimals": 1,
+  "unitLabel": { "en": "mean, ms per tick", "fr": "moyenne, ms par tick" },
+  "aria": { "en": "Cost fell from 10.9 to 1.0 ms", "fr": "Le coût est passé de 10,9 à 1,0 ms" }
+}
+</script>
+</div>
+<figcaption><span lang="en">Caption.</span><span lang="fr">Légende.</span></figcaption>
+</figure>
+
+<!-- Other building blocks, see existing chapters for full examples:
+     .compare (two or three options, .pick on the chosen one) · ol.timeline with .tl-tag ·
+     .stats / .stat .v .k · .table-wrap around tables ·
+     div.lab[data-stepper] with <g data-step="n"> in the SVG and an <ol class="steps"> ·
+     data-widget="varint | drift | aoi | budget | interp | predict | serialize | fleet | phases" ·
+     svg[data-flow] with paths carrying data-flow-path for animated messages. -->
+</section>
+
+<section class="sec" id="takeaways">
+<div class="takeaways">
+<div lang="en"><h2>Key takeaways</h2><ul>
+<li>Three to seven short, actionable lines.</li>
+</ul></div>
+<div lang="fr"><h2>À retenir</h2><ul>
+<li>Trois à sept lignes courtes et actionnables.</li>
+</ul></div>
+</div>
+</section>
+
+</div>
+<div data-chapter-foot></div>
+</article>
+</main>
+<aside class="rail" id="mq-rail"></aside>
+</div>
+<footer class="site-footer" id="mq-footer"></footer>
+<script src="assets/js/site-data.js" defer></script>
+<script src="assets/js/glossary-data.js" defer></script>
+<script src="assets/js/app.js" defer></script>
+<script src="assets/js/widgets.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="en" data-lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>RAM is the authority · MoonQwak</title>
+<meta name="description" content="What may live in memory until later, what must be written now, and the one rule that tells them apart.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Chakra+Petch:wght@500;600&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="assets/css/site.css">
+<script>(function(){var r=document.documentElement,l,t;try{l=localStorage.getItem("mq-lang");t=localStorage.getItem("mq-theme");}catch(e){}if(l!=="en"&&l!=="fr"){l=(navigator.language||"").toLowerCase().indexOf("fr")===0?"fr":"en";}r.setAttribute("data-lang",l);r.setAttribute("lang",l);if(t==="light"||t==="dark")r.setAttribute("data-theme",t);})();</script>
+</head>
+<body data-page="persistence">
+<a class="skip-link" href="#main"><span lang="en">Skip to content</span><span lang="fr">Aller au contenu</span></a>
+<header class="site-header" id="mq-header"></header>
+<div class="layout">
+<aside class="sidebar" id="mq-sidebar"></aside>
+<main class="content" id="main">
+<article>
+<header class="chapter-head">
+  <div class="eyebrow" data-auto></div>
+  <h1><span lang="en">RAM is the authority</span><span lang="fr">La RAM fait autorité</span></h1>
+  <p class="dek"><span lang="en">What may live in memory until later, what must be written now, and the one rule that tells them apart.</span><span lang="fr">Ce qui peut vivre en mémoire jusqu'à plus tard, ce qui doit être écrit tout de suite, et la règle qui les sépare.</span></p>
+  <div class="meta-row" data-auto></div>
+</header>
+
+<div class="prose">
+
+<section class="sec" id="question">
+<div lang="en">
+<h2>Which writes can wait?</h2>
+<p>Chapter <a href="no-db-in-tick.html">3.4</a> took the database out of the tick. That settles <em>where</em> writes happen, not <em>when</em>. At one point I reread every write in the game server, 113 calls that commit to the database, one by one, with a single question: which of these could wait, in memory, until the player disconnects, accepting that a server crash would lose them?</p>
+<p>The answer was not a list of performance hotspots. It was a rule, and once written it explained the whole table.</p>
+</div>
+<div lang="fr">
+<h2>Quelles écritures peuvent attendre ?</h2>
+<p>Le chapitre <a href="no-db-in-tick.html">3.4</a> a sorti la base du tick. Cela règle <em>où</em> se font les écritures, pas <em>quand</em>. À un moment, j'ai relu toutes les écritures du serveur de jeu, 113 appels qui valident en base, un par un, avec une seule question : lesquelles pourraient attendre, en mémoire, jusqu'à la déconnexion du joueur, en acceptant qu'un plantage du serveur les perde ?</p>
+<p>La réponse n'a pas été une liste de points chauds de performance. C'était une règle, et une fois écrite, elle expliquait tout le tableau.</p>
+</div>
+</section>
+
+<section class="sec" id="rule">
+<div lang="en">
+<h2>The rule: mine can wait, changed hands cannot</h2>
+<div class="note rule"><p class="note-label">Rule</p><p>What belongs only to me can live in RAM until I disconnect. What has changed hands is written immediately.</p><p>The loss is not symmetric. Losing my position, the end of an experience tier or my ammunition debt puts me back five minutes: I am where I was, and nobody else is concerned. Losing half of a trade leaves one player with the goods and another who has paid, and the second one may be offline, on another server, or simply remember a different story. That cannot be replayed: it duplicates or destroys.</p></div>
+<p>So the writes on the path of an exchange (trades, the market, mail, crafting, cargo transfers, settling a refit) stay where they are, immediate and transactional, and chapter <a href="transactions.html">6.2</a> is about doing them right. Everything that belongs to a single player is kept in memory and written in batches, at thresholds, or at the end.</p>
+<p>The interesting edge case is jettisoning cargo. Nothing changes hands, but the destruction is irreversible and the player just confirmed it. Writing it immediately costs one transaction on a rare gesture, and avoids giving back at the next login the units someone deliberately threw away to free space.</p>
+</div>
+<div lang="fr">
+<h2>La règle : le mien peut attendre, ce qui a changé de mains, non</h2>
+<div class="note rule"><p class="note-label">Règle</p><p>Ce qui n'appartient qu'à moi peut vivre en RAM jusqu'à ma déconnexion. Ce qui a changé de mains s'écrit tout de suite.</p><p>La perte n'est pas symétrique. Perdre ma position, la fin d'un palier d'expérience ou ma dette de munitions me ramène cinq minutes en arrière : je suis là où j'étais, et personne d'autre n'est concerné. Perdre la moitié d'un échange laisse un joueur avec la marchandise et un autre qui a payé, et le second est peut-être déconnecté, sur un autre serveur, ou se souvient simplement d'une autre histoire. Ça ne se rejoue pas : ça duplique ou ça détruit.</p></div>
+<p>Les écritures sur le chemin d'un échange (échanges directs, marché, courrier, fabrication, transferts de cargaison, règlement d'un réaménagement) restent donc où elles sont, immédiates et transactionnelles, et le chapitre <a href="transactions.html">6.2</a> traite de la façon de bien les faire. Tout ce qui n'appartient qu'à un seul joueur est gardé en mémoire et écrit par lots, à des paliers, ou à la fin.</p>
+<p>Le cas limite intéressant est le largage de cargaison. Rien ne change de mains, mais la destruction est irréversible et le joueur vient de la confirmer. L'écrire tout de suite coûte une transaction sur un geste rare, et évite de rendre au prochain login des unités que quelqu'un a délibérément jetées pour faire de la place.</p>
+</div>
+</section>
+
+<section class="sec" id="patterns">
+<div lang="en">
+<h2>Four ways to keep things in memory</h2>
+<div class="table-wrap"><table>
+<thead><tr><th>State</th><th>Pattern</th><th>Written</th></tr></thead>
+<tbody>
+<tr><td>Experience</td><td>Held in RAM, written when a tier is crossed, flushed at disconnect</td><td>A few times per session</td></tr>
+<tr><td>Faction ledger (who did what where)</td><td>Lock-free queue of facts, flushed in batches off the tick</td><td>About one write per 5,000 facts</td></tr>
+<tr><td>Ammunition</td><td>A hot pool in RAM, and a debt written when the session or the ship ends</td><td>At disconnect or ship change</td></tr>
+<tr><td>Position, posture, health, oxygen, hull damage</td><td>Captured on the tick, written in the background</td><td>Once a minute (checkpoint) and at disconnect</td></tr>
+</tbody></table></div>
+<p>The last row is the safety net for the others: a server crash loses at most a minute of a player's situation (chapter <a href="no-db-in-tick.html#patterns">3.4</a>). Before the checkpoint existed, only disconnection wrote the session, and a crash sent everyone back to where they were when they connected.</p>
+</div>
+<div lang="fr">
+<h2>Quatre façons de garder les choses en mémoire</h2>
+<div class="table-wrap"><table>
+<thead><tr><th>État</th><th>Motif</th><th>Écrit</th></tr></thead>
+<tbody>
+<tr><td>Expérience</td><td>Tenue en RAM, écrite au passage d'un palier, vidée à la déconnexion</td><td>Quelques fois par session</td></tr>
+<tr><td>Registre des factions (qui a fait quoi, où)</td><td>File de faits sans verrou, vidée par lots hors du tick</td><td>Environ une écriture pour 5 000 faits</td></tr>
+<tr><td>Munitions</td><td>Une réserve chaude en RAM, et une dette écrite à la fin de la session ou du vaisseau</td><td>À la déconnexion ou au changement de vaisseau</td></tr>
+<tr><td>Position, posture, points de vie, oxygène, dégâts de coque</td><td>Capturés sur le tick, écrits en fond</td><td>Une fois par minute (point de sauvegarde) et à la déconnexion</td></tr>
+</tbody></table></div>
+<p>La dernière ligne est le filet des autres : un plantage du serveur perd au plus une minute de la situation d'un joueur (chapitre <a href="no-db-in-tick.html#patterns">3.4</a>). Avant le point de sauvegarde, seule la déconnexion écrivait la session, et un plantage renvoyait tout le monde là où il était à sa connexion.</p>
+</div>
+</section>
+
+<section class="sec" id="direction">
+<div lang="en">
+<h2>Choose the direction of the error</h2>
+<p>Ammunition is the best example of a hot counter done safely. A gun fires several times a second, and the inventory is database rows behind a per-character lock; decrementing a row per shot would put a database round trip in the fire path. So the ship holds its ammunition in memory for the whole session and writes the consumption back once. The rows are stale while flying, on purpose: the inventory screen shows what you undocked with. Three decisions keep that disagreement from becoming the bug class it looks like:</p>
+<ul>
+<li><strong>The error only goes one way.</strong> The pool only ever goes down, so the rows are always an <em>over</em>-estimate. Nothing can be spent twice, and a crash loses the <em>spending</em>, not the stock. A crash is a gift, never a duplication.</li>
+<li><strong>Adding invalidates, it does not merge.</strong> Anything that adds ammunition to the ship (a transfer in, a pickup) marks the pool stale and reloads it from the rows. Reloading is cheap and always right; merging two views of the same number is how they drift apart.</li>
+<li><strong>Two dictionaries, not one signed map.</strong> "Available" answers "may I fire?" on every trigger pull; "spent" answers "what do I owe the database?" once, at flush. A single signed map would have every caller re-deriving which meaning it wanted, in a system where getting the sign backwards creates items instead of destroying them. The flush itself only ever subtracts: that is its safety property.</li>
+</ul>
+<div class="note pitfall"><p class="note-label">Pitfall I hit</p><p>The debt settlement at the end of a session looked for "the player's current ship", and the map-transition code had already cleared that reference. The debt was thrown away, the rows kept their pre-flight quantities, and the player found full magazines on the other side of a border (chapter <a href="handover.html#two-halves">2.3</a>). A deferred write is only safe if every path that ends the thing it belongs to settles it.</p></div>
+</div>
+<div lang="fr">
+<h2>Choisir le sens de l'erreur</h2>
+<p>Les munitions sont le meilleur exemple d'un compteur chaud tenu sans danger. Une arme tire plusieurs fois par seconde, et l'inventaire, ce sont des lignes en base derrière un verrou par personnage ; décrémenter une ligne par tir mettrait un aller-retour en base sur le chemin du tir. Le vaisseau garde donc ses munitions en mémoire pendant toute la session et écrit la consommation une seule fois. Les lignes sont périmées pendant le vol, exprès : l'écran d'inventaire montre ce avec quoi vous avez appareillé. Trois décisions empêchent ce désaccord de devenir la famille de bugs qu'il a l'air d'être :</p>
+<ul>
+<li><strong>L'erreur ne va que dans un sens.</strong> La réserve ne fait que descendre, donc les lignes sont toujours une <em>sur</em>-estimation. Rien ne peut être dépensé deux fois, et un plantage perd la <em>dépense</em>, pas le stock. Un plantage est un cadeau, jamais une duplication.</li>
+<li><strong>Ajouter invalide, ne fusionne pas.</strong> Tout ce qui ajoute des munitions au vaisseau (un transfert entrant, un ramassage) marque la réserve comme périmée et la recharge depuis les lignes. Recharger est bon marché et toujours juste ; fusionner deux vues du même nombre, c'est comme ça qu'elles divergent.</li>
+<li><strong>Deux dictionnaires, pas une table signée.</strong> « Disponible » répond à « puis-je tirer ? » à chaque pression de gâchette ; « dépensé » répond à « que dois-je à la base ? » une fois, au vidage. Une table signée obligerait chaque appelant à redéduire le sens qu'il voulait, dans un système où se tromper de signe crée des objets au lieu d'en détruire. Le vidage lui-même ne fait que soustraire : c'est sa propriété de sûreté.</li>
+</ul>
+<div class="note pitfall"><p class="note-label">Piège rencontré</p><p>Le règlement de la dette en fin de session cherchait « le vaisseau courant du joueur », et le code de transition de carte avait déjà effacé cette référence. La dette partait à la poubelle, les lignes gardaient leurs quantités d'avant le vol, et le joueur retrouvait des magasins pleins de l'autre côté d'une frontière (chapitre <a href="handover.html#two-halves">2.3</a>). Une écriture différée n'est sûre que si chaque chemin qui met fin à la chose qu'elle concerne la règle.</p></div>
+</div>
+<div lang="en">
+<div class="note rule"><p class="note-label">Rule</p><p>When state must disagree with the database for a while, arrange for the database to be wrong in the player's favour, never in the direction that creates value.</p><p>A crash that refunds a few shots is a small gift. A crash that lets someone spend the same thing twice is an economy leak that spreads before anyone notices.</p></div>
+</div>
+<div lang="fr">
+<div class="note rule"><p class="note-label">Règle</p><p>Quand un état doit être en désaccord avec la base pendant un temps, faire en sorte que la base se trompe en faveur du joueur, jamais dans le sens qui crée de la valeur.</p><p>Un plantage qui rembourse quelques tirs est un petit cadeau. Un plantage qui permet de dépenser deux fois la même chose est une fuite dans l'économie qui se répand avant que quiconque ne la remarque.</p></div>
+</div>
+</section>
+
+<section class="sec" id="readers">
+<div lang="en">
+<h2>Why not keep everything in memory?</h2>
+<p>The biggest remaining write is the harvest: every unit of ore scooped into a hold is one small transaction. Moving it into memory until disconnect looks like the obvious win, and it is not a line to move, because cargo rows have many readers: the inventory screen, the workshop paying for a refit with them, the refit refusal when a hold is not empty, the market and mail escrow, the ammunition pool. If freshly mined ore lived only in memory, all of them would read stale rows: you mine 200 units, open your inventory, and it shows none; the workshop refuses to use them; the market cannot sell them.</p>
+<p>The correct form is not "flush at disconnect" but a <strong>write-back cache</strong>: memory becomes the truth for <em>every</em> reader, and the flush happens periodically, at disconnect, and before any transaction that needs durability. That turns a stateless inventory service into a per-character cache, a batch of work on its own rather than a tweak, and it is written down as such.</p>
+<div class="note measured"><p class="note-label">Measured</p><p>The audit found one path that really was hot for nothing. Storing each harvested unit also refreshed the ship's ammunition pool, which opens a database context and re-reads every hold of the hull, although ore can never feed a weapon. The refresh is now conditioned on the item actually being ammunition for the fitted weapons: no change in behaviour, half the round trips of the harvest.</p></div>
+</div>
+<div lang="fr">
+<h2>Pourquoi ne pas tout garder en mémoire ?</h2>
+<p>La plus grosse écriture restante est la récolte : chaque unité de minerai ramassée dans une soute est une petite transaction. La passer en mémoire jusqu'à la déconnexion semble être le gain évident, et ce n'est pas une ligne à déplacer, parce que les lignes de cargaison ont beaucoup de lecteurs : l'écran d'inventaire, l'atelier qui paie un réaménagement avec, le refus de réaménager quand une soute n'est pas vide, le séquestre du marché et du courrier, la réserve de munitions. Si le minerai fraîchement extrait ne vivait qu'en mémoire, tous liraient des lignes périmées : vous minez 200 unités, ouvrez votre inventaire, et il n'en montre aucune ; l'atelier refuse de s'en servir ; le marché ne peut pas les vendre.</p>
+<p>La forme juste n'est pas « vider à la déconnexion » mais un <strong>cache à écriture différée</strong> : la mémoire devient la vérité pour <em>tous</em> les lecteurs, et le vidage a lieu périodiquement, à la déconnexion, et avant toute transaction qui a besoin de durabilité. Cela transforme un service d'inventaire sans état en cache par personnage, un chantier à part entière plutôt qu'une retouche, et c'est noté comme tel.</p>
+<div class="note measured"><p class="note-label">Mesuré</p><p>L'audit a trouvé un chemin vraiment chaud pour rien. Ranger chaque unité récoltée rafraîchissait aussi la réserve de munitions du vaisseau, ce qui ouvre un contexte de base et relit toutes les soutes de la coque, alors que du minerai ne peut jamais alimenter une arme. Le rafraîchissement est maintenant conditionné au fait que l'objet soit vraiment une munition des armes montées : aucun changement de comportement, la moitié des allers-retours de la récolte.</p></div>
+</div>
+</section>
+
+<section class="sec" id="recovery">
+<div lang="en">
+<h2>Recovery rules and leaving the world</h2>
+<p>Any design that keeps optimistic state in memory needs a rule for what happens after a crash, and the rule must be stated before the design, not discovered after. For goods it is non-negotiable: <strong>on reconnection, the database is re-read and any optimistic memory state is thrown away</strong>. Without it, a lock in memory protects against a double click but not against a crash, and a crash at the wrong moment duplicates an object. In an MMO, duplication is the one bug that does not repair: it spreads through the economy before anyone notices.</p>
+<p>Restoring a session raises the symmetric question: what should <em>leaving</em> the world be allowed to do? MoonQwak's answer is that it must never be a playable move. Two symmetric rules follow. A hull that was hit recently stays in the world for twenty seconds after its pilot disconnects (chapter <a href="handover.html#disconnects">2.3</a>), so pulling the cable does not escape a fight. And the vacuum keeps biting offline: a character who disconnected adrift in space has the time they were away taken from their air supply when they come back, and from their health once the air is gone, so logging off is not a way to stop the clock.</p>
+</div>
+<div lang="fr">
+<h2>Règles de reprise et sortie du monde</h2>
+<p>Toute conception qui garde un état optimiste en mémoire a besoin d'une règle pour ce qui se passe après un plantage, et la règle doit être énoncée avant la conception, pas découverte après. Pour les biens, elle n'est pas négociable : <strong>à la reconnexion, la base est relue et tout état optimiste en mémoire est jeté</strong>. Sans elle, un verrou en mémoire protège du double clic mais pas du plantage, et un plantage au mauvais moment duplique un objet. Dans un MMO, la duplication est le seul bug qui ne se répare pas : il se répand dans l'économie avant que quiconque ne le remarque.</p>
+<p>Restaurer une session pose la question symétrique : qu'a-t-on le droit de gagner en <em>quittant</em> le monde ? La réponse de MoonQwak est que ça ne doit jamais être un coup jouable. Deux règles symétriques en découlent. Une coque touchée récemment reste dans le monde vingt secondes après la déconnexion de son pilote (chapitre <a href="handover.html#disconnects">2.3</a>), pour que débrancher le câble ne permette pas de fuir un combat. Et le vide continue de mordre hors ligne : un personnage qui s'est déconnecté à la dérive dans l'espace voit le temps passé dehors prélevé sur sa réserve d'air à son retour, puis sur sa santé une fois l'air épuisé, pour que se déconnecter ne soit pas un moyen d'arrêter l'horloge.</p>
+</div>
+</section>
+
+<section class="sec" id="takeaways">
+<div class="takeaways">
+<div lang="en"><h2>Key takeaways</h2><ul>
+<li>Keep what belongs to one player in memory and write it later; write anything that changed hands immediately.</li>
+<li>Pick a batching pattern per kind of state: thresholds, queued facts, hot pools with a debt, periodic checkpoints.</li>
+<li>Arrange for any temporary disagreement to err in the player's favour, never in the direction that creates value.</li>
+<li>Before caching a value in memory, list its readers; a value with many readers needs a write-back cache, not a delayed flush.</li>
+<li>State the crash-recovery rule before the design, and make sure leaving the world is never a winning move.</li>
+</ul></div>
+<div lang="fr"><h2>À retenir</h2><ul>
+<li>Garder en mémoire ce qui n'appartient qu'à un joueur et l'écrire plus tard ; écrire tout de suite ce qui a changé de mains.</li>
+<li>Choisir un motif de regroupement par genre d'état : paliers, faits en file, réserves chaudes avec une dette, points de sauvegarde périodiques.</li>
+<li>Faire en sorte qu'un désaccord temporaire se trompe en faveur du joueur, jamais dans le sens qui crée de la valeur.</li>
+<li>Avant de garder une valeur en mémoire, lister ses lecteurs ; une valeur aux nombreux lecteurs demande un cache à écriture différée, pas un vidage retardé.</li>
+<li>Énoncer la règle de reprise après plantage avant la conception, et s'assurer que quitter le monde n'est jamais un coup gagnant.</li>
+</ul></div>
+</div>
+</section>
+
+</div>
+<div data-chapter-foot></div>
+</article>
+</main>
+<aside class="rail" id="mq-rail"></aside>
+</div>
+<footer class="site-footer" id="mq-footer"></footer>
+<script src="assets/js/site-data.js" defer></script>
+<script src="assets/js/glossary-data.js" defer></script>
+<script src="assets/js/app.js" defer></script>
+<script src="assets/js/widgets.js" defer></script>
+</body>
+</html>

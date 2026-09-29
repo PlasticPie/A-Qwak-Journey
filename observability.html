@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="en" data-lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Instruments that tell the truth · MoonQwak</title>
+<meta name="description" content="Wall time versus CPU time, periodic photos versus thresholds, and a monitor built to be pasted into a bug report.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Chakra+Petch:wght@500;600&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="assets/css/site.css">
+<script>(function(){var r=document.documentElement,l,t;try{l=localStorage.getItem("mq-lang");t=localStorage.getItem("mq-theme");}catch(e){}if(l!=="en"&&l!=="fr"){l=(navigator.language||"").toLowerCase().indexOf("fr")===0?"fr":"en";}r.setAttribute("data-lang",l);r.setAttribute("lang",l);if(t==="light"||t==="dark")r.setAttribute("data-theme",t);})();</script>
+</head>
+<body data-page="observability">
+<a class="skip-link" href="#main"><span lang="en">Skip to content</span><span lang="fr">Aller au contenu</span></a>
+<header class="site-header" id="mq-header"></header>
+<div class="layout">
+<aside class="sidebar" id="mq-sidebar"></aside>
+<main class="content" id="main">
+<article>
+<header class="chapter-head">
+  <div class="eyebrow" data-auto></div>
+  <h1><span lang="en">Instruments that tell the truth</span><span lang="fr">Des instruments qui disent vrai</span></h1>
+  <p class="dek"><span lang="en">Wall time versus CPU time, periodic photos versus thresholds, and a monitor built to be pasted into a bug report.</span><span lang="fr">Temps mural contre temps CPU, photos périodiques contre seuils, et un moniteur conçu pour être collé dans un rapport de bug.</span></p>
+  <div class="meta-row" data-auto></div>
+</header>
+
+<div class="prose">
+
+<section class="sec" id="lies">
+<div lang="en">
+<h2>The expensive bugs were misread numbers</h2>
+<p>Looking back over the performance work on this project, the costliest mistakes were rarely slow code. They were numbers that looked right and meant something else: a wait measured as work, a steady state measured only during accidents, an interval read as a duration, an average of worst cases read as a typical cost. Each one sent the investigation in the wrong direction for days.</p>
+<p>This chapter is about building instruments that cannot mislead that way, and about the less obvious danger: instruments that <em>become</em> the problem they measure.</p>
+<div class="note rule"><p class="note-label">Rule</p><p>Before optimizing, ask what the number you are looking at actually measures, and when it is recorded.</p></div>
+</div>
+<div lang="fr">
+<h2>Les bugs coûteux étaient des chiffres mal lus</h2>
+<p>En regardant en arrière le travail de performance de ce projet, les erreurs les plus coûteuses étaient rarement du code lent. C'étaient des chiffres qui avaient l'air justes et voulaient dire autre chose : une attente mesurée comme du travail, un régime établi mesuré seulement pendant les accidents, un intervalle lu comme une durée, une moyenne de pires cas lue comme un coût typique. Chacun a envoyé l'enquête dans la mauvaise direction pendant des jours.</p>
+<p>Ce chapitre parle de construire des instruments qui ne peuvent pas tromper de cette façon, et du danger moins évident : des instruments qui <em>deviennent</em> le problème qu'ils mesurent.</p>
+<div class="note rule"><p class="note-label">Règle</p><p>Avant d'optimiser, se demander ce que mesure vraiment le chiffre qu'on regarde, et quand il est relevé.</p></div>
+</div>
+</section>
+
+<section class="sec" id="pulse">
+<div lang="en">
+<h2>In the tick, count; measure elsewhere</h2>
+<p>The first thing to know about a game server is its real cadence. Not how long a tick takes, but how often ticks <em>start</em>: a 5 ms tick launched every 200 ms is a world running at 5 ticks per second, and its duration alone would call it perfectly healthy. So the cadence instrument records intervals, and publishes two numbers: the <strong>average rate</strong> over a few seconds, and a <strong>minimum rate</strong> derived from the longest interval in that window. A 400 ms freeze in the middle of five healthy seconds barely moves the average and shows immediately in the minimum.</p>
+<p>An instrument inside the game loop runs 25 times per second forever, and measures exactly the thing it would slow down. It must be free, not cheap. The rule that makes that possible fits in one line: <strong>the tick does not measure, it counts.</strong> The timestamp is <em>given</em> to it by the loop, which already reads the clock for its own bookkeeping, so the added work is a subtraction, a comparison and three field writes: no clock read, no allocation, no lock, no atomic instruction.</p>
+</div>
+<div lang="fr">
+<h2>Dans le tick, compter ; mesurer ailleurs</h2>
+<p>La première chose à savoir d'un serveur de jeu est sa cadence réelle. Pas combien de temps dure un tick, mais à quelle fréquence les ticks <em>commencent</em> : un tick de 5 ms lancé toutes les 200 ms, c'est un monde à 5 ticks par seconde, et sa durée seule le dirait en pleine forme. L'instrument de cadence relève donc des intervalles, et publie deux nombres : le <strong>rythme moyen</strong> sur quelques secondes, et un <strong>rythme minimal</strong> tiré du plus long intervalle de cette fenêtre. Un gel de 400 ms au milieu de cinq secondes saines bouge à peine la moyenne et se voit immédiatement dans le minimum.</p>
+<p>Un instrument dans la boucle de jeu tourne 25 fois par seconde pour toujours, et mesure précisément la chose qu'il ralentirait. Il doit être gratuit, pas bon marché. La règle qui le rend possible tient en une ligne : <strong>le tick ne mesure pas, il compte.</strong> L'horodatage lui est <em>donné</em> par la boucle, qui lit déjà l'horloge pour ses propres comptes : le travail ajouté est une soustraction, une comparaison et trois écritures de champ. Aucune lecture d'horloge, aucune allocation, aucun verrou, aucune instruction atomique.</p>
+</div>
+<div class="code"><div class="code-head"><span class="file">GameServer/Services/TickPulse.cs · Beat and Sample, simplified</span></div><pre><code data-lang="cs">// Tick thread only. Called first thing in every tick, with the loop's own timestamp.
+public void Beat(long wallStart)
+{
+    if (_lastStart != 0)                       // the first beat has no interval
+    {
+        var gap = wallStart - _lastStart;
+        if (gap &gt; _worstGap) _worstGap = gap;
+    }
+    _lastStart = wallStart;
+    _ticks++;                                  // never reset: the reader subtracts
+}
+
+// Publishing thread, every few seconds.
+var ticks = Volatile.Read(ref _ticks);
+var done  = ticks - _prevTicks;                // a rate is a difference of two readings
+var worst = Interlocked.Exchange(ref _worstGap, 0);   // read and reset in ONE gesture
+tpsAvg = done / elapsedSeconds;
+tpsMin = worst &gt; 0 ? Math.Min(Stopwatch.Frequency / (double)worst, tpsAvg) : tpsAvg;</code></pre></div>
+<div lang="en">
+<p>Two threads share these fields without a lock, and it is safe by construction. The tick counter has a single writer and is never reset: the publisher remembers the previous value and subtracts, so no increment can be lost. The worst interval is reset by the publisher, once per window, with an atomic exchange that reads and clears in one gesture (reading then clearing in two steps would lose precisely the big interval that lands in between). A tick writing at the exact instant of the exchange loses one sample every five seconds on a worst-case statistic, and saving that sample would cost the game loop, which is exactly what the design refuses.</p>
+<div class="note rule"><p class="note-label">Rule</p><p>An instrument in the hot loop must be free, not cheap. If a new statistic needs a clock read, an allocation or an atomic operation in the loop, the answer is no.</p></div>
+</div>
+<div lang="fr">
+<p>Deux threads partagent ces champs sans verrou, et c'est sûr par construction. Le compteur de ticks a un seul écrivain et n'est jamais remis à zéro : le publicateur garde la valeur précédente et soustrait, aucun incrément ne peut donc se perdre. Le pire intervalle est remis à zéro par le publicateur, une fois par fenêtre, avec un échange atomique qui lit et efface d'un seul geste (lire puis effacer en deux temps perdrait précisément le gros intervalle tombé entre les deux). Un tick qui écrit à l'instant exact de l'échange perd un échantillon toutes les cinq secondes sur une statistique de pire cas, et sauver cet échantillon coûterait à la boucle de jeu, ce que la conception refuse justement.</p>
+<div class="note rule"><p class="note-label">Règle</p><p>Un instrument dans la boucle chaude doit être gratuit, pas bon marché. Si une nouvelle statistique demande une lecture d'horloge, une allocation ou une opération atomique dans la boucle, la réponse est non.</p></div>
+</div>
+</section>
+
+<section class="sec" id="silence">
+<div lang="en">
+<h2>Let silence be a signal</h2>
+<p>The operator's monitor reads the fleet from the database, not from each server: one query shows every server without opening a connection to each. So each game server writes its own cadence into its own row every five seconds. The choice of <em>who</em> writes it is the whole point: when the server writes its own row, <strong>silence becomes a signal</strong>. A server whose tick thread is stuck stops writing, the timestamp of its row stops moving, and the monitor shows it frozen. If another component published on its behalf from a cache, a dead server would look perfectly healthy, which is exactly the failure this display exists to catch.</p>
+<p>The reporter itself is built so that it can never become the problem:</p>
+<ul>
+<li><strong>Its own thread, not the thread pool.</strong> When the reporter was written, the world loop took its parallel workers from the shared thread pool. A timer callback writing to the database would have held a pool thread for the whole database latency: if the database stalled for a second, the tick had one worker fewer for a second, precisely when the machine was loaded and the number mattered. The loop has since moved to dedicated workers (chapter <a href="threading.html">3.3</a>), and the principle stands: an instrument must not borrow what it measures. A dedicated thread sleeps, wakes, writes and sleeps again, below normal priority, as a background thread that never keeps the process alive.</li>
+<li><strong>A raw UPDATE of named columns.</strong> Other components (the node agent, the gateway) write <em>other</em> columns of the same row. Loading the row as an object, changing three fields and saving it would rewrite everything that was read, overwriting their work with a stale copy.</li>
+<li><strong>Rates divided by the time that really elapsed</strong>, not by the nominal five seconds: a low-priority thread wakes late exactly when the machine is busy, and dividing seven seconds of traffic by five would inflate the rate at the moment it matters. The first round publishes nothing, since a rate needs two points.</li>
+<li><strong>One complaint, then silence.</strong> An unreachable database would otherwise print a line every five seconds forever, burying the log where you are looking for something else.</li>
+</ul>
+</div>
+<div lang="fr">
+<h2>Faire du silence un signal</h2>
+<p>Le moniteur de l'opérateur lit le parc dans la base, pas sur chaque serveur : une requête montre tous les serveurs sans ouvrir une connexion vers chacun. Chaque serveur de jeu écrit donc sa propre cadence dans sa propre ligne toutes les cinq secondes. Le choix de <em>qui</em> l'écrit est tout l'enjeu : quand le serveur écrit sa propre ligne, <strong>le silence devient un signal</strong>. Un serveur dont le thread de tick est bloqué cesse d'écrire, l'horodatage de sa ligne cesse d'avancer, et le moniteur le montre gelé. Si un autre composant publiait à sa place depuis un cache, un serveur mort aurait l'air en pleine forme, ce qui est exactement la panne que cet affichage existe pour attraper.</p>
+<p>Le rapporteur lui-même est construit pour ne jamais pouvoir devenir le problème :</p>
+<ul>
+<li><strong>Son propre thread, pas le pool de threads.</strong> Quand le rapporteur a été écrit, la boucle du monde prenait ses ouvriers parallèles dans le pool de threads partagé. Un rappel de minuterie qui écrit en base aurait tenu un thread du pool pendant toute la latence de la base : si la base calait une seconde, le tick avait un ouvrier de moins pendant une seconde, précisément quand la machine était chargée et que le chiffre comptait. La boucle est depuis passée à des ouvriers dédiés (chapitre <a href="threading.html">3.3</a>), et le principe demeure : un instrument n'emprunte pas ce qu'il mesure. Un thread dédié dort, se réveille, écrit et se rendort, en priorité sous la normale, comme thread d'arrière-plan qui ne retient jamais le processus.</li>
+<li><strong>Un UPDATE brut de colonnes nommées.</strong> D'autres composants (l'agent de machine, la gateway) écrivent d'<em>autres</em> colonnes de la même ligne. Charger la ligne comme objet, changer trois champs et l'enregistrer réécrirait tout ce qui a été lu, écrasant leur travail avec une copie périmée.</li>
+<li><strong>Des débits divisés par le temps réellement écoulé</strong>, pas par les cinq secondes nominales : un thread de faible priorité se réveille en retard justement quand la machine est occupée, et diviser sept secondes de trafic par cinq gonflerait le débit au moment où il compte. Le premier tour ne publie rien, puisqu'un débit demande deux points.</li>
+<li><strong>Une plainte, puis le silence.</strong> Une base injoignable imprimerait sinon une ligne toutes les cinq secondes pour toujours, noyant le journal là où l'on cherche autre chose.</li>
+</ul>
+</div>
+</section>
+
+<section class="sec" id="wall-vs-cpu">
+<div lang="en">
+<h2>Wall time versus CPU time</h2>
+<p>A section of the tick that takes 26 ms of wall time may be computing for 26 ms, or waiting 25 of them for its worker threads, a lock or a socket. The two call for opposite fixes, and wall time alone cannot tell them apart. One report made that concrete: 738 ms of wall-clock work in one tick, for about 40 ms spent in the eight measured phases and 78 ms of CPU. The tick was <em>waiting</em>, somewhere the phases did not cover. The tick was then split into named sections, two clock reads each, and a slow tick now prints its breakdown in plain words ("players tick 690 ms") instead of leaving it to guesswork.</p>
+<p>Measuring CPU correctly took two attempts. The first read the process's total CPU time, which has two fatal flaws at this scale, both visible in one line of output: "snapshot build: 2.1 ms wall, 297 ms CPU". 297 is 19 × 15.625: the whole <em>process</em> was measured (workers, network, snapshot thread), at the granularity of the Windows scheduler quantum, and nineteen threads had each been credited one quantum during a two-millisecond section. The number was real and meant nothing.</p>
+<p>The second attempt uses the per-thread <strong>cycle counter</strong> (<code>QueryThreadCycleTime</code> on Windows): a hardware count of the cycles consumed by the calling thread, with no quantum rounding. And it never converts cycles to milliseconds, because the frequency changes with turbo and power saving, so any conversion constant would be wrong half the time. It only compares cycles to cycles, as <strong>shares</strong>: a section's share of the tick's wall time against its share of the thread's CPU. A ratio has no unit, so there is no constant to get wrong.</p>
+</div>
+<div lang="fr">
+<h2>Temps mural contre temps CPU</h2>
+<p>Une section du tick qui prend 26 ms de temps mural peut calculer pendant 26 ms, ou attendre 25 d'entre elles ses threads ouvriers, un verrou ou une socket. Les deux appellent des corrections opposées, et le temps mural seul ne les distingue pas. Un rapport l'a rendu concret : 738 ms de travail mural dans un tick, pour environ 40 ms passées dans les huit phases mesurées et 78 ms de CPU. Le tick <em>attendait</em>, quelque part que les phases ne couvraient pas. Le tick a alors été découpé en sections nommées, deux lectures d'horloge chacune, et un tick lent imprime maintenant sa répartition en clair (« tick joueurs 690 ms ») au lieu de la laisser aux devinettes.</p>
+<p>Mesurer le CPU correctement a demandé deux tentatives. La première lisait le temps CPU total du processus, qui a deux défauts rédhibitoires à cette échelle, tous deux visibles sur une seule ligne de sortie : « construction des snapshots : 2,1 ms de mur, 297 ms de CPU ». 297, c'est 19 × 15,625 : tout le <em>processus</em> était mesuré (ouvriers, réseau, thread des snapshots), à la granularité du quantum de l'ordonnanceur Windows, et dix-neuf threads avaient chacun été crédités d'un quantum pendant une section de deux millisecondes. Le nombre était réel et ne voulait rien dire.</p>
+<p>La seconde tentative utilise le <strong>compteur de cycles</strong> par thread (<code>QueryThreadCycleTime</code> sous Windows) : un compte matériel des cycles consommés par le thread appelant, sans arrondi au quantum. Et elle ne convertit jamais des cycles en millisecondes, parce que la fréquence varie avec le turbo et les économies d'énergie : toute constante de conversion serait fausse la moitié du temps. Elle ne compare que des cycles à des cycles, sous forme de <strong>parts</strong> : la part d'une section dans le temps mural du tick contre sa part dans le CPU du thread. Un rapport n'a pas d'unité, donc pas de constante à se tromper.</p>
+</div>
+<figure class="fig">
+<div data-chart>
+<script type="application/json">
+{
+  "type": "hbar",
+  "labelWidth": 190,
+  "cats": { "en": ["Computes (verdict: CPU)", "Mixed", "Waits (verdict: WAIT)"], "fr": ["Calcule (verdict : CPU)", "Mixte", "Attend (verdict : ATTENTE)"] },
+  "series": [
+    { "name": { "en": "Share of the tick's wall time", "fr": "Part du temps mural du tick" }, "values": [60, 30, 68] },
+    { "name": { "en": "Share of the thread's CPU cycles", "fr": "Part des cycles CPU du thread" }, "values": [60, 15, 7] }
+  ],
+  "unit": "%",
+  "decimals": 0,
+  "unitLabel": { "en": "share of the tick, %", "fr": "part du tick, %" },
+  "aria": { "en": "Three example sections: one at 60 percent of wall time and 60 percent of CPU computes; one at 30 percent of wall and 15 percent of CPU is mixed; one at 68 percent of wall and 7 percent of CPU is waiting", "fr": "Trois sections d'exemple : l'une à 60 % du temps mural et 60 % du CPU calcule ; l'une à 30 % du mur et 15 % du CPU est mixte ; l'une à 68 % du mur et 7 % du CPU attend" }
+}
+</script>
+</div>
+<figcaption><span lang="en"><strong>Three example readings.</strong> When a section's CPU share is at least 80 % of its wall share, it computes on this thread; below 30 %, it spent its time waiting for workers, a lock or a socket; in between, it did both.</span><span lang="fr"><strong>Trois lectures d'exemple.</strong> Quand la part CPU d'une section vaut au moins 80 % de sa part murale, elle calcule sur ce thread ; sous 30 %, elle a passé son temps à attendre des ouvriers, un verrou ou une socket ; entre les deux, elle a fait les deux.</span></figcaption>
+</figure>
+<div class="code"><div class="code-head"><span class="file">GameServer/GameHost.cs · the verdict, simplified</span></div><pre><code data-lang="cs">// Shares, never milliseconds: cycles are only ever compared to cycles.
+var wallShare = sectionMs[worst] / totalMs;
+var cpuShare  = sectionCycles[worst] / (double)totalCycles;
+var verdict = cpuShare &gt;= 0.8 * wallShare ? "COMPUTING on this thread"
+            : cpuShare &gt;= 0.3 * wallShare ? "MIXED"
+                                          : "WAITING (workers, lock or socket)";
+// Where the cycle counter is unavailable, the line simply omits the verdict.</code></pre></div>
+<div lang="en">
+<div class="note beginner"><p class="note-label">Beginner note</p><p><strong>Wall time</strong> (or elapsed time) is what a stopwatch measures. <strong>CPU time</strong> is how long a processor actually executed your thread. Wall time much larger than CPU time means the thread was waiting: for I/O, for a lock, for other threads, or simply not scheduled. Profilers that only sample CPU cannot see waiting at all, which is why a lock can cost a server dearly and never appear in a CPU profile (chapter <a href="threading.html">3.3</a>).</p></div>
+</div>
+<div lang="fr">
+<div class="note beginner"><p class="note-label">Pour débuter</p><p>Le <strong>temps mural</strong> (ou temps écoulé) est ce que mesure un chronomètre. Le <strong>temps CPU</strong> est la durée pendant laquelle un processeur a réellement exécuté votre thread. Un temps mural très supérieur au temps CPU veut dire que le thread attendait : des entrées-sorties, un verrou, d'autres threads, ou simplement de ne pas être ordonnancé. Les profileurs qui n'échantillonnent que le CPU ne voient pas du tout l'attente, et c'est pourquoi un verrou peut coûter cher à un serveur sans jamais apparaître dans un profil CPU (chapitre <a href="threading.html">3.3</a>).</p></div>
+</div>
+</section>
+
+<section class="sec" id="photos">
+<div lang="en">
+<h2>Periodic photos, not only thresholds</h2>
+<p>The natural way to add a diagnostic line is a threshold: "print the breakdown when this phase exceeds 20 ms". It keeps the console quiet, and it hides a trap that caught this project <strong>twice</strong>.</p>
+<ol class="timeline">
+<li><span class="tl-tag">Once</span><div><h3>Object costs measured only during accidents</h3><p>The per-object breakdown printed when the object phase exceeded 20 ms. In steady state that phase takes 3 to 10 ms, so it never crossed the threshold, and every line ever read came from abnormal ticks: on that bench, the connection ramp of 400 bots. Several iterations went into the cost of NPCs and stations, read at 2,553 and 6,548 µs. Measured in steady state, they cost 71 and 92 µs.</p></div></li>
+<li><span class="tl-tag">Twice</span><div><h3>The only useful breakdown never printed</h3><p>The section breakdown printed above 100 ms, two and a half times the budget. The worst tick of the 400-player bench was 54.6 ms, so the one instrument able to say where the tick's time went never wrote a single line during the whole bench.</p></div></li>
+</ol>
+<p>The fix is the same both times: a <strong>periodic photo</strong>, slow or not, every few seconds (ten by default), labelled "photo", next to the threshold line labelled "SLOW". The photo tells the normal cost; the threshold tells the accidents. Both share a two-second guard so that a burst of slow ticks cannot flood the console.</p>
+<div class="note rule"><p class="note-label">Rule</p><p>An instrument that only fires above normal only measures accidents.</p><p>Always sample the steady state too, and label which of the two a line is.</p></div>
+<p>The same bench exposed a third misreading, of the most visible number of all. The monitor's headline "world tick" value was the <em>interval</em> between two tick starts. At 25 ticks per second it sits near 40 ms whatever the work, by construction. It read 41.78 ms and was understood as "the tick costs 41.7 ms, we are at the budget". The periodic photo showed about 20 ms of actual work. The photo now prints work next to its budget ("22.5 ms of work out of 40 (56 %)"), because a duration without its budget cannot be read.</p>
+</div>
+<div lang="fr">
+<h2>Des photos périodiques, pas seulement des seuils</h2>
+<p>La façon naturelle d'ajouter une ligne de diagnostic est un seuil : « imprimer la répartition quand cette phase dépasse 20 ms ». Cela garde la console calme, et cache un piège qui a attrapé ce projet <strong>deux fois</strong>.</p>
+<ol class="timeline">
+<li><span class="tl-tag">1re fois</span><div><h3>Le coût des objets mesuré seulement pendant les accidents</h3><p>La répartition par objet s'imprimait quand la phase des objets dépassait 20 ms. En régime établi, cette phase prend 3 à 10 ms : elle ne franchissait jamais le seuil, et chaque ligne jamais lue venait de ticks anormaux, sur ce banc la rampe de connexion de 400 bots. Plusieurs itérations sont parties dans le coût des PNJ et des stations, lus à 2 553 et 6 548 µs. Mesurés en régime, ils coûtent 71 et 92 µs.</p></div></li>
+<li><span class="tl-tag">2e fois</span><div><h3>La seule répartition utile ne s'imprimait jamais</h3><p>La répartition par section s'imprimait au-dessus de 100 ms, deux fois et demie le budget. Le pire tick du banc à 400 joueurs faisait 54,6 ms : le seul instrument capable de dire où passait le temps du tick n'a pas écrit une seule ligne de tout le banc.</p></div></li>
+</ol>
+<p>La correction est la même les deux fois : une <strong>photo périodique</strong>, lente ou pas, toutes les quelques secondes (dix par défaut), étiquetée « photo », à côté de la ligne de seuil étiquetée « LENT ». La photo dit le coût normal ; le seuil dit les accidents. Les deux partagent une garde de deux secondes pour qu'une rafale de ticks lents ne puisse pas inonder la console.</p>
+<div class="note rule"><p class="note-label">Règle</p><p>Un instrument qui ne se déclenche qu'au-dessus du normal ne mesure que les accidents.</p><p>Toujours échantillonner aussi le régime établi, et étiqueter laquelle des deux choses dit une ligne.</p></div>
+<p>Le même banc a révélé une troisième erreur de lecture, du chiffre le plus visible de tous. La valeur « world tick » en tête du moniteur était l'<em>intervalle</em> entre deux débuts de tick. À 25 ticks par seconde, elle reste près de 40 ms quel que soit le travail, par construction. Elle affichait 41,78 ms, et on l'a comprise comme « le tick coûte 41,7 ms, on est au budget ». La photo périodique montrait environ 20 ms de travail réel. La photo imprime maintenant le travail à côté de son budget (« 22,5 ms de travail sur 40 (56 %) »), parce qu'une durée sans son budget ne se lit pas.</p>
+</div>
+</section>
+
+<section class="sec" id="console">
+<div lang="en">
+<h2>The console can stop your server</h2>
+<p>The Windows scheduler caused three timing bugs described in chapter <a href="tick-loop.html">3.1</a>. The console provided a fourth, of the same family. <code>Console.WriteLine</code> is synchronous, protected by one lock for the whole process, and ends in a kernel call that writes to the console window. When the window scrolls, when the scrollback is large, when output is redirected to a slow pipe, a line costs milliseconds. And in the worst case, a mouse selection in the console window (Windows' "QuickEdit" mode), the call does not return <em>until the next click</em>. The whole process stops, indefinitely, because someone highlighted a line to copy it.</p>
+<p>The fix replaces the process's standard output with a writer that puts the string in a queue and returns immediately; one low-priority background thread writes to the real console at its own pace. Three properties had to hold:</p>
+<ul>
+<li><strong>Order.</strong> One queue, one consumer: lines come out in the order they went in. A log that reorders is worse than a slow one.</li>
+<li><strong>A bound.</strong> If the console is truly frozen, the queue would grow until it ate the memory. It is capped, the surplus is dropped, and the number of dropped lines is <em>announced</em> when writing resumes. A silent hole in a log lies; an announced one informs.</li>
+<li><strong>The end.</strong> A background thread dies with the process, so without a final flush the last lines would be lost, and they are the ones you read after a crash. A process-exit hook drains the queue.</li>
+</ul>
+<p>Replacing standard output, rather than introducing a logging class, is what made the change feasible: about 440 existing call sites and every future one are covered without anyone migrating anything, including libraries that do not even reference the project where the fix lives. QuickEdit was deliberately left enabled: a selection now only freezes the <em>display</em> of the log, never the simulation.</p>
+<div class="note pitfall"><p class="note-label">Pitfall I hit</p><p>The asynchronous console first lived in the game server only. A 500-bot bench showed what that left out. The gateway writes about ten lines per connecting bot, synchronously, from the network thread that must also answer the game servers' session validations: 500 arriving bots meant 5,000 kernel writes on the critical path of authentication. The load-test tool had the same problem on the few threads that read all of its sockets, where one slow write froze 140 connections at once. The fix now lives in the shared configuration project, used by all three processes.</p></div>
+<div class="note rule"><p class="note-label">Rule</p><p>A fix that has not reached its twins is not finished.</p><p>When you fix a class of bug in one process, search for the same pattern in every sibling process before closing the issue.</p></div>
+</div>
+<div lang="fr">
+<h2>La console peut arrêter votre serveur</h2>
+<p>L'ordonnanceur de Windows a causé trois bugs de minutage décrits au chapitre <a href="tick-loop.html">3.1</a>. La console en a fourni un quatrième, de la même famille. <code>Console.WriteLine</code> est synchrone, protégée par un verrou pour tout le processus, et finit par un appel noyau qui écrit dans la fenêtre de console. Quand la fenêtre défile, quand l'historique est gros, quand la sortie est redirigée vers un tube lent, une ligne coûte des millisecondes. Et dans le pire des cas, une sélection à la souris dans la fenêtre de console (le mode « QuickEdit » de Windows), l'appel ne rend la main <em>qu'au clic suivant</em>. Le processus entier s'arrête, indéfiniment, parce que quelqu'un a surligné une ligne pour la copier.</p>
+<p>La correction remplace la sortie standard du processus par un écrivain qui met la chaîne dans une file et rend la main immédiatement ; un thread d'arrière-plan de faible priorité écrit sur la vraie console à son rythme. Trois propriétés devaient tenir :</p>
+<ul>
+<li><strong>L'ordre.</strong> Une file, un consommateur : les lignes sortent dans l'ordre où elles sont entrées. Un journal qui réordonne est pire qu'un journal lent.</li>
+<li><strong>Une borne.</strong> Si la console est vraiment gelée, la file grossirait jusqu'à manger la mémoire. Elle est plafonnée, le surplus est jeté, et le nombre de lignes jetées est <em>annoncé</em> quand l'écriture reprend. Un trou silencieux dans un journal ment ; un trou annoncé informe.</li>
+<li><strong>La fin.</strong> Un thread d'arrière-plan meurt avec le processus : sans vidange finale, les dernières lignes seraient perdues, et ce sont celles qu'on lit après un crash. Un crochet de fin de processus vide la file.</li>
+</ul>
+<p>Remplacer la sortie standard, plutôt que d'introduire une classe de journalisation, est ce qui a rendu le changement faisable : environ 440 sites d'appel existants et tous les futurs sont couverts sans que personne ne migre quoi que ce soit, y compris des bibliothèques qui ne référencent même pas le projet où vit la correction. QuickEdit est volontairement resté actif : une sélection ne gèle plus que l'<em>affichage</em> du journal, jamais la simulation.</p>
+<div class="note pitfall"><p class="note-label">Piège rencontré</p><p>La console asynchrone a d'abord vécu dans le seul serveur de jeu. Un banc à 500 bots a montré ce que cela laissait dehors. La gateway écrit une dizaine de lignes par bot qui se connecte, en synchrone, depuis le thread réseau qui doit aussi répondre aux validations de session des serveurs de jeu : 500 bots qui arrivent, c'était 5 000 écritures noyau sur le chemin critique de l'authentification. L'outil de test de charge avait le même problème sur les quelques threads qui lisent toutes ses sockets, où une écriture lente gelait 140 connexions d'un coup. La correction vit maintenant dans le projet de configuration partagé, utilisé par les trois processus.</p></div>
+<div class="note rule"><p class="note-label">Règle</p><p>Une correction qui n'a pas atteint ses jumeaux n'est pas terminée.</p><p>Quand on corrige une classe de bug dans un processus, chercher le même motif dans chaque processus frère avant de clore le sujet.</p></div>
+</div>
+</section>
+
+<section class="sec" id="monitor">
+<div lang="en">
+<h2>A monitor built for bug reports</h2>
+<p>The monitor is a separate desktop application. It connects to a game server's debug port and receives about one sample per second; its fleet view reads the database to show every server on one screen, each one a door to its detailed view. Three design decisions matter more than any graph.</p>
+<p><strong>Identity and configuration first.</strong> Settings passed through environment variables leave no trace. Nothing distinguishes "this setting was read and applied" from "the name is misspelled", "a real environment variable overrides the file", or "this code never reads that key". A bench run to settle a hypothesis settles nothing if the setting meant to test it was not applied, and you cannot know afterwards. It happened. So every configuration read is recorded (key, effective value, and where it came from), printed at startup and sent to the monitor once, at connection, with the server's identity (server id, world, machine, process id). With several servers per machine, "which one am I looking at?" is the first question. The configuration is sent once because it cannot change during a process's life, which is exactly what makes it proof.</p>
+<p><strong>Secrets are masked at the source</strong>, by key name, and the filter is closed by default: anything that looks like a secret is masked, even if that hides a harmless setting unlucky enough to be called "…KEY". The length stays visible ("•••, 62 characters"), which answers the only question one asks about a secret: is it set?</p>
+<p><strong>A "Copy report" button.</strong> A screenshot of a live number is a bad bug report: it shows one moment, without saying whether it was the normal case, the worst case, or the second someone connected. The monitor keeps a rolling window of about five minutes of samples, plus the all-time peak with the <em>whole sample</em> captured at that instant (the useful question is rarely "how high did it go" but "what else was happening when it did"). The button renders all of it as text. It is a manual button rather than a file written on a timer, because the useful report is the one taken right after doing something, and only the person who did it knows when that was.</p>
+<div class="note measured"><p class="note-label">Measured</p><p>The report says out loud what its numbers are. The phase timings a server broadcasts are the <em>worst</em> of each second, not instantaneous samples, so an average over the window is an average of per-second worst cases: stable and useful, but not the typical cost of a tick. A statistic whose meaning has to be remembered is a statistic that will be misread.</p></div>
+<p>A few smaller rules keep the screens honest. Rates are shown in bytes, never bits, like every counter in the code: mixing the two in one window is a factor of eight nobody sees. The fleet view considers a server stale after 120 seconds, the same delay the node agent and the gateway use, because three components judging freshness differently would contradict each other on screen. And its gauges draw their warning marks from the same database rows the scaling decisions read (chapter <a href="capacity.html">7.2</a>): a marker drawn anywhere else than where the decision is taken would make the gauge lie about the one thing it exists to show.</p>
+</div>
+<div lang="fr">
+<h2>Un moniteur conçu pour les rapports de bug</h2>
+<p>Le moniteur est une application de bureau séparée. Il se connecte au port de debug d'un serveur de jeu et reçoit environ un échantillon par seconde ; sa vue du parc lit la base pour montrer tous les serveurs sur un seul écran, chacun étant une porte vers sa vue détaillée. Trois décisions de conception comptent plus que n'importe quel graphique.</p>
+<p><strong>L'identité et la configuration d'abord.</strong> Les réglages passés par variables d'environnement ne laissent aucune trace. Rien ne distingue « ce réglage a été lu et appliqué » de « le nom est mal orthographié », « une vraie variable d'environnement couvre le fichier », ou « ce code ne lit jamais cette clé ». Un banc lancé pour trancher une hypothèse ne tranche rien si le réglage censé la tester n'a pas été appliqué, et on ne peut pas le savoir après coup. C'est arrivé. Chaque lecture de configuration est donc enregistrée (clé, valeur effective, et d'où elle vient), imprimée au démarrage et envoyée au moniteur une fois, à la connexion, avec l'identité du serveur (identifiant, monde, machine, numéro de processus). Avec plusieurs serveurs par machine, « lequel est-ce que je regarde ? » est la première question. La configuration est envoyée une fois parce qu'elle ne peut pas changer pendant la vie d'un processus, et c'est exactement ce qui en fait une preuve.</p>
+<p><strong>Les secrets sont masqués à la source</strong>, par nom de clé, et le filtre est fermé par défaut : tout ce qui ressemble à un secret est masqué, même si cela cache un réglage anodin qui a le malheur de s'appeler « …KEY ». La longueur reste visible (« •••, 62 caractères »), ce qui répond à la seule question qu'on se pose sur un secret : est-il défini ?</p>
+<p><strong>Un bouton « Copier le rapport ».</strong> Une capture d'écran d'un chiffre en direct est un mauvais rapport de bug : elle montre un instant, sans dire si c'était le cas normal, le pire cas, ou la seconde où quelqu'un s'est connecté. Le moniteur garde une fenêtre glissante d'environ cinq minutes d'échantillons, plus le pic depuis le début avec l'<em>échantillon entier</em> capturé à cet instant (la question utile est rarement « jusqu'où c'est monté » mais « que se passait-il d'autre à ce moment-là »). Le bouton rend le tout en texte. C'est un bouton manuel plutôt qu'un fichier écrit sur minuterie, parce que le rapport utile est celui pris juste après avoir fait quelque chose, et que seule la personne qui l'a fait sait quand.</p>
+<div class="note measured"><p class="note-label">Mesuré</p><p>Le rapport dit à voix haute ce que sont ses chiffres. Les durées de phase qu'un serveur diffuse sont le <em>pire</em> de chaque seconde, pas des échantillons instantanés : une moyenne sur la fenêtre est une moyenne des pires cas par seconde, stable et utile, mais pas le coût typique d'un tick. Une statistique dont il faut se rappeler le sens est une statistique qui sera mal lue.</p></div>
+<p>Quelques règles plus petites gardent les écrans honnêtes. Les débits s'affichent en octets, jamais en bits, comme tous les compteurs du code : mélanger les deux dans une même fenêtre, c'est un facteur huit que personne ne voit. La vue du parc considère un serveur comme périmé au bout de 120 secondes, le même délai que l'agent de machine et la gateway, parce que trois composants qui jugeraient la fraîcheur différemment se contrediraient à l'écran. Et ses jauges tirent leurs repères d'alerte des mêmes lignes de base que lisent les décisions de montée en charge (chapitre <a href="capacity.html">7.2</a>) : un repère dessiné ailleurs que là où la décision se prend ferait mentir la jauge sur la seule chose qu'elle existe pour montrer.</p>
+</div>
+</section>
+
+<section class="sec" id="takeaways">
+<div class="takeaways">
+<div lang="en"><h2>Key takeaways</h2><ul>
+<li>Measure the interval between tick starts, not only tick duration, and publish the worst interval next to the average.</li>
+<li>Instruments in the hot loop count; clocks, allocations and atomics happen on another thread.</li>
+<li>Let each server publish its own health from its own thread, so that silence means something.</li>
+<li>Compare wall-time shares to per-thread CPU shares to tell computing from waiting; never convert cycles to time.</li>
+<li>Add periodic photos next to every threshold, and print durations next to their budget.</li>
+<li>Take the console off the critical path, keep logs ordered, bounded and flushed, and apply the fix to every sibling process.</li>
+<li>Build the monitor for bug reports: identity, effective configuration, masked secrets, and a copyable window with the peak in context.</li>
+</ul></div>
+<div lang="fr"><h2>À retenir</h2><ul>
+<li>Mesurer l'intervalle entre les débuts de tick, pas seulement la durée du tick, et publier le pire intervalle à côté de la moyenne.</li>
+<li>Les instruments de la boucle chaude comptent ; horloges, allocations et opérations atomiques se font sur un autre thread.</li>
+<li>Laisser chaque serveur publier sa propre santé depuis son propre thread, pour que le silence ait un sens.</li>
+<li>Comparer les parts de temps mural aux parts de CPU par thread pour distinguer le calcul de l'attente ; ne jamais convertir des cycles en temps.</li>
+<li>Ajouter des photos périodiques à côté de chaque seuil, et imprimer les durées à côté de leur budget.</li>
+<li>Sortir la console du chemin critique, garder des journaux ordonnés, bornés et vidés, et appliquer la correction à chaque processus frère.</li>
+<li>Construire le moniteur pour les rapports de bug : identité, configuration effective, secrets masqués, et une fenêtre copiable avec le pic dans son contexte.</li>
+</ul></div>
+</div>
+</section>
+
+</div>
+<div data-chapter-foot></div>
+</article>
+</main>
+<aside class="rail" id="mq-rail"></aside>
+</div>
+<footer class="site-footer" id="mq-footer"></footer>
+<script src="assets/js/site-data.js" defer></script>
+<script src="assets/js/glossary-data.js" defer></script>
+<script src="assets/js/app.js" defer></script>
+<script src="assets/js/widgets.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="en" data-lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>The freshness budget · MoonQwak</title>
+<meta name="description" content="Bounding the per-player cost of a crowd with three cadence rings, a heartbeat and a histogram instead of a sort.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Chakra+Petch:wght@500;600&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="assets/css/site.css">
+<script>(function(){var r=document.documentElement,l,t;try{l=localStorage.getItem("mq-lang");t=localStorage.getItem("mq-theme");}catch(e){}if(l!=="en"&&l!=="fr"){l=(navigator.language||"").toLowerCase().indexOf("fr")===0?"fr":"en";}r.setAttribute("data-lang",l);r.setAttribute("lang",l);if(t==="light"||t==="dark")r.setAttribute("data-theme",t);})();</script>
+</head>
+<body data-page="freshness-budget">
+<a class="skip-link" href="#main"><span lang="en">Skip to content</span><span lang="fr">Aller au contenu</span></a>
+<header class="site-header" id="mq-header"></header>
+<div class="layout">
+<aside class="sidebar" id="mq-sidebar"></aside>
+<main class="content" id="main">
+<article>
+<header class="chapter-head">
+  <div class="eyebrow" data-auto></div>
+  <h1><span lang="en">The freshness budget</span><span lang="fr">Le budget de fraîcheur</span></h1>
+  <p class="dek"><span lang="en">Bounding the per-player cost of a crowd with three cadence rings, a heartbeat and a histogram instead of a sort.</span><span lang="fr">Borner le coût par joueur d'une foule avec trois anneaux de cadence, un battement et un histogramme plutôt qu'un tri.</span></p>
+  <div class="meta-row" data-auto></div>
+</header>
+
+<div class="prose">
+
+<section class="sec" id="crowd">
+<div lang="en">
+<h2>The cost of a crowd grows with the crowd</h2>
+<p>Area of interest limits what a player is told to what is near them. It does nothing when everything is near them, and that is exactly what a battle is. Every hull, station and character within view used to go out every tick.</p>
+<div class="note measured"><p class="note-label">Measured</p><p>With 201 players packed together, each one received <strong>457 objects per snapshot</strong>: 27.3 MB/s outgoing, 1.09 Mbit/s per player, against 147 kbit/s when the same players were spread out. The crowd cost 7.4 times more per head, and it is the regime of every real fight.</p></div>
+<p>The obvious fix is a cadence by distance: near objects every tick, far ones less often. In a crowd it barely helps. In a disc of radius 60, the average distance between two points is about 55, so most of the crowd falls in the "near" band, and tiers of 25, 8 and 3 Hz would only give a factor of 1.4. Distance stops discriminating exactly when you need it to.</p>
+</div>
+<div lang="fr">
+<h2>Le coût d'une foule grandit avec la foule</h2>
+<p>La zone d'intérêt limite ce qu'on dit à un joueur à ce qui est près de lui. Elle ne sert à rien quand tout est près de lui, et c'est exactement ce qu'est une bataille. Chaque coque, station et personnage en vue partait à chaque tick.</p>
+<div class="note measured"><p class="note-label">Mesuré</p><p>Avec 201 joueurs regroupés, chacun recevait <strong>457 objets par snapshot</strong> : 27,3 Mo/s sortants, 1,09 Mbit/s par joueur, contre 147 kbit/s quand les mêmes joueurs étaient dispersés. La foule coûtait 7,4 fois plus par tête, et c'est le régime de tout vrai combat.</p></div>
+<p>La correction évidente est une cadence selon la distance : les objets proches à chaque tick, les lointains moins souvent. Dans une foule, ça aide à peine. Dans un disque de rayon 60, la distance moyenne entre deux points est d'environ 55 : la majeure partie de la foule tombe dans la bande « proche », et des paliers à 25, 8 et 3 Hz ne rendraient qu'un facteur 1,4. La distance cesse de discriminer précisément quand on en a besoin.</p>
+</div>
+</section>
+
+<section class="sec" id="budget">
+<div lang="en">
+<h2>A budget, not a radius</h2>
+<p>The answer is a <strong>budget</strong>: each player receives at most a fixed number of non-urgent objects per snapshot, nearest first. The cost per player becomes <em>bounded</em> instead of proportional: two hundred ships in view cost what sixty cost. Distance is still used, but to prioritize, not to filter.</p>
+<p>This is not a dynamic view radius. Nothing disappears: beyond the budget, an object stops being <em>refreshed</em>, not <em>seen</em>. It freezes for a few tenths of a second and catches up. What tightens as the crowd grows is not the view, it is the attention: you see the whole melee, and you follow your neighbours precisely. The degradation falls in the right place, because whoever you are fighting is close, and therefore always at full rate.</p>
+<p>Objects fall into two groups every tick:</p>
+<ul>
+<li><strong>Mandatory</strong>: an object that was never sent to this player (it just entered their view), or whose <strong>heartbeat</strong> is due (2 seconds since its last send). These go out regardless of the budget.</li>
+<li><strong>Discretionary</strong>: everything else competes for the budget's places, nearest first.</li>
+</ul>
+<p>The heartbeat is not a refinement. Without it, an object outside the budget would stay silent until the client's grace expired, and would be <em>destroyed</em> instead of frozen: the opposite of what we want (chapter <a href="snapshots.html#absence">4.2</a>).</p>
+</div>
+<div lang="fr">
+<h2>Un budget, pas un rayon</h2>
+<p>La réponse est un <strong>budget</strong> : chaque joueur reçoit au plus un nombre fixe d'objets non urgents par snapshot, les plus proches d'abord. Le coût par joueur devient <em>borné</em> au lieu de proportionnel : deux cents vaisseaux en vue coûtent ce qu'en coûtent soixante. La distance sert encore, mais à prioriser, pas à filtrer.</p>
+<p>Ce n'est pas un rayon de vue dynamique. Rien ne disparaît : au-delà du budget, un objet cesse d'être <em>rafraîchi</em>, pas d'être <em>vu</em>. Il gèle quelques dixièmes de seconde et rattrape. Ce qui se resserre quand la foule grossit n'est pas la vue, c'est l'attention : on voit toute la mêlée, et on suit précisément ses voisins. La dégradation tombe au bon endroit, parce que celui qu'on combat est proche, donc toujours à pleine cadence.</p>
+<p>Les objets tombent chaque tick dans deux groupes :</p>
+<ul>
+<li><strong>Obligatoires</strong> : un objet jamais envoyé à ce joueur (il vient d'entrer dans sa vue), ou dont le <strong>battement</strong> est échu (2 secondes depuis son dernier envoi). Ceux-là partent quel que soit le budget.</li>
+<li><strong>Discrétionnaires</strong> : tout le reste concourt pour les places du budget, les plus proches d'abord.</li>
+</ul>
+<p>Le battement n'est pas un raffinement. Sans lui, un objet hors budget resterait silencieux jusqu'à la fin de la grâce du client, et serait <em>détruit</em> au lieu de geler : le contraire de ce qu'on veut (chapitre <a href="snapshots.html#absence">4.2</a>).</p>
+</div>
+</section>
+
+<section class="sec" id="rings">
+<div lang="en">
+<h2>Three rings, because two made a cliff</h2>
+<p>The budget turns on a cycle of four ticks, and only one number changes from tick to tick: the cap. On tick 0 the cap is FAR, on tick 2 it is BUDGET, on ticks 1 and 3 it is NEAR. Ranked by distance, that gives every hull one of four rates, without any other part of the code knowing that rings exist:</p>
+<div class="table-wrap"><table>
+<thead><tr><th>Rank of the hull (by distance)</th><th>Sent on</th><th>Rate</th></tr></thead>
+<tbody>
+<tr><td>below NEAR</td><td>every tick</td><td>25 Hz</td></tr>
+<tr><td>below BUDGET</td><td>ticks 0 and 2</td><td>12.5 Hz</td></tr>
+<tr><td>below FAR</td><td>tick 0</td><td>6.25 Hz</td></tr>
+<tr><td>beyond</td><td>heartbeat only</td><td>0.5 Hz</td></tr>
+</tbody></table></div>
+<p>The average cost per tick is NEAR + (BUDGET − NEAR)/2 + (FAR − BUDGET)/4. The defaults 30 / 60 / 120 cost 60 sends per tick; the 20 / 40 / 100 used on the benches cost 45.</p>
+<p>There used to be only two rings, and tightening them showed why that was wrong. At 600 ships, 95 % of each snapshot was the base block of hulls (movement and turrets), so the obvious lever was the budget: BUDGET 30, NEAR 15. It became unplayable as soon as there was a crowd, and not because of the cadence. With two rings, a hull that leaves the budget does not drop to a lower rate: it falls to the <em>heartbeat</em>, from 12.5 Hz to 0.5 Hz, a factor of twenty-five. With 45 hulls in view, fifteen were frozen. At the default 60/30, the edge was rarely reached, which is exactly why the default passed and the tighter setting did not.</p>
+<p>The lever was never the rate, it was the <strong>slope</strong>. A third ring at 6.25 Hz costs a quarter of a full-rate ring, so it can be wide; the sequence becomes 25 → 12.5 → 6.25 → heartbeat, and the cliff moves back to a rank nobody reaches. On the bench, 20 / 40 / 100 cost exactly the 45 sends of the old two-ring setting, showed three clean tiers of hulls in the byte traces, took the outgoing traffic from 14.5 to 12.2 MB/s, and looked right to the eye. At equal bandwidth, the same scene became playable.</p>
+</div>
+<div lang="fr">
+<h2>Trois anneaux, parce que deux faisaient une falaise</h2>
+<p>Le budget tourne sur un cycle de quatre ticks, et un seul nombre change d'un tick à l'autre : le plafond. Au tick 0, le plafond vaut FAR ; au tick 2, BUDGET ; aux ticks 1 et 3, NEAR. Classées par distance, les coques reçoivent ainsi l'une de quatre cadences, sans qu'aucune autre partie du code ne sache que les anneaux existent :</p>
+<div class="table-wrap"><table>
+<thead><tr><th>Rang de la coque (par distance)</th><th>Envoyée aux</th><th>Cadence</th></tr></thead>
+<tbody>
+<tr><td>sous NEAR</td><td>chaque tick</td><td>25 Hz</td></tr>
+<tr><td>sous BUDGET</td><td>ticks 0 et 2</td><td>12,5 Hz</td></tr>
+<tr><td>sous FAR</td><td>tick 0</td><td>6,25 Hz</td></tr>
+<tr><td>au-delà</td><td>battement seul</td><td>0,5 Hz</td></tr>
+</tbody></table></div>
+<p>Le coût moyen par tick vaut NEAR + (BUDGET − NEAR)/2 + (FAR − BUDGET)/4. Les valeurs par défaut 30 / 60 / 120 coûtent 60 envois par tick ; le 20 / 40 / 100 utilisé aux bancs en coûte 45.</p>
+<p>Il n'y avait autrefois que deux anneaux, et les resserrer a montré pourquoi c'était faux. À 600 vaisseaux, 95 % de chaque snapshot était le bloc de base des coques (mouvement et tourelles) : le levier évident était le budget, BUDGET 30, NEAR 15. C'est devenu injouable dès qu'il y avait du monde, et pas à cause de la cadence. Avec deux anneaux, une coque qui sort du budget ne descend pas à une cadence plus basse : elle tombe au <em>battement</em>, de 12,5 Hz à 0,5 Hz, un facteur vingt-cinq. Avec 45 coques en vue, quinze étaient gelées. Au réglage par défaut 60/30, on atteignait rarement le bord, ce qui explique exactement pourquoi le défaut passait et pas le réglage serré.</p>
+<p>Le levier n'a jamais été la cadence, c'était la <strong>pente</strong>. Un troisième anneau à 6,25 Hz coûte le quart d'un anneau à pleine cadence : on peut donc le faire large ; la séquence devient 25 → 12,5 → 6,25 → battement, et la falaise recule à un rang que personne n'atteint. Au banc, 20 / 40 / 100 coûtait exactement les 45 envois de l'ancien réglage à deux anneaux, montrait trois paliers nets de coques dans les traces d'octets, faisait passer le sortant de 14,5 à 12,2 Mo/s, et était juste à l'œil. À bande passante égale, la même scène est devenue jouable.</p>
+</div>
+<div data-widget="budget"></div>
+<div lang="en">
+<div class="note rule"><p class="note-label">Rule</p><p>When you degrade, degrade in steps small enough that each one is invisible.</p><p>A factor-two step (25 to 12.5 Hz) is smoothed away by interpolation. A factor-twenty-five step is a frozen ship. The cost of an extra tier is often lower than the cost of the cliff it removes.</p></div>
+</div>
+<div lang="fr">
+<div class="note rule"><p class="note-label">Règle</p><p>Quand on dégrade, dégrader par marches assez petites pour que chacune soit invisible.</p><p>Une marche d'un facteur deux (25 à 12,5 Hz) est effacée par l'interpolation. Une marche d'un facteur vingt-cinq est un vaisseau gelé. Le coût d'un palier de plus est souvent inférieur à celui de la falaise qu'il supprime.</p></div>
+</div>
+</section>
+
+<section class="sec" id="histogram">
+<div lang="en">
+<h2>A histogram instead of a sort</h2>
+<p>Picking "the nearest sixty" sounds like a sort. Sorting 457 candidates costs about 4,000 comparisons; times 200 players and 25 ticks, that is 20 million comparisons per second to choose sixty objects. The budget uses two linear passes over 32 distance bands instead: count the candidates per band, find the band where the cap runs out, then emit everything below that band and fill the cut-off band until the quota is used. The result is right to within one band, and that imprecision has no consequence: the goal is sixty <em>near</em> objects, not <em>the</em> sixty nearest.</p>
+</div>
+<div lang="fr">
+<h2>Un histogramme plutôt qu'un tri</h2>
+<p>Choisir « les soixante plus proches » ressemble à un tri. Trier 457 candidats coûte environ 4 000 comparaisons ; multiplié par 200 joueurs et 25 ticks, c'est 20 millions de comparaisons par seconde pour choisir soixante objets. Le budget utilise à la place deux passes linéaires sur 32 bandes de distance : compter les candidats par bande, trouver la bande où le plafond s'épuise, puis émettre tout ce qui est sous cette bande et remplir la bande de coupure jusqu'à épuisement du quota. Le résultat est juste à une bande près, et cette imprécision n'a aucune conséquence : le but est soixante objets <em>proches</em>, pas <em>les</em> soixante plus proches.</p>
+</div>
+<div class="code"><div class="code-head"><span class="file">GameServer/Players/Player.cs · AppendHullsWithinBudget, simplified</span></div><pre><code data-lang="cs">var cap = (int)(_snapshotTick &amp; 3) switch { 0 =&gt; FarBudget, 2 =&gt; Budget, _ =&gt; NearBudget };
+if (candidates.Count &lt;= cap) { foreach (var c in candidates) EmitHull(c, nowMs); return; }
+
+var scale = Bands / ViewRadius;           // one band per slice of the view radius
+Array.Clear(_bands, 0, Bands);
+foreach (var c in candidates) _bands[BandOf(c, viewer, scale)]++;  // pass 1: count
+
+var cutoff = Bands - 1; var remaining = cap;
+for (var b = 0; b &lt; Bands; b++)           // where does the cap run out?
+{
+    if (_bands[b] &gt;= remaining) { cutoff = b; break; }
+    remaining -= _bands[b];
+}
+
+foreach (var c in candidates)             // pass 2: emit, no sort, no allocation
+{
+    var band = BandOf(c, viewer, scale);  // recomputed: cheaper than storing it
+    if (band &gt; cutoff) continue;
+    if (band == cutoff &amp;&amp; remaining-- &lt;= 0) continue;
+    EmitHull(c, nowMs);
+}</code></pre></div>
+</section>
+
+<section class="sec" id="units">
+<div lang="en">
+<h2>A night lost to units</h2>
+<p>With a budget of 60 and a 2-second heartbeat, a player should have received about 64 hulls per snapshot. The measurement said 118, stable over five minutes at 201 players. Three hypotheses were formed and refuted, each at the price of a rebuild: churn at the view boundary, the connection ramp, a heartbeat too short. The heartbeat was lengthened from 500 ms to 2 s and the count barely moved (121, then 118), which should have been a clue: a factor of four on the heartbeat, and almost no change.</p>
+<p>The cause was in the line that records when a hull was sent. The budget path wrote the <strong>snapshot tick counter</strong> (a few thousand) into the dictionary, while the heartbeat check compared it against <strong>milliseconds since boot</strong> (tens of millions). The difference was always larger than the heartbeat, so every hull the budget served was "heartbeat due" on the next tick, mandatory, outside the budget: the cap of 60 doubled itself with 60 mandatory sends it had manufactured.</p>
+<p>It was the same mistake as the heartbeat-in-ticks story of chapter <a href="snapshots.html#absence">4.2</a>, fixed on the reading side and left on the writing side. Half a bug is still a bug. The fix is structural: the clock is read once per snapshot and passed as a parameter to everything that writes to the dictionary, so nobody can write there without holding the unit the reader expects.</p>
+<p>What would have found it in minutes is three counters, which now exist, off by default and printed once per second for one player:</p>
+</div>
+<div lang="fr">
+<h2>Une nuit perdue à cause des unités</h2>
+<p>Avec un budget de 60 et un battement de 2 secondes, un joueur aurait dû recevoir environ 64 coques par snapshot. La mesure disait 118, stable sur cinq minutes à 201 joueurs. Trois hypothèses ont été formulées et démenties, chacune au prix d'une recompilation : l'agitation à la frontière de la vue, la rampe de connexion, un battement trop court. Le battement a été allongé de 500 ms à 2 s et le compte a à peine bougé (121, puis 118), ce qui aurait dû être un indice : un facteur quatre sur le battement, et presque aucun changement.</p>
+<p>La cause était dans la ligne qui note quand une coque a été envoyée. Le chemin du budget écrivait le <strong>compteur de ticks de snapshot</strong> (quelques milliers) dans le dictionnaire, alors que la vérification du battement le comparait à des <strong>millisecondes depuis le démarrage</strong> (des dizaines de millions). L'écart était toujours supérieur au battement : chaque coque servie par le budget était « battement échu » au tick suivant, obligatoire, hors budget. Le plafond de 60 se doublait de 60 envois obligatoires qu'il avait lui-même fabriqués.</p>
+<p>C'était la même faute que l'histoire du battement en ticks du chapitre <a href="snapshots.html#absence">4.2</a>, corrigée côté lecture et laissée côté écriture. La moitié d'un bug est encore un bug. La correction est structurelle : l'horloge est lue une fois par snapshot et passée en paramètre à tout ce qui écrit dans le dictionnaire, pour que personne ne puisse y écrire sans tenir en main l'unité qu'attend le lecteur.</p>
+<p>Ce qui l'aurait trouvé en quelques minutes, ce sont trois compteurs, qui existent maintenant, éteints par défaut et imprimés une fois par seconde pour un joueur :</p>
+</div>
+<div class="code"><div class="code-head"><span class="file">GameServer console · QWAK_SNAP_TRACE=1 · the line's format, with the values expected at 203 hulls</span></div><pre><code data-lang="txt">[Snap] pair 0 : 0 jamais envoyé · 4 battement échu · 60 budget · 64 envoyés au total
+          never sent ─┘            heartbeat due ─┘      budget ─┘</code></pre></div>
+<div lang="en">
+<p>"Never sent" is a hull that just entered the view, "heartbeat due" is the mandatory floor, "budget" is the discretionary part. At 203 hulls in view, a 60 budget and a 2 s heartbeat at 25 Hz, the expected values are about 0, 203 / (2 × 25) ≈ 4, and 60. If "heartbeat due" climbs back towards 60, a unit is mixed up somewhere again.</p>
+<div class="note rule"><p class="note-label">Rule</p><p>Before tuning a mechanism, count each of its paths separately.</p><p>A total that is wrong by a factor of two can be explained by a dozen hypotheses. Three counters, one per path, point at the guilty one immediately. We spent a night deducing from their sum what they would have said directly.</p></div>
+</div>
+<div lang="fr">
+<p>« Jamais envoyé », c'est une coque qui vient d'entrer dans la vue ; « battement échu », c'est le plancher obligatoire ; « budget », c'est la part discrétionnaire. À 203 coques en vue, un budget de 60 et un battement de 2 s à 25 Hz, les valeurs attendues sont environ 0, 203 / (2 × 25) ≈ 4, et 60. Si « battement échu » remonte vers 60, une unité est de nouveau mélangée quelque part.</p>
+<div class="note rule"><p class="note-label">Règle</p><p>Avant de régler un mécanisme, compter chacun de ses chemins séparément.</p><p>Un total faux d'un facteur deux s'explique par une douzaine d'hypothèses. Trois compteurs, un par chemin, désignent le coupable immédiatement. On a passé une nuit à déduire de leur somme ce qu'ils auraient dit directement.</p></div>
+</div>
+</section>
+
+<section class="sec" id="forget">
+<div lang="en">
+<h2>Forget by age, not by visibility</h2>
+<p>The server has to remember, per player, when it last sent each hull. The first version forgot a hull as soon as it left the player's area of interest. In a crowd of radius 60 seen from a view radius of 120, the hulls on the rim cross that boundary constantly, and more so when everybody moves. Every re-entry became "never sent", therefore mandatory, therefore a full state block. Movement manufactured mandatory sends: outgoing traffic jumped from 13 to 22 MB/s as soon as the melee became lively, and the budget could do nothing about it.</p>
+<p>The server now forgets by <strong>age</strong>: an entry is dropped when its hull is out of view <em>and</em> was last sent more than 4 seconds ago. A hull still in view is refreshed at least every 2 seconds, so its entry never ages to the threshold; a hull that really left disappears on its own. The 4 seconds stay under the client's 5-second grace, and the order matters: while the server remembers sending a hull, the client still has it; past that, both have forgotten. A server that forgot <em>later</em> than the client would believe the client knows something it has already destroyed.</p>
+</div>
+<div lang="fr">
+<h2>Oublier par l'âge, pas par la visibilité</h2>
+<p>Le serveur doit retenir, par joueur, quand il a envoyé chaque coque pour la dernière fois. La première version oubliait une coque dès qu'elle sortait de la zone d'intérêt du joueur. Dans une foule de rayon 60 vue avec un rayon de vue de 120, les coques du pourtour traversent cette frontière en permanence, et d'autant plus quand tout le monde bouge. Chaque retour devenait « jamais envoyée », donc obligatoire, donc un bloc d'état complet. Le mouvement fabriquait des envois obligatoires : le sortant sautait de 13 à 22 Mo/s dès que la mêlée s'animait, et le budget n'y pouvait rien.</p>
+<p>Le serveur oublie maintenant par l'<strong>âge</strong> : une entrée disparaît quand sa coque est hors de vue <em>et</em> a été envoyée pour la dernière fois il y a plus de 4 secondes. Une coque encore en vue est rafraîchie au moins toutes les 2 secondes : son entrée ne vieillit jamais jusqu'au seuil ; une coque vraiment partie s'efface toute seule. Les 4 secondes restent sous la grâce de 5 secondes du client, et l'ordre compte : tant que le serveur se souvient d'avoir envoyé une coque, le client l'a encore ; au-delà, les deux ont oublié. Un serveur qui oublierait <em>plus tard</em> que le client croirait que celui-ci sait quelque chose qu'il a déjà détruit.</p>
+</div>
+<div lang="en">
+<div class="note tradeoff"><p class="note-label">Trade-off</p><p>Why a 2-second heartbeat and not 500 ms? Because the heartbeat is a floor, and a high floor eats the budget. At 500 ms with about 200 hulls in view, the mandatory sends alone are 200 / (0.5 × 25) = 16 per tick per player; at 2 s they are 4. The price is that a hull that really left your view lingers, frozen, up to the 5-second grace. That floor will only disappear with an explicit "this one left your view" message, which the server could send since it already detects the case; it is written down as the next step rather than done.</p></div>
+</div>
+<div lang="fr">
+<div class="note tradeoff"><p class="note-label">Compromis</p><p>Pourquoi un battement de 2 secondes et pas de 500 ms ? Parce que le battement est un plancher, et qu'un plancher haut mange le budget. À 500 ms avec environ 200 coques en vue, les envois obligatoires seuls valent 200 / (0,5 × 25) = 16 par tick et par joueur ; à 2 s, ils valent 4. Le prix est qu'une coque vraiment sortie de votre vue s'attarde, figée, jusqu'à la grâce de 5 secondes. Ce plancher ne disparaîtra qu'avec un message explicite « celle-ci a quitté ta vue », que le serveur pourrait envoyer puisqu'il détecte déjà le cas ; c'est noté comme prochaine étape plutôt que fait.</p></div>
+</div>
+</section>
+
+<section class="sec" id="takeaways">
+<div class="takeaways">
+<div lang="en"><h2>Key takeaways</h2><ul>
+<li>Bound the per-player cost with a budget ranked by distance; in a crowd, distance alone does not discriminate.</li>
+<li>Separate mandatory sends (new objects, heartbeat) from discretionary ones, and keep the heartbeat well inside the client's grace.</li>
+<li>Degrade in small steps: three rings removed a factor-25 cliff at equal bandwidth.</li>
+<li>Select "near enough" with a histogram instead of sorting; exactness has no value there.</li>
+<li>Read the clock once and pass it around, count each path of a mechanism separately, and forget by age rather than by visibility.</li>
+</ul></div>
+<div lang="fr"><h2>À retenir</h2><ul>
+<li>Borner le coût par joueur par un budget classé par distance ; dans une foule, la distance seule ne discrimine pas.</li>
+<li>Séparer les envois obligatoires (objets nouveaux, battement) des discrétionnaires, et garder le battement bien à l'intérieur de la grâce du client.</li>
+<li>Dégrader par petites marches : trois anneaux ont supprimé une falaise d'un facteur 25 à bande passante égale.</li>
+<li>Choisir « assez proche » par un histogramme plutôt que par un tri ; l'exactitude n'y a aucune valeur.</li>
+<li>Lire l'horloge une fois et la passer en paramètre, compter chaque chemin d'un mécanisme séparément, et oublier par l'âge plutôt que par la visibilité.</li>
+</ul></div>
+</div>
+</section>
+
+</div>
+<div data-chapter-foot></div>
+</article>
+</main>
+<aside class="rail" id="mq-rail"></aside>
+</div>
+<footer class="site-footer" id="mq-footer"></footer>
+<script src="assets/js/site-data.js" defer></script>
+<script src="assets/js/glossary-data.js" defer></script>
+<script src="assets/js/app.js" defer></script>
+<script src="assets/js/widgets.js" defer></script>
+</body>
+</html>

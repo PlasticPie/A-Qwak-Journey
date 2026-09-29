@@ -1,0 +1,225 @@
+<!doctype html>
+<html lang="en" data-lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>The gateway · MoonQwak</title>
+<meta name="description" content="Why a separate front door, what it owns, how game servers prove who they are, and why it carries the social layer.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Chakra+Petch:wght@500;600&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="assets/css/site.css">
+<script>(function(){var r=document.documentElement,l,t;try{l=localStorage.getItem("mq-lang");t=localStorage.getItem("mq-theme");}catch(e){}if(l!=="en"&&l!=="fr"){l=(navigator.language||"").toLowerCase().indexOf("fr")===0?"fr":"en";}r.setAttribute("data-lang",l);r.setAttribute("lang",l);if(t==="light"||t==="dark")r.setAttribute("data-theme",t);})();</script>
+</head>
+<body data-page="gateway">
+<a class="skip-link" href="#main"><span lang="en">Skip to content</span><span lang="fr">Aller au contenu</span></a>
+<header class="site-header" id="mq-header"></header>
+<div class="layout">
+<aside class="sidebar" id="mq-sidebar"></aside>
+<main class="content" id="main">
+<article>
+<header class="chapter-head">
+  <div class="eyebrow" data-auto></div>
+  <h1><span lang="en">The gateway</span><span lang="fr">La gateway</span></h1>
+  <p class="dek"><span lang="en">Why a separate front door, what it owns, how game servers prove who they are, and why it carries the social layer.</span><span lang="fr">Pourquoi une porte d'entrée séparée, ce qu'elle possède, comment les serveurs de jeu prouvent qui ils sont, et pourquoi elle porte le social.</span></p>
+  <div class="meta-row" data-auto></div>
+</header>
+
+<div class="prose">
+
+<section class="sec" id="why">
+<div lang="en">
+<h2>Why a front door at all</h2>
+<p>The first version of any online game has one server that does everything. As soon as the world is split across several game servers, a question appears that none of them can answer alone: <em>which server should this player talk to?</em> Answering it requires knowing every server, every map they host, and every player online. That knowledge belongs in one place, and in MoonQwak that place is the <a class="term" data-term="gateway">gateway</a>.</p>
+<p>The gateway is deliberately boring. It simulates nothing and holds no physics. It owns accounts and characters (in the database), sessions and presence (in memory), the social features that span maps, the decision of which server hosts which map, and the number of servers each world needs. Because it does not simulate, it can stay up while game servers start, crash and retire around it.</p>
+</div>
+<div lang="fr">
+<h2>Pourquoi une porte d'entrée</h2>
+<p>La première version de tout jeu en ligne a un serveur qui fait tout. Dès que le monde est réparti sur plusieurs serveurs de jeu, une question apparaît à laquelle aucun d'eux ne peut répondre seul : <em>à quel serveur ce joueur doit-il parler ?</em> Y répondre demande de connaître chaque serveur, chaque carte qu'il héberge et chaque joueur en ligne. Cette connaissance doit vivre à un seul endroit, et dans MoonQwak cet endroit est la <a class="term" data-term="gateway">gateway</a>.</p>
+<p>La gateway est volontairement ennuyeuse. Elle ne simule rien et ne porte aucune physique. Elle possède les comptes et les personnages (en base), les sessions et la présence (en mémoire), les fonctions sociales qui traversent les cartes, la décision de quel serveur héberge quelle carte, et le nombre de serveurs dont chaque monde a besoin. Comme elle ne simule pas, elle peut rester debout pendant que les serveurs de jeu démarrent, plantent et se retirent autour d'elle.</p>
+</div>
+<div lang="en">
+<div class="note tradeoff"><p class="note-label">Trade-off</p><p>A single gateway is a single point of failure, and it holds live state that is lost when it restarts: every session, every group, the map-to-server table. Game servers reconnect and re-authenticate on their own, but players must log in again. The right fix is a resynchronization (servers re-announcing the sessions they carry) rather than persisting groups and sessions; it has not been built or tested yet, and it is on the <a href="open-problems.html">open problems</a> list.</p></div>
+</div>
+<div lang="fr">
+<div class="note tradeoff"><p class="note-label">Compromis</p><p>Une gateway unique est un point de défaillance unique, et elle tient un état vivant perdu à son redémarrage : chaque session, chaque groupe, la table cartes-serveurs. Les serveurs de jeu se reconnectent et se réauthentifient seuls, mais les joueurs doivent se reconnecter. La bonne correction est une resynchronisation (les serveurs réannonçant les sessions qu'ils portent) plutôt que de persister groupes et sessions ; elle n'est ni écrite ni testée, et figure dans les <a href="open-problems.html">problèmes ouverts</a>.</p></div>
+</div>
+</section>
+
+<section class="sec" id="two-ports">
+<div lang="en">
+<h2>Two doors, two audiences</h2>
+<p>The gateway opens two listeners on two ports: one for players, one for game servers. Each listener registers only the handlers its audience may call. A player cannot send a map-assignment result, because the client port does not know that packet; a game server cannot send a login. There is no <code>if (sender is a server)</code> check to forget, because the question never arises.</p>
+<p>On the client port, authentication is derived from the packet's type. Packets that require a session derive from <code>AuthenticatedPacket</code>, and the registration helper checks the token automatically for exactly those types, before the handler runs:</p>
+</div>
+<div lang="fr">
+<h2>Deux portes, deux publics</h2>
+<p>La gateway ouvre deux écoutes sur deux ports : un pour les joueurs, un pour les serveurs de jeu. Chaque écoute n'enregistre que les gestionnaires que son public a le droit d'appeler. Un joueur ne peut pas envoyer un résultat d'assignation de carte, parce que le port client ne connaît pas ce paquet ; un serveur de jeu ne peut pas envoyer un login. Il n'y a pas de test <code>if (l'expéditeur est un serveur)</code> à oublier, parce que la question ne se pose jamais.</p>
+<p>Sur le port client, l'authentification découle du type du paquet. Les paquets qui exigent une session dérivent d'<code>AuthenticatedPacket</code>, et l'utilitaire d'enregistrement vérifie automatiquement le jeton pour exactement ces types, avant le gestionnaire :</p>
+</div>
+<div class="code"><div class="code-head"><span class="file">Gateway/ClientGateway.cs</span></div><pre><code data-lang="cs">private void Register&lt;T&gt;(ushort type, Func&lt;int, T, Server, bool&gt; handler) where T : BasePacket, new()
+{
+    // Decided once, from the type: a new authenticated packet is protected the day it is added.
+    bool needsAuth = typeof(AuthenticatedPacket).IsAssignableFrom(typeof(T));
+
+    _server.Dispatcher.Register&lt;T&gt;(type, (peerId, packet, source) =>
+    {
+        var server = (Server)source;
+        if (needsAuth &amp;&amp; packet is AuthenticatedPacket auth
+            &amp;&amp; _sessions.Validate(peerId, auth.SessionToken) == null)  // token must belong to THIS connection
+        {
+            server.Send(peerId, new ErrorResult(Code.LoginRequired));
+            return false;
+        }
+        return handler(peerId, (T)packet, server);
+    });
+}</code></pre></div>
+<div lang="en">
+<p>Note the second argument of <code>Validate</code>: a token is accepted only from the connection that logged in. A token copied to another connection is useless there.</p>
+</div>
+<div lang="fr">
+<p>Remarquez le second argument de <code>Validate</code> : un jeton n'est accepté que depuis la connexion qui s'est authentifiée. Un jeton copié sur une autre connexion n'y sert à rien.</p>
+</div>
+</section>
+
+<section class="sec" id="server-trust">
+<div lang="en">
+<h2>How a game server proves who it is</h2>
+<p>Game servers connect to the gateway like any other peer, over the same encrypted transport. Then they must prove they are part of the fleet, because a registered server is trusted with a lot: it is told which maps to host and receives players.</p>
+<p>Each machine that may run game servers has an RSA key pair. The private key stays on the machine; the public key is a file on the gateway, named after the machine. When a server starts, it announces its identity, address, port and a timestamp, and signs that announcement with the machine's private key. The gateway looks up the public key by machine name and verifies the signature. A wrong or missing key means the server is refused.</p>
+</div>
+<div lang="fr">
+<h2>Comment un serveur de jeu prouve qui il est</h2>
+<p>Les serveurs de jeu se connectent à la gateway comme n'importe quel pair, sur le même transport chiffré. Ensuite, ils doivent prouver qu'ils font partie du parc, parce qu'un serveur enregistré reçoit beaucoup de confiance : on lui dit quelles cartes héberger et on lui envoie des joueurs.</p>
+<p>Chaque machine autorisée à faire tourner des serveurs de jeu a une paire de clés RSA. La clé privée reste sur la machine ; la clé publique est un fichier sur la gateway, nommé d'après la machine. Au démarrage, un serveur annonce son identité, son adresse, son port et un horodatage, et signe cette annonce avec la clé privée de la machine. La gateway retrouve la clé publique par le nom de machine et vérifie la signature. Une clé fausse ou absente, et le serveur est refusé.</p>
+</div>
+<div class="code"><div class="code-head"><span class="file">Gateway/GameServerGateway.cs · the GameServerAuth handler, simplified</span></div><pre><code data-lang="cs">// Servers are started on demand as "MACHINE#index": the key belongs to the MACHINE.
+var hash = auth.ServerId.IndexOf('#');
+var machine = hash > 0 ? auth.ServerId.Substring(0, hash) : auth.ServerId;
+
+if (!_publicKeys.TryGetValue(machine, out var rsa))
+    return Refuse(peerId, $"no public key for machine '{machine}'");
+
+var signed = Encoding.UTF8.GetBytes(auth.ServerId + auth.ServerIp + auth.ServerPort + auth.Timestamp);
+if (!rsa.VerifyData(signed, auth.Signature, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1))
+    return Refuse(peerId, "signature verification failed");
+
+_gameServers[peerId] = new GameServerInfo { ServerId = auth.ServerId, Ip = auth.ServerIp,
+                                            Port = auth.ServerPort, WorldId = auth.WorldId };
+server.Send(peerId, new GameServerAuthResult(Code.Success));
+RetryPendingAssigns();  // maps that were waiting for a host get a second chance now</code></pre></div>
+<div lang="en">
+<p>The key belongs to the machine, not to the server process, and that was forced by the fleet design. Game servers are now started on demand by a node agent (chapter <a href="node-agents.html">7.3</a>), so a server's identity does not exist until it is started: there was never going to be a way to hand out one key per server. The invariant that mattered survives: a row in a database table is not enough to join the fleet. Only possession of the machine's private key is.</p>
+<p>The last line of the handler matters for scaling: when a new server announces itself, the gateway immediately replays every map that was waiting for a host. Chapter <a href="map-hosting.html">7.1</a> explains that waiting room.</p>
+</div>
+<div lang="fr">
+<p>La clé appartient à la machine, pas au processus serveur, et c'est la conception du parc qui l'a imposé. Les serveurs de jeu sont désormais lancés à la demande par un agent de machine (chapitre <a href="node-agents.html">7.3</a>) : l'identité d'un serveur n'existe pas avant son lancement, il n'aurait jamais été possible de distribuer une clé par serveur. L'invariant qui comptait survit : une ligne dans une table ne suffit pas pour entrer dans le parc. Seule la possession de la clé privée de la machine le permet.</p>
+<p>La dernière ligne du gestionnaire compte pour la montée en charge : quand un nouveau serveur s'annonce, la gateway rejoue immédiatement chaque carte qui attendait un hôte. Le chapitre <a href="map-hosting.html">7.1</a> explique cette salle d'attente.</p>
+</div>
+</section>
+
+<section class="sec" id="social">
+<div lang="en">
+<h2>Why the social layer lives here</h2>
+<p>A guild's members are spread over many maps, served by as many processes. A private message goes from a player on one server to a player on another. A group must know when its members go offline, not when they merely change map. None of this can be decided by a game server, which only sees its own maps. So the gateway is the authority for everything social: presence, chat routing, groups, friends, guilds.</p>
+<p>The game server becomes a relay. A player's guild command reaches their game server, which forwards it to the gateway; the gateway decides, and the answer travels back down to every member concerned, through whichever server each one is on. The game server keeps authority only over the few gestures that need the world, such as checking that a player is standing at the right place before founding something.</p>
+<p>Three habits keep this layer simple:</p>
+<ul>
+<li><strong>Indexes, never scans, on the message path.</strong> Presence is indexed by character id and by name when a session is created. Routing a whisper is a dictionary lookup, not a loop over everyone online.</li>
+<li><strong>Full state, idempotent.</strong> A guild state packet always carries the whole roster, and "guild id 0" means "no guild". Absence is a state, not a silence, so the client can reset its copy from any single message.</li>
+<li><strong>Rebuild, never forward.</strong> A relayed packet is parsed on the game server and a new one is built for the client. A parsed packet is in read mode, and asking it to serialize again throws (chapter <a href="packet-format.html#build-parse">1.2</a>).</li>
+</ul>
+</div>
+<div lang="fr">
+<h2>Pourquoi le social vit ici</h2>
+<p>Les membres d'une guilde sont répartis sur de nombreuses cartes, servies par autant de processus. Un message privé part d'un joueur sur un serveur vers un joueur sur un autre. Un groupe doit savoir quand ses membres se déconnectent, pas quand ils changent simplement de carte. Rien de tout ça ne peut être décidé par un serveur de jeu, qui ne voit que ses cartes. La gateway est donc l'autorité pour tout le social : présence, routage du chat, groupes, amis, guildes.</p>
+<p>Le serveur de jeu devient un relais. La commande de guilde d'un joueur arrive sur son serveur, qui la transmet à la gateway ; la gateway décide, et la réponse redescend vers chaque membre concerné, par le serveur sur lequel se trouve chacun. Le serveur de jeu ne garde l'autorité que sur les rares gestes qui ont besoin du monde, comme vérifier qu'un joueur se tient au bon endroit avant de fonder quelque chose.</p>
+<p>Trois habitudes gardent cette couche simple :</p>
+<ul>
+<li><strong>Des index, jamais de parcours, sur le chemin d'un message.</strong> La présence est indexée par identifiant de personnage et par nom à la création de la session. Router un message privé, c'est une recherche dans un dictionnaire, pas une boucle sur tous les connectés.</li>
+<li><strong>L'état complet, idempotent.</strong> Un paquet d'état de guilde porte toujours toute la liste des membres, et « guilde 0 » veut dire « pas de guilde ». L'absence est un état, pas un silence : le client peut réinitialiser sa copie à partir de n'importe quel message.</li>
+<li><strong>Reconstruire, jamais transférer.</strong> Un paquet relayé est parsé sur le serveur de jeu et un nouveau est construit pour le client. Un paquet parsé est en mode lecture, et lui demander de se resérialiser lève une exception (chapitre <a href="packet-format.html#build-parse">1.2</a>).</li>
+</ul>
+</div>
+<div lang="en">
+<div class="note rule"><p class="note-label">Rule</p><p>The authority for a feature is the process that can see all of it.</p><p>A guild spans servers, so only the gateway can decide about it. A docking bay is in one map, so only that map's server can. When the data a decision needs is spread over several processes, move the decision, not the data.</p></div>
+</div>
+<div lang="fr">
+<div class="note rule"><p class="note-label">Règle</p><p>L'autorité sur une fonctionnalité est le processus qui peut la voir en entier.</p><p>Une guilde s'étend sur plusieurs serveurs, donc seule la gateway peut en décider. Une baie d'amarrage est dans une carte, donc seul le serveur de cette carte le peut. Quand les données dont une décision a besoin sont réparties sur plusieurs processus, déplacer la décision, pas les données.</p></div>
+</div>
+</section>
+
+<section class="sec" id="memory">
+<div lang="en">
+<h2>What lives only in the gateway's memory</h2>
+<div class="table-wrap"><table>
+<thead><tr><th>Table</th><th>Key</th><th>Purpose</th></tr></thead>
+<tbody>
+<tr><td>Login sessions</td><td>connection → token, token → session</td><td>Who is logged in, on which connection</td></tr>
+<tr><td>Game sessions</td><td>game token → character, server</td><td>Which character plays where; what chat and groups route on</td></tr>
+<tr><td>Presence</td><td>character id, character name</td><td>Who is online; found by lookup, never by scan</td></tr>
+<tr><td>Game servers</td><td>server connection → identity, address, maps hosted, players</td><td>Where each map lives, and how loaded each server is</td></tr>
+<tr><td>Pending map assignments</td><td>map id → waiting callers</td><td>Exactly one assignment in flight per map (chapter <a href="map-hosting.html">7.1</a>)</td></tr>
+</tbody></table></div>
+<p>All of it is rebuilt from scratch at startup. That is a conscious choice: a session is a fact about a running connection, and a connection does not survive a restart anyway. Persisting it would mean keeping two copies of something whose only true copy is the socket.</p>
+</div>
+<div lang="fr">
+<h2>Ce qui ne vit que dans la mémoire de la gateway</h2>
+<div class="table-wrap"><table>
+<thead><tr><th>Table</th><th>Clé</th><th>Rôle</th></tr></thead>
+<tbody>
+<tr><td>Sessions de login</td><td>connexion → jeton, jeton → session</td><td>Qui est connecté, sur quelle connexion</td></tr>
+<tr><td>Sessions de jeu</td><td>jeton de jeu → personnage, serveur</td><td>Quel personnage joue où ; ce sur quoi routent chat et groupes</td></tr>
+<tr><td>Présence</td><td>identifiant de personnage, nom</td><td>Qui est en ligne ; trouvé par recherche, jamais par parcours</td></tr>
+<tr><td>Serveurs de jeu</td><td>connexion serveur → identité, adresse, cartes, joueurs</td><td>Où vit chaque carte, et la charge de chaque serveur</td></tr>
+<tr><td>Assignations en attente</td><td>identifiant de carte → demandeurs</td><td>Exactement une assignation en vol par carte (chapitre <a href="map-hosting.html">7.1</a>)</td></tr>
+</tbody></table></div>
+<p>Tout est reconstruit de zéro au démarrage. C'est un choix : une session est un fait sur une connexion vivante, et une connexion ne survit pas à un redémarrage de toute façon. La persister reviendrait à garder deux copies d'une chose dont la seule vraie copie est la socket.</p>
+</div>
+</section>
+
+<section class="sec" id="logging">
+<div lang="en">
+<h2>A slow console is an outage</h2>
+<div class="note pitfall"><p class="note-label">Pitfall I hit</p><p>The gateway wrote about fifteen log lines for every player who connected, synchronously, from its network thread: the same thread that answers the game servers' session checks and relays map transitions. With five hundred bots arriving, that was seven thousand kernel calls on the critical path of authentication, each holding a process-wide lock. A console that scrolls, a large scrollback, or someone selecting text with the mouse in the console window (which pauses writes until the next click on Windows), and authentication stopped for everyone.</p></div>
+<p>The fix, shared by all server processes: standard output is replaced at the very start of <code>Main</code> by a writer that queues the line and returns. A low-priority thread writes to the real console. The queue is bounded, keeps the order, counts what it had to drop and says so, and is drained when the process exits so the last lines before a crash are not lost. Noisy per-player prefixes can be muted by configuration. Chapter <a href="observability.html">10.1</a> gives the details.</p>
+</div>
+<div lang="fr">
+<h2>Une console lente est une panne</h2>
+<div class="note pitfall"><p class="note-label">Piège rencontré</p><p>La gateway écrivait une quinzaine de lignes de journal pour chaque joueur qui se connectait, en synchrone, depuis son thread réseau : le même thread qui répond aux vérifications de session des serveurs de jeu et relaie les transitions de carte. Avec cinq cents robots qui arrivaient, ça faisait sept mille appels noyau sur le chemin critique de l'authentification, chacun tenant un verrou global au processus. Une console qui défile, un gros historique, ou quelqu'un qui sélectionne du texte à la souris dans la fenêtre (ce qui suspend les écritures jusqu'au clic suivant sous Windows), et l'authentification s'arrêtait pour tout le monde.</p></div>
+<p>La correction, partagée par tous les processus serveur : la sortie standard est remplacée dès le début de <code>Main</code> par un writer qui met la ligne en file et rend la main. Un thread de faible priorité écrit sur la vraie console. La file est bornée, garde l'ordre, compte ce qu'elle a dû jeter et le dit, et se vide à l'arrêt du processus pour ne pas perdre les dernières lignes avant un plantage. Les préfixes bavards par joueur peuvent être rendus muets par configuration. Le chapitre <a href="observability.html">10.1</a> donne les détails.</p>
+</div>
+</section>
+
+<section class="sec" id="takeaways">
+<div class="takeaways">
+<div lang="en"><h2>Key takeaways</h2><ul>
+<li>A gateway exists to answer "where should this player go?", which no single game server can.</li>
+<li>Separate listeners for players and servers make whole classes of permission checks unnecessary.</li>
+<li>Derive authentication from the packet type, and bind session tokens to the connection that logged in.</li>
+<li>Servers join the fleet by signing their announcement with their machine's private key.</li>
+<li>The authority for a feature is the process that sees all of it; for social features that is the gateway.</li>
+</ul></div>
+<div lang="fr"><h2>À retenir</h2><ul>
+<li>Une gateway existe pour répondre à « où doit aller ce joueur ? », ce qu'aucun serveur de jeu ne peut faire seul.</li>
+<li>Des écoutes séparées pour les joueurs et les serveurs rendent inutiles des catégories entières de vérifications de droits.</li>
+<li>Déduire l'authentification du type du paquet, et lier les jetons de session à la connexion qui s'est authentifiée.</li>
+<li>Les serveurs entrent dans le parc en signant leur annonce avec la clé privée de leur machine.</li>
+<li>L'autorité sur une fonctionnalité est le processus qui la voit en entier ; pour le social, c'est la gateway.</li>
+</ul></div>
+</div>
+</section>
+
+</div>
+<div data-chapter-foot></div>
+</article>
+</main>
+<aside class="rail" id="mq-rail"></aside>
+</div>
+<footer class="site-footer" id="mq-footer"></footer>
+<script src="assets/js/site-data.js" defer></script>
+<script src="assets/js/glossary-data.js" defer></script>
+<script src="assets/js/app.js" defer></script>
+<script src="assets/js/widgets.js" defer></script>
+</body>
+</html>

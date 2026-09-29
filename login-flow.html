@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="en" data-lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>From login to first snapshot · MoonQwak</title>
+<meta name="description" content="Password hashing, session tokens, game tokens, and an arrival phase that finally defines what 'arrived' means.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Chakra+Petch:wght@500;600&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="assets/css/site.css">
+<script>(function(){var r=document.documentElement,l,t;try{l=localStorage.getItem("mq-lang");t=localStorage.getItem("mq-theme");}catch(e){}if(l!=="en"&&l!=="fr"){l=(navigator.language||"").toLowerCase().indexOf("fr")===0?"fr":"en";}r.setAttribute("data-lang",l);r.setAttribute("lang",l);if(t==="light"||t==="dark")r.setAttribute("data-theme",t);})();</script>
+</head>
+<body data-page="login-flow">
+<a class="skip-link" href="#main"><span lang="en">Skip to content</span><span lang="fr">Aller au contenu</span></a>
+<header class="site-header" id="mq-header"></header>
+<div class="layout">
+<aside class="sidebar" id="mq-sidebar"></aside>
+<main class="content" id="main">
+<article>
+<header class="chapter-head">
+  <div class="eyebrow" data-auto></div>
+  <h1><span lang="en">From login to first snapshot</span><span lang="fr">Du login au premier snapshot</span></h1>
+  <p class="dek"><span lang="en">Password hashing, session tokens, game tokens, and an arrival phase that finally defines what "arrived" means.</span><span lang="fr">Hachage des mots de passe, jetons de session, jetons de jeu, et une phase d'arrivée qui définit enfin ce que veut dire « arrivé ».</span></p>
+  <div class="meta-row" data-auto></div>
+</header>
+
+<div class="prose">
+
+<section class="sec" id="passwords">
+<div lang="en">
+<h2>Passwords are stored as slow hashes</h2>
+<p>A game database will leak one day, so it must never contain passwords. It contains a salted, deliberately slow hash of each one: PBKDF2 with SHA-256, 100,000 iterations, a random 16-byte salt per account, stored as <code>salt:hash</code> in base64. Verifying a password means recomputing the hash with the stored salt and comparing it in constant time, so that the comparison itself does not leak how many leading bytes matched.</p>
+</div>
+<div lang="fr">
+<h2>Les mots de passe sont stockés en hachages lents</h2>
+<p>Une base de jeu fuira un jour : elle ne doit donc jamais contenir de mots de passe. Elle contient un hachage salé et volontairement lent de chacun : PBKDF2 avec SHA-256, 100 000 itérations, un sel aléatoire de 16 octets par compte, stocké en <code>sel:hachage</code> en base64. Vérifier un mot de passe, c'est recalculer le hachage avec le sel stocké et comparer en temps constant, pour que la comparaison elle-même ne révèle pas combien d'octets de tête correspondaient.</p>
+</div>
+<div class="code"><div class="code-head"><span class="file">Qwak.Data/Services/PasswordHasher.cs</span></div><pre><code data-lang="cs">public static string Hash(string password)
+{
+    var salt = new byte[16];
+    RandomNumberGenerator.Fill(salt);
+    var hash = Rfc2898DeriveBytes.Pbkdf2(password, salt, 100_000, HashAlgorithmName.SHA256, 32);
+    return $"{Convert.ToBase64String(salt)}:{Convert.ToBase64String(hash)}";
+}
+
+public static bool Verify(string password, string stored)
+{
+    var parts = stored.Split(':');
+    if (parts.Length != 2) return false;
+    var computed = Rfc2898DeriveBytes.Pbkdf2(password, Convert.FromBase64String(parts[0]),
+                                             100_000, HashAlgorithmName.SHA256, 32);
+    return CryptographicOperations.FixedTimeEquals(Convert.FromBase64String(parts[1]), computed);
+}</code></pre></div>
+<div lang="en">
+<p>Slowness is the point of the hash and a cost for the server: each verification burns several milliseconds of CPU. That is why the protocol version is checked before it (chapter <a href="protocol-testing.html#version-gate">1.6</a>): an outdated client retrying in a loop must not be able to make the gateway compute a hundred thousand iterations per attempt.</p>
+</div>
+<div lang="fr">
+<p>La lenteur est tout l'intérêt du hachage, et un coût pour le serveur : chaque vérification brûle plusieurs millisecondes de CPU. C'est pour ça que la version du protocole est vérifiée avant (chapitre <a href="protocol-testing.html#version-gate">1.6</a>) : un vieux client qui réessaie en boucle ne doit pas pouvoir faire calculer cent mille itérations à la gateway à chaque tentative.</p>
+</div>
+</section>
+
+<section class="sec" id="tokens">
+<div lang="en">
+<h2>Two tokens, two scopes</h2>
+<p>A successful login creates a <strong>session token</strong>: a random identifier, kept in the gateway's memory, tied to the connection that logged in. It authorizes the character screen: listing, creating, deleting and selecting characters.</p>
+<p>Selecting a character creates a second token, the <strong>game token</strong>, tied to that character. The gateway sends it to the client together with the address of the game server that hosts the character's map. The client opens a new connection to that server and presents the game token. The game server cannot check it (it has never seen it), so it asks the gateway, which answers with the character id and records that this session now lives on this server.</p>
+<p>The two tokens separate two questions: "is this person logged in?" is answered by the gateway on its own connection, and "may this connection play this character here?" is answered for the game server, which never sees a password. The game token stays valid until the game server reports the session closed; consuming it on first use would be a small hardening step.</p>
+</div>
+<div lang="fr">
+<h2>Deux jetons, deux portées</h2>
+<p>Un login réussi crée un <strong>jeton de session</strong> : un identifiant aléatoire, gardé dans la mémoire de la gateway, lié à la connexion qui s'est authentifiée. Il autorise l'écran des personnages : lister, créer, supprimer et choisir.</p>
+<p>Choisir un personnage crée un second jeton, le <strong>jeton de jeu</strong>, lié à ce personnage. La gateway l'envoie au client avec l'adresse du serveur de jeu qui héberge la carte du personnage. Le client ouvre une nouvelle connexion vers ce serveur et présente le jeton de jeu. Le serveur de jeu ne peut pas le vérifier (il ne l'a jamais vu) : il le demande à la gateway, qui répond avec l'identifiant du personnage et note que cette session vit désormais sur ce serveur.</p>
+<p>Les deux jetons séparent deux questions : « cette personne est-elle connectée ? » trouve sa réponse à la gateway, sur sa propre connexion, et « cette connexion peut-elle jouer ce personnage ici ? » trouve la sienne pour le serveur de jeu, qui ne voit jamais un mot de passe. Le jeton de jeu reste valable jusqu'à ce que le serveur de jeu annonce la fermeture de la session ; le consommer à la première utilisation serait un petit durcissement.</p>
+</div>
+</section>
+
+<section class="sec" id="select">
+<div lang="en">
+<h2>Selecting a character</h2>
+<p>Selection does three things in order.</p>
+<ol>
+<li><strong>Takeover.</strong> If this character already has a live session somewhere (a crashed client, a second PC), that session is kicked. The most recent connection always wins. Refusing with "already logged in" would lock a player out of their own character after any crash, and would let two clients fight over one ship.</li>
+<li><strong>Where to wake up.</strong> The character wakes up on the map of their active ship, or at a station if they have no ship. The gateway and the game server must reach the same answer, so both call the same shared query instead of each writing its own version of the rule.</li>
+<li><strong>Find a host.</strong> The gateway looks up which server hosts that map, and if none does, asks one to load it and waits for the answer (chapter <a href="map-hosting.html">7.1</a>). Only then does it create the game token and reply.</li>
+</ol>
+</div>
+<div lang="fr">
+<h2>Choisir un personnage</h2>
+<p>Le choix fait trois choses dans l'ordre.</p>
+<ol>
+<li><strong>Reprise de session.</strong> Si ce personnage a déjà une session vivante quelque part (un client planté, un second PC), cette session est éjectée. La connexion la plus récente gagne toujours. Refuser avec « déjà connecté » enfermerait un joueur hors de son propre personnage après n'importe quel plantage, et laisserait deux clients se disputer un vaisseau.</li>
+<li><strong>Où se réveiller.</strong> Le personnage se réveille sur la carte de son vaisseau actif, ou dans une station s'il n'a pas de vaisseau. La gateway et le serveur de jeu doivent arriver à la même réponse : les deux appellent la même requête partagée au lieu d'écrire chacun sa version de la règle.</li>
+<li><strong>Trouver un hôte.</strong> La gateway cherche quel serveur héberge cette carte, et si aucun ne le fait, demande à l'un d'eux de la charger et attend la réponse (chapitre <a href="map-hosting.html">7.1</a>). Alors seulement, elle crée le jeton de jeu et répond.</li>
+</ol>
+</div>
+</section>
+
+<section class="sec" id="arrival">
+<div lang="en">
+<h2>"Arrived" needs a definition</h2>
+<p>For a long time, arriving on a map was a scatter of independent messages: the map's gravity field here, the spawn result there, each racing the client's scene loading. Worse, the ship was added to the map at the moment the session was validated, so the first snapshots reached a client that had not finished loading. It displayed whatever it had at hand (a stale hull for one frame, a map without its field) and then corrected itself in front of the player. Each of those artefacts was chased separately. They were one bug: nothing defined what "arrived" meant.</p>
+<p>Arrival is now a phase with a beginning and an end, owned by the server:</p>
+</div>
+<div lang="fr">
+<h2>« Arrivé » a besoin d'une définition</h2>
+<p>Longtemps, arriver sur une carte a été une dispersion de messages indépendants : le champ de gravité de la carte ici, le résultat du spawn là, chacun en course avec le chargement de scène du client. Pire, le vaisseau était ajouté à la carte à l'instant où la session était validée : les premiers snapshots atteignaient un client qui n'avait pas fini de charger. Il affichait ce qu'il avait sous la main (une coque périmée pendant une image, une carte sans son champ) puis se corrigeait sous les yeux du joueur. Chacun de ces artefacts a été traqué séparément. C'était un seul bug : rien ne définissait ce que voulait dire « arrivé ».</p>
+<p>L'arrivée est maintenant une phase avec un début et une fin, possédée par le serveur :</p>
+</div>
+<div class="lab" data-stepper>
+<div class="lab-head"><span class="lab-title"><span lang="en">The arrival phase</span><span lang="fr">La phase d'arrivée</span></span><span class="lab-sub"><span lang="en">Nothing enters the world before the client says it is ready</span><span lang="fr">Rien n'entre dans le monde avant que le client se dise prêt</span></span></div>
+<div class="lab-body">
+<div class="fig-scroll">
+<svg viewBox="0 0 760 330" role="img" aria-label="Arrival sequence between the client and the game server: EnterGame, validation, loading state, EnterGameResult, catalog sync, MapInit, MapReady, then the ship enters the map and snapshots start">
+  <defs><marker id="lf-arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs>
+  <rect x="60" y="12" width="160" height="34" rx="6" class="dg-hot"/><text x="140" y="34" text-anchor="middle" class="dg-text" font-weight="700"><tspan lang="en">Client</tspan><tspan lang="fr">Client</tspan></text>
+  <rect x="540" y="12" width="160" height="34" rx="6" class="dg-box-2"/><text x="620" y="34" text-anchor="middle" class="dg-text" font-weight="700"><tspan lang="en">Game server</tspan><tspan lang="fr">Serveur de jeu</tspan></text>
+  <g class="dg-line dg-dash"><line x1="140" y1="46" x2="140" y2="320"/><line x1="620" y1="46" x2="620" y2="320"/></g>
+  <g data-step="1"><line class="dg-line seq-msg" x1="140" y1="70" x2="616" y2="70" marker-end="url(#lf-arr)"/><text class="dg-small" x="380" y="64" text-anchor="middle">EnterGame(game token)</text>
+    <rect x="632" y="78" width="118" height="26" rx="5" class="dg-box"/><text class="dg-small" x="691" y="95" text-anchor="middle"><tspan lang="en">ask gateway</tspan><tspan lang="fr">demander à la gateway</tspan></text></g>
+  <g data-step="2"><rect x="632" y="112" width="118" height="40" rx="5" class="dg-hot"/><text class="dg-small" x="691" y="128" text-anchor="middle"><tspan lang="en">ship built,</tspan><tspan lang="fr">vaisseau construit,</tspan></text><text class="dg-small" x="691" y="143" text-anchor="middle"><tspan lang="en">NOT in the map</tspan><tspan lang="fr">PAS dans la carte</tspan></text></g>
+  <g data-step="3"><line class="dg-line seq-msg" x1="620" y1="170" x2="144" y2="170" marker-end="url(#lf-arr)"/><text class="dg-small" x="380" y="164" text-anchor="middle"><tspan lang="en">EnterGameResult: which map</tspan><tspan lang="fr">EnterGameResult : quelle carte</tspan></text></g>
+  <g data-step="4"><line class="dg-line seq-msg" x1="620" y1="200" x2="144" y2="200" marker-end="url(#lf-arr)"/><text class="dg-small" x="380" y="194" text-anchor="middle"><tspan lang="en">CatalogSync: game data that differs from the client's DLL</tspan><tspan lang="fr">CatalogSync : données qui diffèrent de la DLL du client</tspan></text></g>
+  <g data-step="5"><line class="dg-line seq-msg" x1="620" y1="230" x2="144" y2="230" marker-end="url(#lf-arr)"/><text class="dg-small" x="380" y="224" text-anchor="middle"><tspan lang="en">MapInit: what this map is (fields, known maps)</tspan><tspan lang="fr">MapInit : ce qu'est cette carte (champs, cartes connues)</tspan></text>
+    <rect x="10" y="238" width="118" height="26" rx="5" class="dg-box"/><text class="dg-small" x="69" y="255" text-anchor="middle"><tspan lang="en">loading screen</tspan><tspan lang="fr">écran de chargement</tspan></text></g>
+  <g data-step="6"><line class="dg-line seq-msg" x1="140" y1="276" x2="616" y2="276" marker-end="url(#lf-arr)"/><text class="dg-small" x="380" y="270" text-anchor="middle"><tspan lang="en">MapReady (always sent, in a finally)</tspan><tspan lang="fr">MapReady (toujours envoyé, dans un finally)</tspan></text></g>
+  <g data-step="7"><rect x="632" y="284" width="118" height="26" rx="5" class="dg-hot"/><text class="dg-small" x="691" y="301" text-anchor="middle"><tspan lang="en">add to map · Seated</tspan><tspan lang="fr">ajout carte · Assis</tspan></text>
+    <line class="dg-line seq-msg" x1="620" y1="312" x2="144" y2="312" marker-end="url(#lf-arr)"/><text class="dg-small" x="380" y="306" text-anchor="middle"><tspan lang="en">first snapshot</tspan><tspan lang="fr">premier snapshot</tspan></text></g>
+</svg>
+</div>
+<ol class="steps">
+<li><span lang="en">The client presents its game token. The server asks the gateway whether it is valid; the answer comes back on the gateway link.</span><span lang="fr">Le client présente son jeton de jeu. Le serveur demande à la gateway s'il est valide ; la réponse revient par le lien gateway.</span></li>
+<li><span lang="en">The server loads the character and builds the ship, but does <strong>not</strong> add it to the map. The player is in the <code>Loading</code> state: every input handler already refuses input in that state, and the snapshot builder skips the player explicitly. <code>Loading</code> is the first value of the enum, so a player cannot exist "already arrived" by default.</span><span lang="fr">Le serveur charge le personnage et construit le vaisseau, mais ne l'ajoute <strong>pas</strong> à la carte. Le joueur est dans l'état <code>Loading</code> : chaque gestionnaire d'entrée refuse déjà les entrées dans cet état, et le constructeur de snapshots saute explicitement ce joueur. <code>Loading</code> est la première valeur de l'énumération : un joueur ne peut pas exister « déjà arrivé » par défaut.</span></li>
+<li><span lang="en"><code>EnterGameResult</code> says which map: the client needs it to load the right scene.</span><span lang="fr"><code>EnterGameResult</code> dit quelle carte : le client en a besoin pour charger la bonne scène.</span></li>
+<li><span lang="en">If the server's game data has been edited since the client was built, the changed catalogs are sent now, compressed, so the client reads its own hull with the right numbers. See <a href="data-and-catalogs.html">6.3</a>.</span><span lang="fr">Si les données de jeu du serveur ont été modifiées depuis la compilation du client, les catalogues changés partent maintenant, compressés, pour que le client lise sa propre coque avec les bons chiffres. Voir <a href="data-and-catalogs.html">6.3</a>.</span></li>
+<li><span lang="en"><code>MapInit</code> says what the map is: its field sources and the maps this character already knows. It is the one place to add any future arrival data, without reopening the question of when to send it. The client keeps its loading screen until everything is applied.</span><span lang="fr"><code>MapInit</code> dit ce qu'est la carte : ses sources de champ et les cartes que ce personnage connaît déjà. C'est l'endroit unique où ajouter toute future donnée d'arrivée, sans rouvrir la question du moment de l'envoi. Le client garde son écran de chargement jusqu'à tout avoir appliqué.</span></li>
+<li><span lang="en">The client sends <code>MapReady</code> from a <code>finally</code> block: even if applying one piece fails, the message goes out. A missing gravity well is a bug; a player stuck forever on a loading screen is worse.</span><span lang="fr">Le client envoie <code>MapReady</code> depuis un bloc <code>finally</code> : même si l'application d'un morceau échoue, le message part. Un puits gravitationnel manquant est un bug ; un joueur bloqué pour toujours sur un écran de chargement est pire.</span></li>
+<li><span lang="en">Only now does the server add the ship to the map and switch the player to <code>Seated</code>. The first snapshot describes a world the client is ready to draw.</span><span lang="fr">Maintenant seulement, le serveur ajoute le vaisseau à la carte et passe le joueur en <code>Seated</code>. Le premier snapshot décrit un monde que le client est prêt à dessiner.</span></li>
+</ol>
+</div>
+</div>
+<div lang="en">
+<div class="note tradeoff"><p class="note-label">Trade-off</p><p>There is no timeout on <code>MapReady</code>, deliberately. A client that never sends it stays invisible, and its connection eventually dies through the normal disconnect path. A partial, silent spawn (in the map but not ready) would be worse than a visible hang, and far harder to diagnose.</p></div>
+<div class="note rule"><p class="note-label">Rule</p><p>When several bugs share a moment ("on arrival", "on reconnect"), give that moment a name, an owner and an explicit end.</p><p>An undefined phase produces a family of race conditions that look unrelated. A named state that handlers already respect removes the family at once.</p></div>
+</div>
+<div lang="fr">
+<div class="note tradeoff"><p class="note-label">Compromis</p><p>Il n'y a pas de délai d'expiration sur <code>MapReady</code>, délibérément. Un client qui ne l'envoie jamais reste invisible, et sa connexion finit par mourir par le chemin normal de déconnexion. Une apparition partielle et silencieuse (dans la carte mais pas prête) serait pire qu'un blocage visible, et bien plus dure à diagnostiquer.</p></div>
+<div class="note rule"><p class="note-label">Règle</p><p>Quand plusieurs bugs partagent un moment (« à l'arrivée », « à la reconnexion »), donner à ce moment un nom, un propriétaire et une fin explicite.</p><p>Une phase non définie produit une famille de courses qui ont l'air sans rapport. Un état nommé que les gestionnaires respectent déjà supprime toute la famille d'un coup.</p></div>
+</div>
+</section>
+
+<section class="sec" id="redundancy">
+<div lang="en">
+<h2>Redundancy bought on purpose</h2>
+<p><code>MapInit</code> resends, every time, the list of maps this character has visited, each with the faction that controlled it at the time and the age of that information. Strictly, the client needs it once per session. Sending it on every arrival means a client that reconnects, crashes or is freshly installed converges to the truth each time, and nothing on the server has to remember what it already told whom. A few dozen bytes on a screen the player crosses anyway are not worth optimizing against correctness.</p>
+<p>The ages are sent as hours elapsed, not as dates. The client has no clock to synchronize with the server, so nothing can drift, and the value is capped by the constructor of the message itself, which keeps it within one byte even for a map visited six months ago.</p>
+</div>
+<div lang="fr">
+<h2>Une redondance achetée exprès</h2>
+<p><code>MapInit</code> renvoie à chaque fois la liste des cartes que ce personnage a visitées, chacune avec la faction qui la contrôlait à ce moment et l'âge de ce renseignement. Strictement, le client n'en a besoin qu'une fois par session. L'envoyer à chaque arrivée fait qu'un client qui se reconnecte, qui a planté ou qui est fraîchement installé converge vers la vérité à chaque fois, et rien côté serveur n'a à se souvenir de ce qu'il a déjà dit à qui. Quelques dizaines d'octets sur un écran que le joueur traverse de toute façon ne valent pas d'être optimisés contre la justesse.</p>
+<p>Les âges partent en heures écoulées, pas en dates. Le client n'a aucune horloge à synchroniser avec le serveur, rien ne peut dériver, et la valeur est plafonnée par le constructeur du message lui-même, ce qui la garde sur un octet même pour une carte visitée il y a six mois.</p>
+</div>
+<div lang="en">
+<div class="note rule"><p class="note-label">Rule</p><p>Send durations, not timestamps.</p><p>"Expires in 3,600 s" needs no clock agreement and lets the client count down on its own. A date forces both ends to agree on time and time zone, and the day they disagree the bug looks like a logic error.</p></div>
+</div>
+<div lang="fr">
+<div class="note rule"><p class="note-label">Règle</p><p>Envoyer des durées, pas des horodatages.</p><p>« Expire dans 3 600 s » ne demande aucun accord d'horloge et laisse le client décompter seul. Une date oblige les deux bouts à s'accorder sur l'heure et le fuseau, et le jour où ils ne s'accordent pas, le bug ressemble à une erreur de logique.</p></div>
+</div>
+</section>
+
+<section class="sec" id="off-tick">
+<div lang="en">
+<h2>Loading happens outside the tick</h2>
+<p>Everything above runs on the network thread and the background threads, never inside the 40 ms world tick. Reading the character, the ship and its parts from the database takes milliseconds, sometimes far more. Only the final step, creating the ship's physics body when it enters the map, runs on the tick thread, and it is queued there rather than done immediately (chapter <a href="no-db-in-tick.html">3.4</a>).</p>
+<div class="note measured"><p class="note-label">Measured</p><p>In a bench with 2,500 bots, map loading still read the database from inside the tick: seven round trips per map. Fifty maps were created in ninety seconds and the tick rate collapsed to 3.6 per second, with the CPU at 25%. It was waiting, not computing. Splitting "read the content" (off the tick, one database context) from "place the bodies" (on the tick, with a time budget) removed the stall.</p></div>
+</div>
+<div lang="fr">
+<h2>Le chargement se fait hors du tick</h2>
+<p>Tout ce qui précède tourne sur le thread réseau et les threads de fond, jamais dans le tick du monde de 40 ms. Lire le personnage, le vaisseau et ses pièces en base prend des millisecondes, parfois bien plus. Seule la dernière étape, la création du corps physique du vaisseau quand il entre dans la carte, tourne sur le thread du tick, et elle y est mise en file plutôt que faite immédiatement (chapitre <a href="no-db-in-tick.html">3.4</a>).</p>
+<div class="note measured"><p class="note-label">Mesuré</p><p>Dans un banc à 2 500 robots, le chargement des cartes lisait encore la base depuis le tick : sept allers-retours par carte. Cinquante cartes ont été créées en quatre-vingt-dix secondes et la cadence est tombée à 3,6 ticks par seconde, avec le CPU à 25 %. Il attendait, il ne calculait pas. Séparer « lire le contenu » (hors tick, un seul contexte de base) de « poser les corps » (sur le tick, avec un budget de temps) a supprimé le blocage.</p></div>
+</div>
+</section>
+
+<section class="sec" id="takeaways">
+<div class="takeaways">
+<div lang="en"><h2>Key takeaways</h2><ul>
+<li>Store slow, salted password hashes, compare in constant time, and check cheap things (the protocol version) before the expensive hash.</li>
+<li>Use a login token for the gateway and a separate game token for the game server; the game server asks the gateway instead of seeing credentials.</li>
+<li>On a new login for a character that is already online, the most recent connection wins.</li>
+<li>Define arrival as a phase: build, describe, wait for the client, then add to the world.</li>
+<li>Prefer redundant, self-healing initialization messages and durations over dates.</li>
+</ul></div>
+<div lang="fr"><h2>À retenir</h2><ul>
+<li>Stocker des hachages de mots de passe lents et salés, comparer en temps constant, et vérifier le bon marché (la version du protocole) avant le hachage coûteux.</li>
+<li>Utiliser un jeton de login pour la gateway et un jeton de jeu distinct pour le serveur de jeu ; le serveur de jeu demande à la gateway au lieu de voir les identifiants.</li>
+<li>Quand un personnage déjà en ligne se reconnecte, la connexion la plus récente gagne.</li>
+<li>Définir l'arrivée comme une phase : construire, décrire, attendre le client, puis ajouter au monde.</li>
+<li>Préférer des messages d'initialisation redondants et auto-réparateurs, et des durées plutôt que des dates.</li>
+</ul></div>
+</div>
+</section>
+
+</div>
+<div data-chapter-foot></div>
+</article>
+</main>
+<aside class="rail" id="mq-rail"></aside>
+</div>
+<footer class="site-footer" id="mq-footer"></footer>
+<script src="assets/js/site-data.js" defer></script>
+<script src="assets/js/glossary-data.js" defer></script>
+<script src="assets/js/app.js" defer></script>
+<script src="assets/js/widgets.js" defer></script>
+</body>
+</html>

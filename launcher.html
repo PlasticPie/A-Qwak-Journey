@@ -1,0 +1,474 @@
+<!doctype html>
+<html lang="en" data-lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>The launcher · MoonQwak</title>
+<meta name="description" content="Planning, verifying and applying an update atomically, and replacing yourself while you are running.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Chakra+Petch:wght@500;600&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="assets/css/site.css">
+<script>(function(){var r=document.documentElement,l,t;try{l=localStorage.getItem("mq-lang");t=localStorage.getItem("mq-theme");}catch(e){}if(l!=="en"&&l!=="fr"){l=(navigator.language||"").toLowerCase().indexOf("fr")===0?"fr":"en";}r.setAttribute("data-lang",l);r.setAttribute("lang",l);if(t==="light"||t==="dark")r.setAttribute("data-theme",t);})();</script>
+</head>
+<body data-page="launcher">
+<a class="skip-link" href="#main"><span lang="en">Skip to content</span><span lang="fr">Aller au contenu</span></a>
+<header class="site-header" id="mq-header"></header>
+<div class="layout">
+<aside class="sidebar" id="mq-sidebar"></aside>
+<main class="content" id="main">
+<article>
+<header class="chapter-head">
+  <div class="eyebrow" data-auto></div>
+  <h1><span lang="en">The launcher</span><span lang="fr">Le launcher</span></h1>
+  <p class="dek"><span lang="en">Planning, verifying and applying an update atomically, and replacing yourself while you are running.</span><span lang="fr">Planifier, vérifier et appliquer une mise à jour de façon atomique, et se remplacer soi-même en cours d'exécution.</span></p>
+  <div class="meta-row" data-auto></div>
+</header>
+
+<div class="prose">
+
+<section class="sec" id="job">
+<div lang="en">
+<h2>A small job that must never lie</h2>
+<p>The launcher's job fits in one sentence: find out what the server publishes (chapter <a href="updater.html">8.1</a>), compare it with what is on the disk, fetch the difference, verify it, and start the game. What makes it delicate is that every step can be interrupted: a network cut, a closed laptop, an antivirus holding a file. The design rule is that an interruption, at any point, leaves an installation that is either still the old version or repaired by the next launch. Never one that <em>claims</em> to be complete when it is not.</p>
+<p>The engine that checks and applies has no user interface at all. The window only displays what the engine reports, through a callback, and it is the window's job to hop back onto its own thread. Everything interesting can therefore be tested without the UI framework, and a command-line launcher (for a Linux friend, or a test machine) would need nothing rewritten.</p>
+</div>
+<div lang="fr">
+<h2>Un petit travail qui ne doit jamais mentir</h2>
+<p>Le travail du launcher tient en une phrase : savoir ce que publie le serveur (chapitre <a href="updater.html">8.1</a>), le comparer à ce qu'il y a sur le disque, récupérer la différence, la vérifier, et lancer le jeu. Ce qui le rend délicat, c'est que chaque étape peut être interrompue : une coupure réseau, un portable qu'on referme, un antivirus qui tient un fichier. La règle de conception est qu'une interruption, à n'importe quel moment, laisse une installation qui est soit encore l'ancienne version, soit réparée par le lancement suivant. Jamais une installation qui <em>prétend</em> être complète alors qu'elle ne l'est pas.</p>
+<p>Le moteur qui vérifie et applique n'a aucune interface. La fenêtre ne fait qu'afficher ce que le moteur rapporte, par un rappel, et c'est à la fenêtre de repasser sur son propre thread. Tout ce qui est intéressant se teste donc sans le framework d'interface, et un launcher en ligne de commande (pour un ami sous Linux, ou une machine de test) n'aurait rien à réécrire.</p>
+</div>
+<figure class="fig fig-scroll">
+<svg viewBox="0 0 760 210" role="img" aria-label="One launch: start and clean the staging folder, read launcher.json, check the launcher channel; if the launcher is outdated, stage the new version and hand over; otherwise check the game channel, apply the plan, then play and close">
+  <defs><marker id="la-arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="currentColor" opacity="0.7"/></marker></defs>
+  <rect x="20" y="20" width="160" height="54" rx="8" class="dg-box"/>
+  <text class="dg-text" x="100" y="42" text-anchor="middle" font-weight="700"><tspan lang="en">start</tspan><tspan lang="fr">démarrage</tspan></text>
+  <text class="dg-small" x="100" y="60" text-anchor="middle"><tspan lang="en">clean launcher-neuf/</tspan><tspan lang="fr">nettoyer launcher-neuf/</tspan></text>
+  <rect x="210" y="20" width="160" height="54" rx="8" class="dg-box"/>
+  <text class="dg-text" x="290" y="42" text-anchor="middle" font-weight="700"><tspan lang="en">read launcher.json</tspan><tspan lang="fr">lire launcher.json</tspan></text>
+  <text class="dg-small" x="290" y="60" text-anchor="middle"><tspan lang="en">unreadable → show, stop</tspan><tspan lang="fr">illisible : message, arrêt</tspan></text>
+  <rect x="400" y="20" width="160" height="54" rx="8" class="dg-hot"/>
+  <text class="dg-text" x="480" y="42" text-anchor="middle" font-weight="700"><tspan lang="en">launcher channel</tspan><tspan lang="fr">canal launcher</tspan></text>
+  <text class="dg-small" x="480" y="60" text-anchor="middle"><tspan lang="en">up to date?</tspan><tspan lang="fr">à jour ?</tspan></text>
+  <rect x="590" y="20" width="150" height="54" rx="8" class="dg-box-2"/>
+  <text class="dg-text" x="665" y="42" text-anchor="middle" font-weight="700"><tspan lang="en">stage + hand over</tspan><tspan lang="fr">transit + relève</tspan></text>
+  <text class="dg-small" x="665" y="60" text-anchor="middle"><tspan lang="en">then exit</tspan><tspan lang="fr">puis quitter</tspan></text>
+  <text class="dg-small" x="665" y="94" text-anchor="middle"><tspan lang="en">relaunched, it starts over</tspan><tspan lang="fr">relancé, il recommence</tspan></text>
+  <line x1="180" y1="47" x2="206" y2="47" class="dg-line" marker-end="url(#la-arr)"/>
+  <line x1="370" y1="47" x2="396" y2="47" class="dg-line" marker-end="url(#la-arr)"/>
+  <line x1="560" y1="47" x2="586" y2="47" class="dg-line" marker-end="url(#la-arr)"/>
+  <text class="dg-small" x="573" y="38" text-anchor="middle"><tspan lang="en">no</tspan><tspan lang="fr">non</tspan></text>
+  <line x1="480" y1="74" x2="480" y2="126" class="dg-line" marker-end="url(#la-arr)"/>
+  <text class="dg-small" x="488" y="104"><tspan lang="en">yes, or check failed</tspan><tspan lang="fr">oui, ou vérif. en échec</tspan></text>
+  <rect x="400" y="130" width="160" height="54" rx="8" class="dg-box"/>
+  <text class="dg-text" x="480" y="152" text-anchor="middle" font-weight="700"><tspan lang="en">game channel</tspan><tspan lang="fr">canal jeu</tspan></text>
+  <text class="dg-small" x="480" y="170" text-anchor="middle"><tspan lang="en">plan: fetch, delete</tspan><tspan lang="fr">plan : récupérer, supprimer</tspan></text>
+  <rect x="210" y="130" width="160" height="54" rx="8" class="dg-box"/>
+  <text class="dg-text" x="290" y="152" text-anchor="middle" font-weight="700"><tspan lang="en">apply</tspan><tspan lang="fr">appliquer</tspan></text>
+  <text class="dg-small" x="290" y="170" text-anchor="middle"><tspan lang="en">verify, rename, clean</tspan><tspan lang="fr">vérifier, poser, nettoyer</tspan></text>
+  <rect x="20" y="130" width="160" height="54" rx="8" class="dg-hot"/>
+  <text class="dg-text" x="100" y="152" text-anchor="middle" font-weight="700"><tspan lang="en">Play</tspan><tspan lang="fr">Jouer</tspan></text>
+  <text class="dg-small" x="100" y="170" text-anchor="middle"><tspan lang="en">start the game, close</tspan><tspan lang="fr">lancer le jeu, fermer</tspan></text>
+  <line x1="400" y1="157" x2="374" y2="157" class="dg-line" marker-end="url(#la-arr)"/>
+  <line x1="210" y1="157" x2="184" y2="157" class="dg-line" marker-end="url(#la-arr)"/>
+</svg>
+<figcaption><span lang="en"><strong>One launch.</strong> The launcher updates itself before it looks at the game. The "Verify files" button runs the same path, with a full re-hash instead of the fast comparison.</span><span lang="fr"><strong>Un lancement.</strong> Le launcher se met à jour avant de regarder le jeu. Le bouton « Vérifier les fichiers » suit le même chemin, avec un rehachage complet au lieu de la comparaison rapide.</span></figcaption>
+</figure>
+<div lang="en">
+<p>The order is deliberate: <strong>the launcher first, always</strong>. The launcher is what knows how to install the game, and a new game build may require a newer launcher (a wider manifest format, one more channel); the reverse never happens. Updating the game first would install a version with a tool that does not fully understand it, the kind of failure that only shows on the third deployment. Startup and the "Verify files" button also share one single path: two paths would have diverged at the first special case.</p>
+</div>
+<div lang="fr">
+<p>L'ordre est voulu : <strong>le launcher d'abord, toujours</strong>. Le launcher est ce qui sait installer le jeu, et une nouvelle build du jeu peut exiger un launcher plus récent (un format de manifeste élargi, un canal de plus) ; l'inverse n'arrive jamais. Mettre à jour le jeu d'abord installerait une version avec un outil qui ne la comprend pas tout à fait, le genre de panne qui ne se voit qu'au troisième déploiement. Le démarrage et le bouton « Vérifier les fichiers » partagent aussi un seul et même chemin : deux chemins auraient divergé au premier cas particulier.</p>
+</div>
+</section>
+
+<section class="sec" id="plan">
+<div lang="en">
+<h2>A plan, not an action</h2>
+<p>Comparing the installation with the manifest produces a <strong>plan</strong>: a list of files to fetch and a list of files to delete. A plan is computed, displayed ("340 MB to download"), then executed. Separating the two lets the launcher ask before using someone's bandwidth, and above all lets the decision be tested without touching a disk. The comparison runs in one of two regimes:</p>
+<div class="compare">
+<div><h4>Fast path (every launch)</h4><p>Trust the manifest the launcher itself wrote after the last successful update, and check only each file's <strong>size</strong> on disk. A 500 MB build compares in a few tens of milliseconds instead of several seconds of SHA-256. On a hard drive, that is the difference between "instant" and "has the launcher crashed?"</p></div>
+<div><h4>Deep path ("Verify files")</h4><p>Ignore the local manifest and re-hash every file. The only way to detect silent corruption (a dead sector, an antivirus that truncates, a manual edit), and the only way to repair an installation whose local manifest was lost.</p></div>
+</div>
+<p>Size proves nothing in theory: a file can be corrupted without changing size. But it catches everything that actually happens after a successful update: a deleted file, an interrupted write, a partial replacement. And the real guarantee lives elsewhere: every downloaded file is verified against its hash <em>before</em> it is put in place. The fast path only decides what to download again, never what to believe.</p>
+</div>
+<div lang="fr">
+<h2>Un plan, pas une action</h2>
+<p>Comparer l'installation au manifeste produit un <strong>plan</strong> : une liste de fichiers à récupérer et une liste de fichiers à supprimer. Un plan se calcule, s'affiche (« 340 Mo à télécharger »), puis s'exécute. Séparer les deux permet au launcher de demander avant de consommer la bande passante de quelqu'un, et surtout de tester la décision sans toucher à un disque. La comparaison suit l'un de deux régimes :</p>
+<div class="compare">
+<div><h4>Chemin rapide (chaque lancement)</h4><p>Faire confiance au manifeste que le launcher a lui-même écrit après la dernière mise à jour réussie, et ne vérifier que la <strong>taille</strong> de chaque fichier sur le disque. Une build de 500 Mo se compare en quelques dizaines de millisecondes au lieu de plusieurs secondes de SHA-256. Sur un disque dur, c'est la différence entre « instantané » et « le launcher a planté ? »</p></div>
+<div><h4>Chemin complet (« Vérifier les fichiers »)</h4><p>Ignorer le manifeste local et rehacher chaque fichier. Le seul moyen de détecter une corruption silencieuse (un secteur mort, un antivirus qui tronque, une modification à la main), et le seul moyen de réparer une installation dont le manifeste local a été perdu.</p></div>
+</div>
+<p>La taille ne prouve rien en théorie : un fichier peut être corrompu sans changer de taille. Mais elle attrape tout ce qui arrive réellement après une mise à jour réussie : un fichier effacé, une écriture interrompue, un remplacement partiel. Et la vraie garantie vit ailleurs : chaque fichier téléchargé est vérifié par son hachage <em>avant</em> d'être mis en place. Le chemin rapide ne décide que quoi retélécharger, jamais quoi croire.</p>
+</div>
+<div class="code"><div class="code-head"><span class="file">Qwak.Patcher/UpdatePlan.cs · Compute, simplified</span></div><pre><code data-lang="cs">foreach (var want in remote.Files)
+{
+    var full = Path.Combine(root, want.Path);
+    if (!File.Exists(full)) { plan.Fetch.Add(want); continue; }
+
+    if (installedByPath != null)
+    {
+        // Fast path: does the manifest we applied last time already say this hash,
+        // and does the size on disk match? A "no" to either re-fetches the file.
+        if (installedByPath.TryGetValue(want.Path, out var had)
+            &amp;&amp; had.Sha256 == want.Sha256
+            &amp;&amp; new FileInfo(full).Length == want.Size)
+            continue;
+        plan.Fetch.Add(want);
+        continue;
+    }
+
+    // Deep path: believe only what we just computed.
+    if (BuildScanner.HashFile(full) != want.Sha256) plan.Fetch.Add(want);
+}
+
+// Orphans: ONLY what the previous manifest claimed. No manifest, no deletion.
+if (installedByPath == null) return plan;
+foreach (var path in installedByPath.Keys)
+{
+    if (wanted.ContainsKey(path)) continue;
+    if (IsControlFile(path)) continue;                 // the launcher's own files
+    if (!ManifestFile.IsSafeRelative(path)) continue;  // never outside the folder
+    if (File.Exists(Path.Combine(root, path))) plan.Delete.Add(path);
+}</code></pre></div>
+</section>
+
+<section class="sec" id="orphans">
+<div lang="en">
+<h2>Deleting is necessary, and dangerous</h2>
+<p>An installer that only adds files accumulates orphans, because Unity renames and moves files from one version to the next. The case that hurts is a renamed assembly: two DLLs exporting the same types, and a loader that picks the wrong one depending on the order the file system lists them. So deleting is part of the plan. But a <code>File.Delete</code> driven by a list is the most dangerous line of a launcher, and it is surrounded by four guards:</p>
+<ul>
+<li><strong>Only what the previous manifest claimed</strong>, never "everything in the folder that is not in the new manifest". That is the difference between cleaning your own installation and erasing what you find on the player's disk: a save, a screenshot or a config file placed next to the game would vanish at the first update.</li>
+<li><strong>No local manifest, no deletion.</strong> If the launcher does not know what belongs to it, it deletes nothing.</li>
+<li><strong>Never the launcher's control files</strong>, even when an old manifest claims them. That is the transition case: manifests published before the control files were excluded still list them.</li>
+<li><strong>Never outside the folder</strong>, even for paths from the local manifest, which the launcher wrote itself. "In principle safe" is not enough when the consequence is a delete on an absolute path, and an old version of the manifest may have been written before any validation existed.</li>
+</ul>
+<p>The same reasoning places the game in a <code>jeu/</code> sub-folder under the launcher rather than in the launcher's own folder. The launcher deletes files where it installs; installing the game over itself would give it the right to erase its own executable, its configuration, and whatever the player put there. A clear border between "what I manage" and "what is next to me" is worth the ten characters of a sub-folder.</p>
+<div class="note rule"><p class="note-label">Rule</p><p>Delete only what you can prove you created.</p><p>Absence from the new list is not proof. Presence in the previous list you wrote is.</p></div>
+</div>
+<div lang="fr">
+<h2>Supprimer est nécessaire, et dangereux</h2>
+<p>Un installateur qui ne fait qu'ajouter accumule des orphelins, parce qu'Unity renomme et déplace des fichiers d'une version à l'autre. Le cas qui fait mal est l'assembly renommée : deux DLL qui exportent les mêmes types, et un chargeur qui prend la mauvaise selon l'ordre dans lequel le système de fichiers les liste. Supprimer fait donc partie du plan. Mais un <code>File.Delete</code> piloté par une liste est la ligne la plus dangereuse d'un launcher, et elle est entourée de quatre gardes :</p>
+<ul>
+<li><strong>Seulement ce que le manifeste précédent revendiquait</strong>, jamais « tout ce qui, dans le dossier, n'est pas dans le nouveau manifeste ». C'est la différence entre nettoyer sa propre installation et effacer ce qu'on trouve sur le disque du joueur : une sauvegarde, une capture d'écran ou un fichier de configuration posé à côté du jeu disparaîtrait à la première mise à jour.</li>
+<li><strong>Pas de manifeste local, pas de suppression.</strong> Si le launcher ne sait pas ce qui lui appartient, il ne supprime rien.</li>
+<li><strong>Jamais les fichiers de contrôle du launcher</strong>, même quand un ancien manifeste les revendique. C'est le cas de transition : les manifestes publiés avant l'exclusion des fichiers de contrôle les citent encore.</li>
+<li><strong>Jamais hors du dossier</strong>, même pour des chemins venant du manifeste local, que le launcher a écrit lui-même. « En principe sain » ne suffit pas quand la conséquence est une suppression sur un chemin absolu, et une ancienne version du manifeste a pu être écrite avant que la moindre validation existe.</li>
+</ul>
+<p>Le même raisonnement place le jeu dans un sous-dossier <code>jeu/</code> sous le launcher plutôt que dans le dossier du launcher lui-même. Le launcher supprime des fichiers là où il installe ; installer le jeu par-dessus lui-même lui donnerait le droit d'effacer son propre exécutable, sa configuration, et tout ce que le joueur y a posé. Une frontière nette entre « ce que je gère » et « ce qui est à côté de moi » vaut bien la dizaine de caractères d'un sous-dossier.</p>
+<div class="note rule"><p class="note-label">Règle</p><p>Ne supprimer que ce qu'on peut prouver avoir créé.</p><p>L'absence de la nouvelle liste n'est pas une preuve. La présence dans la liste précédente, écrite par soi, en est une.</p></div>
+</div>
+</section>
+
+<section class="sec" id="apply">
+<div lang="en">
+<h2>Applying: the order is the safety</h2>
+<p>Applying a plan is four steps, and their order is what makes every interruption harmless:</p>
+<ol class="timeline">
+<li><span class="tl-tag">1</span><div><h3>Fetch in parallel, bounded</h3><p>Four downloads at a time by default, configurable. Beyond that, a home connection does not go faster: the same bandwidth is split over more connections. Below it, round-trip latency dominates the thousands of small files of a Unity build. The bound is a semaphore around the requests, not a parallel loop: the work is waiting on the network, and a degree of parallelism chosen by the thread pool would bear no relation to what a home line can take.</p></div></li>
+<li><span class="tl-tag">2</span><div><h3>Each file: temporary name, hash, rename</h3><p>The body is streamed into a temporary file beside the target, hashed, and renamed over the target only if the hash matches. A rename on the same volume is atomic, so there is never a moment when the final file exists half-written. An abandoned temporary file fools no one, and the next pass overwrites it.</p></div></li>
+<li><span class="tl-tag">3</span><div><h3>Delete the orphans, after</h3><p>After all downloads, never before. If the update fails on the way, an installation with extra files is better than one with missing files: the first still runs (it is the old version), the second does not start.</p></div></li>
+<li><span class="tl-tag">4</span><div><h3>Write the installed manifest, last</h3><p>The local manifest is the promise "this is what is installed". Written before the end, any interruption would turn it into a permanent lie: the next launch's fast path would believe the installation complete and download nothing, leaving a half-updated game with no way out except "Verify files". Written last, an interruption simply leaves the previous manifest, and the next plan asks again for what is missing.</p></div></li>
+</ol>
+</div>
+<div lang="fr">
+<h2>Appliquer : l'ordre est la sécurité</h2>
+<p>Appliquer un plan, c'est quatre étapes, et leur ordre est ce qui rend toute interruption inoffensive :</p>
+<ol class="timeline">
+<li><span class="tl-tag">1</span><div><h3>Récupérer en parallèle, avec une borne</h3><p>Quatre téléchargements à la fois par défaut, réglable. Au-delà, une connexion domestique ne va pas plus vite : la même bande passante se répartit sur plus de connexions. En dessous, la latence d'aller-retour domine sur les milliers de petits fichiers d'une build Unity. La borne est un sémaphore autour des requêtes, pas une boucle parallèle : le travail consiste à attendre le réseau, et un degré de parallélisme choisi par le pool de threads n'aurait aucun rapport avec ce qu'une ligne domestique supporte.</p></div></li>
+<li><span class="tl-tag">2</span><div><h3>Chaque fichier : nom temporaire, hachage, renommage</h3><p>Le contenu est écrit en flux dans un fichier temporaire à côté de la cible, haché, et renommé sur la cible seulement si le hachage correspond. Un renommage sur le même volume est atomique : il n'existe jamais de moment où le fichier final est à moitié écrit. Un fichier temporaire abandonné ne trompe personne, et le passage suivant l'écrase.</p></div></li>
+<li><span class="tl-tag">3</span><div><h3>Supprimer les orphelins, après</h3><p>Après tous les téléchargements, jamais avant. Si la mise à jour échoue en route, une installation avec des fichiers en trop vaut mieux qu'une installation avec des fichiers en moins : la première marche encore (c'est l'ancienne version), la seconde ne démarre pas.</p></div></li>
+<li><span class="tl-tag">4</span><div><h3>Écrire le manifeste installé, en dernier</h3><p>Le manifeste local est la promesse « voici ce qui est installé ». Écrit avant la fin, toute interruption en ferait un mensonge permanent : le chemin rapide du lancement suivant croirait l'installation complète et ne téléchargerait rien, laissant un jeu à moitié à jour sans autre issue que « Vérifier les fichiers ». Écrit en dernier, une interruption laisse simplement le manifeste précédent, et le plan suivant redemande ce qui manque.</p></div></li>
+</ol>
+</div>
+<div class="code"><div class="code-head"><span class="file">Qwak.Launcher/UpdateRunner.cs · FetchOneAsync, simplified</span></div><pre><code data-lang="cs">var temp = target + ".qwaktmp";
+
+using (var response = await http.GetAsync(url,
+           HttpCompletionOption.ResponseHeadersRead, ct))
+{
+    response.EnsureSuccessStatusCode();
+    await using var source = await response.Content.ReadAsStreamAsync(ct);
+    await using var destination = new FileStream(temp, FileMode.Create,
+        FileAccess.Write, FileShare.None, bufferSize: 1 &lt;&lt; 16, useAsync: true);
+    await source.CopyToAsync(destination, ct);   // streamed, never all in memory
+}
+
+if (BuildScanner.HashFile(temp) != file.Sha256)
+{
+    File.Delete(temp);
+    throw new InvalidDataException($"{file.Path} arrived damaged.");
+}
+
+File.Move(temp, target, overwrite: true);               // atomic on the same volume</code></pre></div>
+<div lang="en">
+<p>The guarantee here is local and depends on nothing else: a file appears under its real name <em>only</em> if its content has the right hash. Before this, a truncated download under the right name would have been caught only because the installed manifest had not been written yet. Saved by accident, by the order of another file: exactly the kind of safety you do not want to rely on. If the rename fails because the file is locked, the error says so in the words of the likely cause: "is the game still open?"</p>
+<p>Before anything is downloaded, the manifest itself is checked three times: its hash against the one the pointer announced, its channel against the one requested, and every path against the installation folder, a single bad path rejecting the whole manifest (chapter <a href="updater.html#trust">8.1</a>). Ignoring only the faulty line would apply a partial update described by a file that has just been proven wrong.</p>
+</div>
+<div lang="fr">
+<p>La garantie est ici locale et ne dépend de rien d'autre : un fichier n'apparaît sous son vrai nom <em>que</em> si son contenu a le bon hachage. Avant cela, un téléchargement tronqué sous le bon nom n'aurait été rattrapé que parce que le manifeste installé n'était pas encore écrit. Sauvé par accident, par l'ordre d'un autre fichier : exactement le genre de sécurité sur laquelle on ne veut pas compter. Si le renommage échoue parce que le fichier est verrouillé, l'erreur le dit avec les mots de la cause probable : « le jeu est-il encore ouvert ? »</p>
+<p>Avant le moindre téléchargement, le manifeste lui-même est vérifié trois fois : son hachage contre celui qu'annonçait le pointeur, son canal contre celui demandé, et chaque chemin contre le dossier d'installation, un seul mauvais chemin faisant rejeter tout le manifeste (chapitre <a href="updater.html#trust">8.1</a>). N'ignorer que la ligne fautive appliquerait une mise à jour partielle décrite par un fichier dont on vient de prouver qu'il est faux.</p>
+</div>
+</section>
+
+<section class="sec" id="self-update">
+<div lang="en">
+<h2>Replacing yourself while running</h2>
+<p>Windows locks the image of a running executable, and its DLLs with it. A launcher therefore cannot write over its own files: anything that tries fails with "access denied" at the worst moment, once the new version is already downloaded. The solution is a small dance in which the same program plays two roles from two different folders:</p>
+</div>
+<div lang="fr">
+<h2>Se remplacer en cours d'exécution</h2>
+<p>Windows verrouille l'image d'un exécutable en cours d'exécution, et ses DLL avec. Un launcher ne peut donc pas écrire par-dessus ses propres fichiers : tout ce qui essaie échoue avec « accès refusé » au pire moment, une fois la nouvelle version déjà téléchargée. La solution est une petite danse dans laquelle le même programme joue deux rôles depuis deux dossiers différents :</p>
+</div>
+<div class="lab" data-stepper>
+<div class="lab-head"><span class="lab-title"><span lang="en">The self-update dance</span><span lang="fr">La danse de l'auto-mise à jour</span></span><span class="lab-sub"><span lang="en">The copier never copies onto itself</span><span lang="fr">Le copieur ne copie jamais sur lui-même</span></span></div>
+<div class="lab-body">
+<div class="fig-scroll">
+<svg viewBox="0 0 760 330" role="img" aria-label="Self-update: the old launcher downloads the full new version into launcher-neuf, starts it as a copier and exits; the copier waits for the old process, copies every file over the installed folder, relaunches it with a flag and exits; the relaunched launcher deletes the staging folder">
+  <defs><marker id="su-arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs>
+  <rect x="280" y="8" width="200" height="40" rx="8" class="dg-box-2"/>
+  <text class="dg-text" x="380" y="25" text-anchor="middle" font-weight="700"><tspan lang="en">update server</tspan><tspan lang="fr">serveur de mise à jour</tspan></text>
+  <text class="dg-small" x="380" y="41" text-anchor="middle"><tspan lang="en">launcher channel: v3</tspan><tspan lang="fr">canal launcher : v3</tspan></text>
+  <rect x="20" y="66" width="300" height="180" rx="8" class="dg-box"/>
+  <text class="dg-small dg-mono" x="34" y="88" font-weight="700">QwakLauncher/</text>
+  <text class="dg-small" x="306" y="88" text-anchor="end"><tspan lang="en">installed</tspan><tspan lang="fr">installé</tspan></text>
+  <text class="dg-small dg-mono" x="34" y="116">QwakLauncher.exe</text><text class="dg-small" x="306" y="116" text-anchor="end">v2</text>
+  <text class="dg-small dg-mono" x="34" y="140">Qwak.Patcher.dll</text><text class="dg-small" x="306" y="140" text-anchor="end">v2</text>
+  <text class="dg-small dg-mono" x="34" y="164">launcher.json</text><text class="dg-small" x="306" y="164" text-anchor="end"><tspan lang="en">player's</tspan><tspan lang="fr">du joueur</tspan></text>
+  <text class="dg-small dg-mono" x="34" y="188">.qwak-installed.json</text><text class="dg-small" x="306" y="188" text-anchor="end">v2</text>
+  <text class="dg-small dg-mono" x="34" y="212">jeu/ …</text><text class="dg-small" x="306" y="212" text-anchor="end"><tspan lang="en">the game</tspan><tspan lang="fr">le jeu</tspan></text>
+  <rect x="440" y="66" width="300" height="180" rx="8" class="dg-box-2"/>
+  <text class="dg-small dg-mono" x="454" y="88" font-weight="700">launcher-neuf/</text>
+  <text class="dg-small" x="726" y="88" text-anchor="end"><tspan lang="en">staging</tspan><tspan lang="fr">transit</tspan></text>
+  <rect x="20" y="270" width="300" height="34" rx="17" class="dg-box"/>
+  <circle cx="40" cy="287" r="5" class="dg-good"/>
+  <text class="dg-small" x="54" y="291"><tspan lang="en">running: launcher v2</tspan><tspan lang="fr">en cours : launcher v2</tspan></text>
+  <g data-step="1">
+    <line class="dg-line seq-msg" x1="430" y1="48" x2="520" y2="64" marker-end="url(#su-arr)"/>
+    <text class="dg-small" x="496" y="24"><tspan lang="en">every file of v3,</tspan><tspan lang="fr">chaque fichier de v3,</tspan></text>
+    <text class="dg-small" x="496" y="38"><tspan lang="en">hash-verified</tspan><tspan lang="fr">vérifié par hachage</tspan></text>
+    <text class="dg-small dg-mono" x="454" y="116">QwakLauncher.exe</text><text class="dg-small" x="726" y="116" text-anchor="end">v3</text>
+    <text class="dg-small dg-mono" x="454" y="140">Qwak.Patcher.dll</text><text class="dg-small" x="726" y="140" text-anchor="end">v3</text>
+    <text class="dg-small" x="454" y="164"><tspan lang="en">… every other file of v3</tspan><tspan lang="fr">… tous les autres fichiers de v3</tspan></text>
+    <text class="dg-small dg-mono" x="454" y="188">.qwak-installed.json</text><text class="dg-small" x="726" y="188" text-anchor="end">v3</text>
+  </g>
+  <g data-step="2">
+    <line class="dg-line seq-msg" x1="320" y1="112" x2="436" y2="112" marker-end="url(#su-arr)"/>
+    <text class="dg-small" x="380" y="104" text-anchor="middle"><tspan lang="en">starts copier</tspan><tspan lang="fr">lance le copieur</tspan></text>
+    <text class="dg-small" x="380" y="128" text-anchor="middle"><tspan lang="en">folder + pid</tspan><tspan lang="fr">dossier + pid</tspan></text>
+    <rect x="440" y="270" width="300" height="34" rx="17" class="dg-box"/>
+    <circle cx="460" cy="287" r="5" class="dg-good"/>
+    <text class="dg-small" x="474" y="291"><tspan lang="en">running: copier v3, from staging</tspan><tspan lang="fr">en cours : copieur v3, depuis le transit</tspan></text>
+  </g>
+  <g data-step="3">
+    <rect x="20" y="270" width="300" height="34" rx="17" class="dg-box dg-crit-stroke"/>
+    <text class="dg-small" x="40" y="291" style="fill:var(--crit-ink)"><tspan lang="en">✕ v2 has exited</tspan><tspan lang="fr">✕ v2 s'est fermé</tspan></text>
+  </g>
+  <g data-step="4">
+    <line class="dg-line seq-msg" x1="440" y1="176" x2="324" y2="176" marker-end="url(#su-arr)"/>
+    <text class="dg-small" x="380" y="168" text-anchor="middle"><tspan lang="en">waits for pid,</tspan><tspan lang="fr">attend le pid,</tspan></text>
+    <text class="dg-small" x="380" y="192" text-anchor="middle"><tspan lang="en">copies all</tspan><tspan lang="fr">copie tout</tspan></text>
+    <rect x="276" y="103" width="36" height="17" style="fill:var(--panel)"/><text class="dg-small" x="306" y="116" text-anchor="end" font-weight="700" style="fill:var(--accent-ink)">v3</text>
+    <rect x="276" y="127" width="36" height="17" style="fill:var(--panel)"/><text class="dg-small" x="306" y="140" text-anchor="end" font-weight="700" style="fill:var(--accent-ink)">v3</text>
+    <rect x="276" y="175" width="36" height="17" style="fill:var(--panel)"/><text class="dg-small" x="306" y="188" text-anchor="end" font-weight="700" style="fill:var(--accent-ink)">v3</text>
+  </g>
+  <g data-step="5">
+    <line class="dg-line seq-msg" x1="440" y1="287" x2="324" y2="287" marker-end="url(#su-arr)"/>
+    <text class="dg-small" x="380" y="264" text-anchor="middle"><tspan lang="en">relaunches</tspan><tspan lang="fr">relance</tspan></text>
+    <text class="dg-small dg-mono" x="380" y="322" text-anchor="middle">--relaunched-after-update</text>
+    <rect x="20" y="270" width="300" height="34" rx="17" class="dg-box"/>
+    <circle cx="40" cy="287" r="5" class="dg-good"/>
+    <text class="dg-small" x="54" y="291"><tspan lang="en">running: launcher v3, relaunched</tspan><tspan lang="fr">en cours : launcher v3, relancé</tspan></text>
+    <rect x="440" y="270" width="300" height="34" rx="17" class="dg-box dg-crit-stroke"/>
+    <text class="dg-small" x="460" y="291" style="fill:var(--crit-ink)"><tspan lang="en">✕ copier has exited</tspan><tspan lang="fr">✕ le copieur s'est fermé</tspan></text>
+  </g>
+  <g data-step="6">
+    <rect x="440" y="66" width="300" height="180" rx="8" style="fill:var(--panel);stroke:var(--crit);stroke-dasharray:5 4;opacity:0.94"/>
+    <text class="dg-text" x="590" y="150" text-anchor="middle" font-weight="700" style="fill:var(--crit-ink)"><tspan lang="en">deleted at startup</tspan><tspan lang="fr">effacé au démarrage</tspan></text>
+    <text class="dg-small" x="590" y="170" text-anchor="middle"><tspan lang="en">by the relaunched launcher</tspan><tspan lang="fr">par le launcher relancé</tspan></text>
+  </g>
+</svg>
+</div>
+<ol class="steps">
+<li><span lang="en"><strong>Stage.</strong> The running launcher (v2) sees that the launcher channel is ahead. It downloads the <em>complete</em> new version into <code>launcher-neuf/</code>, verified by hash like any installation: it is the same engine. Nothing in the installed folder is touched.</span><span lang="fr"><strong>Mettre en transit.</strong> Le launcher en cours (v2) voit que le canal launcher est en avance. Il télécharge la nouvelle version <em>complète</em> dans <code>launcher-neuf/</code>, vérifiée par hachage comme n'importe quelle installation : c'est le même moteur. Rien n'est touché dans le dossier installé.</span></li>
+<li><span lang="en"><strong>Hand over.</strong> v2 starts the staged executable with <code>--apply-launcher-update "&lt;installed folder&gt;" &lt;its own pid&gt;</code>. The quotes matter: <code>C:\Program Files\…</code> would otherwise split into two arguments, and the copier would copy to <code>C:\Program</code>.</span><span lang="fr"><strong>Passer la main.</strong> v2 lance l'exécutable en transit avec <code>--apply-launcher-update "&lt;dossier installé&gt;" &lt;son propre pid&gt;</code>. Les guillemets comptent : <code>C:\Program Files\…</code> se couperait sinon en deux arguments, et le copieur copierait vers <code>C:\Program</code>.</span></li>
+<li><span lang="en"><strong>Exit.</strong> v2 closes immediately and writes nothing else to disk. Its files are no longer locked.</span><span lang="fr"><strong>Quitter.</strong> v2 se ferme immédiatement et n'écrit plus rien sur le disque. Ses fichiers ne sont plus verrouillés.</span></li>
+<li><span lang="en"><strong>Copy.</strong> The copier waits for the old process <em>by its id</em>, not with an arbitrary sleep (too short on a loaded machine, too long for nothing everywhere else), with a 15-second ceiling in case the old launcher is stuck on a dialog. Then it copies every file of the staging folder over the installed one. It runs from <code>launcher-neuf/</code>, so it locks nothing it writes. <code>launcher.json</code> is not in the staging folder (it is never published), so the player's settings survive.</span><span lang="fr"><strong>Copier.</strong> Le copieur attend l'ancien processus <em>par son identifiant</em>, pas avec une pause arbitraire (trop courte sur une machine chargée, trop longue pour rien partout ailleurs), avec un plafond de 15 secondes au cas où l'ancien launcher serait bloqué sur une boîte de dialogue. Puis il copie chaque fichier du dossier de transit par-dessus le dossier installé. Il tourne depuis <code>launcher-neuf/</code> : il ne verrouille rien de ce qu'il écrit. <code>launcher.json</code> n'est pas dans le dossier de transit (il n'est jamais publié) : les réglages du joueur survivent.</span></li>
+<li><span lang="en"><strong>Relaunch.</strong> The copier starts the installed launcher again, now v3, with <code>--relaunched-after-update</code>, then exits. It relaunches <em>even if the copy failed halfway</em>: a hybrid launcher that starts can still repair itself, while relaunching nothing leaves the user in front of an empty desktop after a double-click, with nothing to report.</span><span lang="fr"><strong>Relancer.</strong> Le copieur relance le launcher installé, désormais v3, avec <code>--relaunched-after-update</code>, puis se ferme. Il relance <em>même si la copie a échoué en route</em> : un launcher hybride qui démarre peut encore se réparer, alors que ne rien relancer laisse l'utilisateur devant un bureau vide après un double-clic, sans rien à signaler.</span></li>
+<li><span lang="en"><strong>Clean up.</strong> At startup, before anything else, the launcher deletes <code>launcher-neuf/</code>: the copier could not delete the folder it was running from. A successful update and an abandoned one leave the same folder, so they are treated alike. If the copier has not quite exited yet, the deletion fails quietly and the next start succeeds.</span><span lang="fr"><strong>Nettoyer.</strong> Au démarrage, avant tout le reste, le launcher efface <code>launcher-neuf/</code> : le copieur ne pouvait pas effacer le dossier depuis lequel il tournait. Une mise à jour réussie et une tentative abandonnée laissent le même dossier : elles sont traitées pareil. Si le copieur n'a pas tout à fait fini de se fermer, l'effacement échoue sans bruit et le démarrage suivant réussit.</span></li>
+</ol>
+</div>
+</div>
+<div lang="en">
+<p>Until step 4, the installed launcher is intact. A failed download, a power cut, an antivirus that blocks: what remains is a half-filled staging folder, erased at the next start, and a launcher that still works. The only risky instant is the copy itself, a handful of milliseconds on files that are already local.</p>
+<p>The staging folder is always <strong>complete</strong>, even when the update changes a single DLL, and that is not waste. The copier <em>is</em> the staged executable. With only the changed files in staging, an update that did not touch the executable (the most common case) would leave no one to perform the copy. The rule "which files are missing" and the rule "who performs the hand-over" would have to stay compatible forever, a coupling that no test would ever see break. The launcher weighs a few tens of megabytes and changes a few times a year; paying for the whole of it on those occasions goes unnoticed.</p>
+<div class="note tradeoff"><p class="note-label">Trade-off</p><p>A separate <code>updater.exe</code> is the classic alternative. It would have to be maintained, published and verified too, and it raises the question nobody likes: who updates the updater? One binary that copies itself from elsewhere has none of these problems: the program doing the copy is always the version that was just downloaded and verified. Windows also lets you rename a running executable, and many updaters use that trick instead; the dance used here keeps every installed file untouched until the new version is complete.</p></div>
+<p>One detail makes the two roles clean: the role is decided in the application's startup code, before any window exists. With the window declared as the startup page, the launcher's screen would flash for a fraction of a second before the program decided it was a copier.</p>
+</div>
+<div lang="fr">
+<p>Jusqu'à l'étape 4, le launcher installé est intact. Un téléchargement raté, une coupure de courant, un antivirus qui bloque : il reste un dossier de transit à moitié rempli, effacé au démarrage suivant, et un launcher qui fonctionne toujours. Le seul instant risqué est la copie elle-même, une poignée de millisecondes sur des fichiers déjà locaux.</p>
+<p>Le dossier de transit est toujours <strong>complet</strong>, même quand la mise à jour ne change qu'une DLL, et ce n'est pas du gaspillage. Le copieur <em>est</em> l'exécutable en transit. Avec seulement les fichiers changés en transit, une mise à jour qui ne touche pas l'exécutable (le cas le plus courant) ne laisserait personne pour faire la copie. La règle « quels fichiers manquent » et la règle « qui fait la relève » devraient rester compatibles pour toujours, un couplage qu'aucun test ne verrait jamais casser. Le launcher pèse quelques dizaines de mégaoctets et change quelques fois par an ; payer l'intégralité à ces occasions passe inaperçu.</p>
+<div class="note tradeoff"><p class="note-label">Compromis</p><p>Un <code>updater.exe</code> séparé est l'alternative classique. Il faudrait le maintenir, le publier et le vérifier lui aussi, et il pose la question que personne n'aime : qui met à jour l'updater ? Un seul binaire qui se copie lui-même depuis ailleurs n'a aucun de ces problèmes : le programme qui fait la copie est toujours la version qu'on vient de télécharger et de vérifier. Windows permet aussi de renommer un exécutable en cours d'exécution, et beaucoup d'updaters utilisent plutôt cette astuce ; la danse choisie ici garde chaque fichier installé intact jusqu'à ce que la nouvelle version soit complète.</p></div>
+<p>Un détail rend les deux rôles propres : le rôle se décide dans le code de démarrage de l'application, avant qu'aucune fenêtre n'existe. Avec la fenêtre déclarée comme page de démarrage, l'écran du launcher clignoterait une fraction de seconde avant que le programme ne décide qu'il est un copieur.</p>
+</div>
+<div class="code"><div class="code-head"><span class="file">Qwak.Launcher/App.xaml.cs · OnStartup, simplified</span></div><pre><code data-lang="cs">protected override void OnStartup(StartupEventArgs e)
+{
+    base.OnStartup(e);
+
+    // Copier role: running from launcher-neuf/, never shows a window.
+    if (e.Args.Length &gt;= 3 &amp;&amp; e.Args[0] == SelfUpdate.ApplyFlag
+        &amp;&amp; int.TryParse(e.Args[2], out var pid))
+    {
+        // Wait for the old pid, copy every file, relaunch the target.
+        var failure = SelfUpdate.ApplyFromStaging(e.Args[1], pid);
+        if (failure != null) ShowWarning(failure);    // speak only when it failed
+        Shutdown();
+        return;
+    }
+
+    // Normal role. Clean first: a successful update and an abandoned one look alike.
+    SelfUpdate.CleanStaging();
+    new MainWindow(justUpdated: e.Args.Contains(SelfUpdate.RelaunchedFlag)).Show();
+}</code></pre></div>
+</section>
+
+<section class="sec" id="loop">
+<div lang="en">
+<h2>The infinite update loop</h2>
+<div class="note pitfall"><p class="note-label">Pitfall I hit</p><p>The launcher folder that was published still contained a <code>.qwak-installed.json</code>, so the launcher channel's manifest listed that file, with the hash of its content at publication time: an older manifest. Every update downloaded it, then, as its very last gesture, overwrote it with the new manifest. The file on disk could therefore never match what the manifest announced. The relaunched launcher saw it "different", staged the update again, handed over, relaunched, and started over. Forever, without ever converging, because the divergence was structural, not accidental. From the player's side: a launcher closing and reopening endlessly, eating bandwidth, without a window open long enough to click anything, or even to read a message.</p></div>
+</div>
+<div lang="fr">
+<h2>La boucle de mise à jour infinie</h2>
+<div class="note pitfall"><p class="note-label">Piège rencontré</p><p>Le dossier du launcher qui avait été publié contenait encore un <code>.qwak-installed.json</code> : le manifeste du canal launcher listait donc ce fichier, avec le hachage de son contenu au moment de la publication, un manifeste plus ancien. Chaque mise à jour le téléchargeait, puis, en tout dernier geste, l'écrasait avec le nouveau manifeste. Le fichier sur le disque ne pouvait donc jamais correspondre à ce qu'annonçait le manifeste. Le launcher relancé le voyait « différent », remettait la mise à jour en transit, passait la main, se relançait, et recommençait. Indéfiniment, sans jamais converger, parce que la divergence était structurelle et pas accidentelle. Du côté du joueur : un launcher qui se ferme et se rouvre sans fin, en mangeant de la bande passante, sans qu'aucune fenêtre ne reste ouverte assez longtemps pour cliquer quoi que ce soit, ni même lire un message.</p></div>
+</div>
+<figure class="fig fig-scroll">
+<svg viewBox="0 0 760 232" role="img" aria-label="The loop: the manifest lists .qwak-installed.json with an old content; the update downloads it then rewrites it; the relaunched launcher finds it different; it stages and hands over again; a guard allowing one hand-over per launch cuts the cycle">
+  <defs><marker id="lp-arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="currentColor" opacity="0.7"/></marker></defs>
+  <rect x="275" y="16" width="210" height="48" rx="8" class="dg-box"/>
+  <text class="dg-small" x="380" y="36" text-anchor="middle"><tspan lang="en">manifest lists .qwak-installed.json</tspan><tspan lang="fr">le manifeste cite .qwak-installed.json</tspan></text>
+  <text class="dg-small" x="380" y="52" text-anchor="middle"><tspan lang="en">with an OLD manifest inside</tspan><tspan lang="fr">avec un ANCIEN manifeste dedans</tspan></text>
+  <rect x="530" y="92" width="210" height="48" rx="8" class="dg-box"/>
+  <text class="dg-small" x="635" y="112" text-anchor="middle"><tspan lang="en">update downloads it, then</tspan><tspan lang="fr">la mise à jour le télécharge,</tspan></text>
+  <text class="dg-small" x="635" y="128" text-anchor="middle"><tspan lang="en">rewrites it with the NEW one</tspan><tspan lang="fr">puis le réécrit avec le NOUVEAU</tspan></text>
+  <rect x="275" y="168" width="210" height="48" rx="8" class="dg-box"/>
+  <text class="dg-small" x="380" y="188" text-anchor="middle"><tspan lang="en">relaunched: file differs from</tspan><tspan lang="fr">relancé : le fichier diffère</tspan></text>
+  <text class="dg-small" x="380" y="204" text-anchor="middle"><tspan lang="en">what the manifest announces</tspan><tspan lang="fr">de ce qu'annonce le manifeste</tspan></text>
+  <rect x="20" y="92" width="210" height="48" rx="8" class="dg-box"/>
+  <text class="dg-small" x="125" y="112" text-anchor="middle"><tspan lang="en">"not up to date": stage,</tspan><tspan lang="fr">« pas à jour » : transit,</tspan></text>
+  <text class="dg-small" x="125" y="128" text-anchor="middle"><tspan lang="en">hand over, relaunch</tspan><tspan lang="fr">relève, relance</tspan></text>
+  <path d="M 485 40 Q 635 40 635 88" class="dg-line" marker-end="url(#lp-arr)"/>
+  <path d="M 635 140 Q 635 192 489 192" class="dg-line" marker-end="url(#lp-arr)"/>
+  <path d="M 275 192 Q 125 192 125 144" class="dg-line" marker-end="url(#lp-arr)"/>
+  <path d="M 125 92 Q 125 40 271 40" class="dg-line" marker-end="url(#lp-arr)"/>
+  <text class="dg-text" x="380" y="112" text-anchor="middle" font-weight="700" style="fill:var(--crit-ink)"><tspan lang="en">never converges</tspan><tspan lang="fr">ne converge jamais</tspan></text>
+  <text class="dg-small" x="380" y="130" text-anchor="middle"><tspan lang="en">the divergence is structural</tspan><tspan lang="fr">la divergence est structurelle</tspan></text>
+  <line x1="156" y1="40" x2="166" y2="66" style="stroke:var(--crit);stroke-width:4;stroke-linecap:round"/>
+  <text class="dg-small" x="172" y="82" style="fill:var(--crit-ink)"><tspan lang="en">guard: one hand-over per launch</tspan><tspan lang="fr">garde : une relève par lancement</tspan></text>
+</svg>
+<figcaption><span lang="en"><strong>A manifest that describes a file depending on it.</strong> The fix removes the cause; the guard bounds the shape of any future cause.</span><span lang="fr"><strong>Un manifeste qui décrit un fichier dépendant de lui.</strong> La correction retire la cause ; la garde borne la forme de toute cause future.</span></figcaption>
+</figure>
+<div lang="en">
+<p>The fix came in three parts. The cause: the launcher's control files are never published (chapter <a href="updater.html#never-ships">8.1</a>). The transition: they are never deleted either, even when an older manifest still claims them. And a guard that assumes nothing about the cause: the copier relaunches with <code>--relaunched-after-update</code>, and a launcher carrying that flag refuses to hand over a second time in the same session. A real update always passes, since it needs exactly one round trip. A divergence that does not converge now stops and <em>says so</em>, naming one file that does not converge, because the person who publishes is the one who can fix it and needs the name. Then it moves on to the game, which has no reason to be affected.</p>
+<div class="note rule"><p class="note-label">Rule</p><p>Fix the cause, then bound the shape of the failure.</p><p>The cause was one file. The shape, an automatic action that repeats itself with no window for a human, deserves its own guard, because the next cause will be different and the shape the same.</p></div>
+</div>
+<div lang="fr">
+<p>La correction s'est faite en trois temps. La cause : les fichiers de contrôle du launcher ne sont jamais publiés (chapitre <a href="updater.html#never-ships">8.1</a>). La transition : ils ne sont jamais supprimés non plus, même quand un ancien manifeste les revendique encore. Et une garde qui ne suppose rien de la cause : le copieur relance avec <code>--relaunched-after-update</code>, et un launcher qui porte ce drapeau refuse de passer la main une seconde fois dans la même session. Une vraie mise à jour passe toujours, puisqu'elle n'a besoin que d'un aller-retour. Une divergence qui ne converge pas s'arrête maintenant et <em>le dit</em>, en nommant un fichier qui ne converge pas, parce que c'est celui qui publie qui peut corriger et qu'il lui faut le nom. Puis elle passe au jeu, qui n'a aucune raison d'être affecté.</p>
+<div class="note rule"><p class="note-label">Règle</p><p>Corriger la cause, puis borner la forme de la panne.</p><p>La cause était un fichier. La forme, une action automatique qui se répète sans laisser de fenêtre à un humain, mérite sa propre garde, parce que la prochaine cause sera différente et la forme identique.</p></div>
+</div>
+</section>
+
+<section class="sec" id="failing-gently">
+<div lang="en">
+<h2>Failing gently</h2>
+<p>Most of a launcher's code runs when something is wrong, and the question is always the same: what can the player still do?</p>
+<ul>
+<li><strong>The self-update can never prevent playing.</strong> It is the one place that swallows every error: the launcher channel may not exist yet (nothing ever published there, a 404), be mid-publication, or serve a damaged manifest. None of these makes the <em>game</em> unplayable. The message goes to the status line, where the game check replaces it a second later: visible to someone watching, blocking for no one.</li>
+<li><strong>Playing stays possible after a failed update</strong>, if the game is installed. The update server being down does not make the local build useless. Compatibility is not the launcher's decision: the gateway compares the protocol version the client announces with its own and has the last word (chapter <a href="protocol-testing.html#version-gate">1.6</a>). The protocol number in the manifest is only there so the launcher can <em>explain</em> a refusal ("the online build speaks protocol 3, yours 2") instead of showing "connection refused".</li>
+<li><strong>An unreachable server gets its own message</strong>: server off, NAT rule missing, wrong address in <code>launcher.json</code>. A generic "network error" sends players to check their own connection, which works fine.</li>
+<li><strong>An unexpected exception is shown, and the window stays open</strong>, with its "Verify files" button, which is precisely what repairs most states the launcher can end up in. Without that last net, the window would close without a word, and the player would have nothing to report.</li>
+<li><strong>A configuration problem is shown first, and stops there.</strong> Otherwise the cause would flash for a second before being replaced by its symptom, "server unreachable".</li>
+</ul>
+<div class="note pitfall"><p class="note-label">Pitfall I hit</p><p><code>launcher.json</code> is edited by hand, in a text editor. An earlier version rewrote the file with default values when it could not parse it. One extra comma, and the carefully typed server address was silently replaced. The symptom was "I edit the file and it changes back", which looks like anything but a syntax error. Now the file is only written when it does not exist; an unreadable file is kept as is (the only state from which its author can fix the mistake) and the parser's message, which carries the line and position, is displayed. The reader also accepts trailing commas and comments: the format is strict between machines for good reasons, and this one has a human at the other end.</p></div>
+</div>
+<div lang="fr">
+<h2>Échouer en douceur</h2>
+<p>La plus grande partie du code d'un launcher s'exécute quand quelque chose ne va pas, et la question est toujours la même : que peut encore faire le joueur ?</p>
+<ul>
+<li><strong>L'auto-mise à jour ne peut jamais empêcher de jouer.</strong> C'est le seul endroit qui avale toutes les erreurs : le canal launcher peut ne pas exister encore (rien n'y a jamais été publié, un 404), être en cours de publication, ou servir un manifeste abîmé. Aucune de ces situations ne rend le <em>jeu</em> injouable. Le message passe dans la ligne de statut, où la vérification du jeu le remplace une seconde plus tard : visible pour qui regarde, bloquant pour personne.</li>
+<li><strong>Jouer reste possible après une mise à jour ratée</strong>, si le jeu est installé. Un serveur de mise à jour éteint ne rend pas la build locale inutilisable. La compatibilité n'est pas la décision du launcher : la gateway compare la version de protocole annoncée par le client à la sienne et a le dernier mot (chapitre <a href="protocol-testing.html#version-gate">1.6</a>). Le numéro de protocole dans le manifeste n'est là que pour que le launcher puisse <em>expliquer</em> un refus (« la build en ligne parle le protocole 3, la tienne le 2 ») au lieu d'afficher « connexion refusée ».</li>
+<li><strong>Un serveur injoignable a son propre message</strong> : serveur éteint, règle NAT manquante, mauvaise adresse dans <code>launcher.json</code>. Une « erreur réseau » générique envoie les joueurs vérifier leur propre connexion, qui marche très bien.</li>
+<li><strong>Une exception inattendue est affichée, et la fenêtre reste ouverte</strong>, avec son bouton « Vérifier les fichiers », qui est précisément ce qui répare la plupart des états dans lesquels le launcher peut tomber. Sans ce dernier filet, la fenêtre se fermerait sans un mot, et le joueur n'aurait rien à rapporter.</li>
+<li><strong>Un problème de configuration s'affiche en premier, et s'arrête là.</strong> Sinon la cause clignoterait une seconde avant d'être remplacée par son symptôme, « serveur injoignable ».</li>
+</ul>
+<div class="note pitfall"><p class="note-label">Piège rencontré</p><p><code>launcher.json</code> se modifie à la main, dans un éditeur de texte. Une version précédente réécrivait le fichier avec les valeurs par défaut quand elle n'arrivait pas à le lire. Une virgule de trop, et l'adresse du serveur patiemment saisie était remplacée en silence. Le symptôme était « je modifie le fichier et il revient comme avant », ce qui ressemble à tout sauf à une erreur de syntaxe. Désormais le fichier n'est écrit que s'il n'existe pas ; un fichier illisible est conservé tel quel (le seul état depuis lequel son auteur peut corriger sa faute) et le message de l'analyseur, qui porte la ligne et la position, est affiché. La lecture accepte aussi les virgules finales et les commentaires : le format est strict entre machines pour de bonnes raisons, et celui-ci a un humain au bout.</p></div>
+</div>
+</section>
+
+<section class="sec" id="edges">
+<div lang="en">
+<h2>Small decisions at the edges</h2>
+<div class="table-wrap"><table>
+<thead><tr><th>Decision</th><th>Why</th></tr></thead>
+<tbody>
+<tr><td><code>launcher.json</code> lives next to the executable, created with defaults if missing</td><td>Distribution is "here is a zipped folder". A configuration in the user profile would force the other player to type the server's address on first launch, exactly what the launcher is meant to spare them.</td></tr>
+<tr><td>The launcher's folder is the executable's folder, never the current directory</td><td>A Windows shortcut can start the process from anywhere. With the current directory, the launcher would create its game folder on the player's desktop and reinstall everything, without understanding why.</td></tr>
+<tr><td>The installed manifest lives inside the folder it describes</td><td>Deleting the folder must also delete what the launcher believed about it. A manifest that survived its installation would announce "nothing to do" in front of an empty folder.</td></tr>
+<tr><td>A launcher sent by hand writes its installed manifest after a full check that finds it conform</td><td>Otherwise every start would re-hash everything to conclude "nothing to do". The discovery is paid once.</td></tr>
+<tr><td>One HTTP client for the whole process</td><td>One per download exhausts the system's ephemeral ports (closed sockets linger in <code>TIME_WAIT</code>), long before the end of a first installation of tens of thousands of files, with an incomprehensible network error.</td></tr>
+<tr><td>Progress reported every 100 files while checking, and posted to the UI without waiting</td><td>Hopping to the UI thread for every file of a 30,000-file build would cost more than the check itself; waiting for the UI from four parallel downloads would pace them on the display.</td></tr>
+<tr><td>The game starts with its own folder as working directory</td><td>Unity looks for its <code>*_Data</code> folder, logs and configuration there. Started from elsewhere: a black screen and a log nowhere to be found.</td></tr>
+<tr><td>The executable path is checked once more just before it is started</td><td>It was already validated with the manifest, but this is the last line before <em>executing</em> something: it costs nothing and depends on no check made elsewhere.</td></tr>
+<tr><td>The launcher closes once the game has started</td><td>Left open, it would hold files of the folder it manages, and suggest that an update could run while the game locks the files it would need to replace.</td></tr>
+</tbody></table></div>
+</div>
+<div lang="fr">
+<h2>Petites décisions aux bords</h2>
+<div class="table-wrap"><table>
+<thead><tr><th>Décision</th><th>Pourquoi</th></tr></thead>
+<tbody>
+<tr><td><code>launcher.json</code> vit à côté de l'exécutable, créé avec les valeurs par défaut s'il manque</td><td>La distribution, c'est « voici un dossier zippé ». Une configuration dans le profil utilisateur obligerait l'autre joueur à saisir l'adresse du serveur au premier lancement, exactement ce que le launcher doit lui épargner.</td></tr>
+<tr><td>Le dossier du launcher est celui de l'exécutable, jamais le répertoire courant</td><td>Un raccourci Windows peut démarrer le processus depuis n'importe où. Avec le répertoire courant, le launcher créerait son dossier de jeu sur le bureau du joueur et réinstallerait tout, sans comprendre pourquoi.</td></tr>
+<tr><td>Le manifeste installé vit dans le dossier qu'il décrit</td><td>Effacer le dossier doit aussi effacer ce que le launcher croyait savoir de lui. Un manifeste qui survivrait à son installation annoncerait « rien à faire » devant un dossier vide.</td></tr>
+<tr><td>Un launcher envoyé à la main écrit son manifeste installé après une vérification complète qui le trouve conforme</td><td>Sinon chaque démarrage rehacherait tout pour conclure « rien à faire ». La découverte ne se paie qu'une fois.</td></tr>
+<tr><td>Un seul client HTTP pour tout le processus</td><td>Un par téléchargement épuise les ports éphémères du système (les sockets fermées restent en <code>TIME_WAIT</code>), bien avant la fin d'une première installation de dizaines de milliers de fichiers, avec une erreur réseau incompréhensible.</td></tr>
+<tr><td>Progression rapportée tous les 100 fichiers pendant la vérification, et postée à l'interface sans attendre</td><td>Repasser sur le thread d'interface pour chaque fichier d'une build de 30 000 fichiers coûterait plus que la vérification elle-même ; attendre l'interface depuis quatre téléchargements parallèles les cadencerait sur l'affichage.</td></tr>
+<tr><td>Le jeu démarre avec son propre dossier comme répertoire de travail</td><td>Unity y cherche son dossier <code>*_Data</code>, ses journaux et sa configuration. Lancé d'ailleurs : un écran noir et un journal introuvable.</td></tr>
+<tr><td>Le chemin de l'exécutable est vérifié une dernière fois juste avant son lancement</td><td>Il a déjà été validé avec le manifeste, mais c'est la dernière ligne avant d'<em>exécuter</em> quelque chose : elle ne coûte rien et ne dépend d'aucune vérification faite ailleurs.</td></tr>
+<tr><td>Le launcher se ferme une fois le jeu lancé</td><td>Resté ouvert, il tiendrait des fichiers du dossier qu'il gère, et laisserait croire qu'une mise à jour pourrait tourner pendant que le jeu verrouille les fichiers qu'elle devrait remplacer.</td></tr>
+</tbody></table></div>
+</div>
+</section>
+
+<section class="sec" id="takeaways">
+<div class="takeaways">
+<div lang="en"><h2>Key takeaways</h2><ul>
+<li>Update the launcher before the game, and share one code path between startup and "Verify files".</li>
+<li>Compute a plan, then apply it; trust sizes on the fast path, re-hash on demand, and verify every downloaded file before it takes its real name.</li>
+<li>Delete only what the previous manifest you wrote claimed, never outside the folder, and nothing at all when you do not know what is yours.</li>
+<li>Order the writes so that any interruption leaves the old version or a repairable one: files, then orphans, then the installed manifest.</li>
+<li>Replace yourself from a complete staging copy that never copies onto itself, and allow at most one hand-over per launch.</li>
+<li>Never let a secondary failure block the primary task, and never rewrite a file a human wrote that you could not read.</li>
+</ul></div>
+<div lang="fr"><h2>À retenir</h2><ul>
+<li>Mettre à jour le launcher avant le jeu, et partager un seul chemin de code entre le démarrage et « Vérifier les fichiers ».</li>
+<li>Calculer un plan, puis l'appliquer ; croire les tailles sur le chemin rapide, rehacher à la demande, et vérifier chaque fichier téléchargé avant qu'il ne prenne son vrai nom.</li>
+<li>Ne supprimer que ce que revendiquait le manifeste précédent écrit par soi, jamais hors du dossier, et rien du tout quand on ne sait pas ce qui nous appartient.</li>
+<li>Ordonner les écritures pour qu'une interruption laisse l'ancienne version ou une version réparable : les fichiers, puis les orphelins, puis le manifeste installé.</li>
+<li>Se remplacer depuis une copie de transit complète qui ne copie jamais sur elle-même, et n'autoriser qu'une relève par lancement.</li>
+<li>Ne jamais laisser une panne secondaire bloquer la tâche principale, et ne jamais réécrire un fichier écrit par un humain qu'on n'a pas su lire.</li>
+</ul></div>
+</div>
+</section>
+
+</div>
+<div data-chapter-foot></div>
+</article>
+</main>
+<aside class="rail" id="mq-rail"></aside>
+</div>
+<footer class="site-footer" id="mq-footer"></footer>
+<script src="assets/js/site-data.js" defer></script>
+<script src="assets/js/glossary-data.js" defer></script>
+<script src="assets/js/app.js" defer></script>
+<script src="assets/js/widgets.js" defer></script>
+</body>
+</html>

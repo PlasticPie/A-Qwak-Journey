@@ -1,0 +1,425 @@
+<!doctype html>
+<html lang="en" data-lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Content-addressed updates · MoonQwak</title>
+<meta name="description" content="Manifests of hashes, one shared object store, a pointer written last, and an update server with no logic at all.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Chakra+Petch:wght@500;600&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="assets/css/site.css">
+<script>(function(){var r=document.documentElement,l,t;try{l=localStorage.getItem("mq-lang");t=localStorage.getItem("mq-theme");}catch(e){}if(l!=="en"&&l!=="fr"){l=(navigator.language||"").toLowerCase().indexOf("fr")===0?"fr":"en";}r.setAttribute("data-lang",l);r.setAttribute("lang",l);if(t==="light"||t==="dark")r.setAttribute("data-theme",t);})();</script>
+</head>
+<body data-page="updater">
+<a class="skip-link" href="#main"><span lang="en">Skip to content</span><span lang="fr">Aller au contenu</span></a>
+<header class="site-header" id="mq-header"></header>
+<div class="layout">
+<aside class="sidebar" id="mq-sidebar"></aside>
+<main class="content" id="main">
+<article>
+<header class="chapter-head">
+  <div class="eyebrow" data-auto></div>
+  <h1><span lang="en">Content-addressed updates</span><span lang="fr">Des mises à jour adressées par contenu</span></h1>
+  <p class="dek"><span lang="en">Manifests of hashes, one shared object store, a pointer written last, and an update server with no logic at all.</span><span lang="fr">Des manifestes de hachages, un magasin d'objets partagé, un pointeur écrit en dernier, et un serveur de mise à jour sans aucune logique.</span></p>
+  <div class="meta-row" data-auto></div>
+</header>
+
+<div class="prose">
+
+<section class="sec" id="hashes">
+<div lang="en">
+<h2>Identify files by what they contain</h2>
+<p>A game build is tens of thousands of files and hundreds of megabytes, published several times an evening during development. Players must end up with exactly the right bytes, whatever state their installation is in: up to date, several versions behind, half-installed, or silently corrupted by a tired disk.</p>
+<p>The obvious design, a version number per file, drags history along: to know what to download, you need to know where the player comes from. A <strong>hash of the content</strong> answers the only question that matters on its own: "is this file, on my disk, exactly the one the server describes?" Any client, in any state, gets the same answer: here are the objects that are missing. There is no "up to date" state to maintain anywhere, and therefore no state to fall out of sync.</p>
+<div class="note beginner"><p class="note-label">Beginner note</p><p>A cryptographic hash such as SHA-256 turns any file into a 64-character fingerprint. Change one byte and the fingerprint changes completely; two different files practically never share one. So the fingerprint can serve as the file's <em>name</em>: this is <strong>content-addressed storage</strong>, the idea behind Git's object store and many package caches.</p></div>
+<p>Two choices in how the hash is computed matter more than they look:</p>
+<ul>
+<li><strong>SHA-256, not a fast hash like xxHash.</strong> This hash decides that a file does <em>not</em> need to be downloaded again, and it is the only check that a byte received is the byte sent. A collision would not be a slowdown, it would be a silently wrong installation. Its cost, around a gigabyte per second on a modern CPU with hardware acceleration, is nothing next to the network it saves.</li>
+<li><strong>Streamed, never read whole.</strong> Files are hashed through a 64 KB buffer. A Unity <code>.assets</code> file commonly exceeds a gigabyte, and reading it whole to hash it would put that gigabyte on the managed heap, in the large object heap, which is not compacted. On a busy machine, that is an out-of-memory error for an operation that needs a few kilobytes.</li>
+</ul>
+</div>
+<div lang="fr">
+<h2>Identifier les fichiers par ce qu'ils contiennent</h2>
+<p>Une version du jeu, ce sont des dizaines de milliers de fichiers et des centaines de mégaoctets, publiés plusieurs fois par soirée pendant le développement. Les joueurs doivent finir avec exactement les bons octets, quel que soit l'état de leur installation : à jour, en retard de plusieurs versions, à moitié installée, ou corrompue en silence par un disque fatigué.</p>
+<p>La conception évidente, un numéro de version par fichier, traîne l'historique avec elle : pour savoir quoi télécharger, il faut savoir d'où vient le joueur. Un <strong>hachage du contenu</strong> répond tout seul à la seule question qui compte : « ce fichier, sur mon disque, est-il exactement celui que décrit le serveur ? » N'importe quel client, dans n'importe quel état, obtient la même réponse : voici les objets qui manquent. Il n'existe aucun état « à jour » à tenir quelque part, donc aucun état à désynchroniser.</p>
+<div class="note beginner"><p class="note-label">Pour débuter</p><p>Un hachage cryptographique comme SHA-256 transforme n'importe quel fichier en une empreinte de 64 caractères. Changez un octet et l'empreinte change complètement ; deux fichiers différents n'en partagent pratiquement jamais une. L'empreinte peut donc servir de <em>nom</em> au fichier : c'est le <strong>stockage adressé par contenu</strong>, l'idée derrière le magasin d'objets de Git et de nombreux caches de paquets.</p></div>
+<p>Deux choix dans le calcul du hachage comptent plus qu'il n'y paraît :</p>
+<ul>
+<li><strong>SHA-256, pas un hachage rapide comme xxHash.</strong> Ce hachage décide qu'un fichier n'a <em>pas</em> besoin d'être retéléchargé, et c'est la seule vérification qu'un octet reçu est l'octet envoyé. Une collision n'y serait pas un ralentissement, ce serait une installation silencieusement fausse. Son coût, de l'ordre d'un gigaoctet par seconde sur un CPU moderne avec accélération matérielle, n'est rien à côté du réseau qu'il économise.</li>
+<li><strong>En flux, jamais lu en entier.</strong> Les fichiers sont hachés à travers un tampon de 64 Ko. Un fichier <code>.assets</code> d'Unity dépasse couramment le gigaoctet, et le lire en entier pour le hacher mettrait ce gigaoctet sur le tas managé, dans le tas des grands objets, qui n'est pas compacté. Sur une machine chargée, c'est une erreur de mémoire pour une opération qui n'a besoin que de quelques kilo-octets.</li>
+</ul>
+</div>
+</section>
+
+<section class="sec" id="store">
+<div lang="en">
+<h2>One object store, many builds</h2>
+<p>The update server does not store builds side by side, each complete. It stores <strong>objects</strong> under their hash, and a build is only a <em>manifest</em>: a list of paths, each with a size and the hash of its content. Two builds that share 95 % of their files share 95 % of their objects, on disk and on the network. If each build changes only a few percent of its files, ten versions of a 500 MB build take roughly 600 MB instead of five gigabytes. And "download only what changed" is not an optimization of the launcher: it is the only thing it knows how to do, because it asks for hashes, not files.</p>
+</div>
+<div lang="fr">
+<h2>Un magasin d'objets, beaucoup de versions</h2>
+<p>Le serveur de mise à jour ne range pas les versions côte à côte, chacune complète. Il range des <strong>objets</strong> sous leur hachage, et une version n'est qu'un <em>manifeste</em> : une liste de chemins, chacun avec une taille et le hachage de son contenu. Deux versions qui partagent 95 % de leurs fichiers partagent 95 % de leurs objets, sur le disque comme sur le réseau. Si chaque version ne change que quelques pour cent de ses fichiers, dix versions d'une build de 500 Mo occupent environ 600 Mo au lieu de cinq gigaoctets. Et « ne télécharger que ce qui a changé » n'est pas une optimisation du launcher : c'est la seule chose qu'il sache faire, parce qu'il demande des hachages, pas des fichiers.</p>
+</div>
+<figure class="fig fig-scroll">
+<svg viewBox="0 0 760 250" role="img" aria-label="Server layout: game/latest.json points to game/manifests/41.json, which lists paths with sizes and hashes; each hash names a file under objects/, in a two-character sub-folder; manifests 40 and 41 share most objects">
+  <defs><marker id="up-arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="currentColor" opacity="0.7"/></marker></defs>
+  <rect x="20" y="30" width="170" height="52" rx="8" class="dg-hot"/>
+  <text class="dg-text dg-mono" x="105" y="52" text-anchor="middle" font-weight="700">game/latest.json</text>
+  <text class="dg-small" x="105" y="70" text-anchor="middle"><tspan lang="en">the only mutable file</tspan><tspan lang="fr">le seul fichier modifiable</tspan></text>
+  <line x1="190" y1="56" x2="246" y2="56" class="dg-line" marker-end="url(#up-arr)"/>
+  <text class="dg-small" x="218" y="46" text-anchor="middle">+ sha</text>
+  <rect x="250" y="20" width="220" height="100" rx="8" class="dg-box"/>
+  <text class="dg-text dg-mono" x="360" y="42" text-anchor="middle" font-weight="700">manifests/41.json</text>
+  <text class="dg-small dg-mono" x="262" y="64">QwakClient.exe · 9f2c…</text>
+  <text class="dg-small dg-mono" x="262" y="82">Data/level0 · 1a07…</text>
+  <text class="dg-small dg-mono" x="262" y="100">Data/Managed/… · 41ce…</text>
+  <rect x="250" y="140" width="220" height="80" rx="8" class="dg-box" style="opacity:0.7"/>
+  <text class="dg-text dg-mono" x="360" y="162" text-anchor="middle">manifests/40.json</text>
+  <text class="dg-small dg-mono" x="262" y="184">QwakClient.exe · 9f2c…</text>
+  <text class="dg-small dg-mono" x="262" y="202">Data/level0 · 77b1…</text>
+  <rect x="540" y="20" width="200" height="200" rx="8" class="dg-box-2"/>
+  <text class="dg-text dg-mono" x="640" y="42" text-anchor="middle" font-weight="700">objects/</text>
+  <text class="dg-small dg-mono" x="556" y="70">9f/9f2c… <tspan lang="en">(shared)</tspan><tspan lang="fr">(partagé)</tspan></text>
+  <text class="dg-small dg-mono" x="556" y="94">1a/1a07…</text>
+  <text class="dg-small dg-mono" x="556" y="118">77/77b1…</text>
+  <text class="dg-small dg-mono" x="556" y="142">41/41ce…</text>
+  <text class="dg-small" x="556" y="176"><tspan lang="en">named by hash, immutable,</tspan><tspan lang="fr">nommés par hachage, immuables,</tspan></text>
+  <text class="dg-small" x="556" y="194"><tspan lang="en">256 two-character drawers</tspan><tspan lang="fr">256 tiroirs de deux caractères</tspan></text>
+  <line x1="470" y1="60" x2="536" y2="66" class="dg-line" marker-end="url(#up-arr)"/>
+  <line x1="470" y1="180" x2="536" y2="72" class="dg-line dg-dash" marker-end="url(#up-arr)"/>
+  <line x1="470" y1="198" x2="536" y2="114" class="dg-line dg-dash" marker-end="url(#up-arr)"/>
+</svg>
+<figcaption><span lang="en"><strong>Builds are lists; files are objects.</strong> Two manifests point at the same object when a file did not change, so only new objects are ever stored or downloaded.</span><span lang="fr"><strong>Les versions sont des listes ; les fichiers sont des objets.</strong> Deux manifestes pointent vers le même objet quand un fichier n'a pas changé : seuls les nouveaux objets sont stockés ou téléchargés.</span></figcaption>
+</figure>
+<div lang="en">
+<p>A few details of the layout, each paid for by a real or easily imagined failure:</p>
+<ul>
+<li><strong>Objects are filed under a sub-folder</strong> named after the first two characters of their hash. A Unity build has tens of thousands of files, and common file systems slow down noticeably past a few thousand entries in one directory. Two hexadecimal characters give 256 drawers, which keeps each at a few hundred objects up to dozens of builds.</li>
+<li><strong>The manifest is indented JSON</strong>, although it is a machine file and that makes it larger. When an update goes wrong, the first diagnostic gesture is to open the manifest in a browser, and it can be diffed if versioned; a few percent on a file a thousand times smaller than the build it describes is worth it.</li>
+<li><strong>Paths always use forward slashes</strong>, and a single function converts them. One forgotten backslash would make the launcher re-download a file it already has, on every launch, with nothing to report it.</li>
+<li><strong>Paths compare case-insensitively.</strong> On Windows, <code>Data/x.dll</code> and <code>data/X.dll</code> are the same file; treating them as two entries would download one over the other, then find the first missing, forever.</li>
+<li><strong>Duplicates are copied once.</strong> A build contains identical files under different names (licenses, empty files). The hash merges them, which is intended; the publisher just must not copy the same object twice.</li>
+</ul>
+</div>
+<div lang="fr">
+<p>Quelques détails du rangement, chacun payé par une panne réelle ou facile à imaginer :</p>
+<ul>
+<li><strong>Les objets sont rangés dans un sous-dossier</strong> nommé d'après les deux premiers caractères de leur hachage. Une build Unity compte des dizaines de milliers de fichiers, et les systèmes de fichiers courants ralentissent nettement au-delà de quelques milliers d'entrées dans un même dossier. Deux caractères hexadécimaux donnent 256 tiroirs, ce qui garde chacun à quelques centaines d'objets jusqu'à des dizaines de versions.</li>
+<li><strong>Le manifeste est du JSON indenté</strong>, bien que ce soit un fichier de machine et que ça le grossisse. Quand une mise à jour se passe mal, le premier geste de diagnostic est d'ouvrir le manifeste dans un navigateur, et on peut le comparer s'il est versionné ; quelques pour cent sur un fichier mille fois plus petit que la build qu'il décrit, ça vaut le coup.</li>
+<li><strong>Les chemins utilisent toujours des barres obliques</strong>, et une seule fonction les convertit. Une seule barre oblique inverse oubliée ferait retélécharger au launcher un fichier qu'il possède déjà, à chaque lancement, sans que rien ne le signale.</li>
+<li><strong>Les chemins se comparent sans tenir compte de la casse.</strong> Sous Windows, <code>Data/x.dll</code> et <code>data/X.dll</code> sont le même fichier ; les traiter comme deux entrées ferait télécharger l'un par-dessus l'autre, puis trouver le premier manquant, pour toujours.</li>
+<li><strong>Les doublons sont copiés une fois.</strong> Une build contient des fichiers identiques sous des noms différents (licences, fichiers vides). Le hachage les confond, c'est voulu ; l'outil de publication doit simplement ne pas copier deux fois le même objet.</li>
+</ul>
+</div>
+</section>
+
+<section class="sec" id="pointer">
+<div lang="en">
+<h2>A pointer, written last</h2>
+<p>The launcher knows exactly one path by heart: <code>game/latest.json</code>. That small file names the current build, the path of its manifest and the hash of the manifest. Everything else is deduced from it. It exists as a separate file, rather than the server answering "what is the latest version?", because a server that has to answer questions has logic, and a server with logic cannot be replaced by a shared folder. The manifest path is written in the pointer rather than deduced from a naming convention for the same reason: the day the layout changes, launchers already distributed follow without being replaced.</p>
+<p>The pointer is also what makes publishing atomic, simply through the order of operations. As long as <code>latest.json</code> points at the previous build, the new one is invisible, so it can be half uploaded without anyone seeing it. Step through a publication:</p>
+</div>
+<div lang="fr">
+<h2>Un pointeur, écrit en dernier</h2>
+<p>Le launcher ne connaît qu'un seul chemin par cœur : <code>game/latest.json</code>. Ce petit fichier nomme la version courante, le chemin de son manifeste et le hachage du manifeste. Tout le reste s'en déduit. Il existe comme fichier séparé, plutôt que le serveur réponde à « quelle est la dernière version ? », parce qu'un serveur qui doit répondre à des questions a une logique, et qu'un serveur qui a une logique ne peut pas être remplacé par un dossier partagé. Le chemin du manifeste est écrit dans le pointeur plutôt que déduit d'une convention de nommage pour la même raison : le jour où le rangement change, les launchers déjà distribués suivent sans être remplacés.</p>
+<p>Le pointeur est aussi ce qui rend la publication atomique, simplement par l'ordre des opérations. Tant que <code>latest.json</code> pointe vers la version précédente, la nouvelle est invisible : elle peut être à moitié téléversée sans que personne ne la voie. Déroulez une publication :</p>
+</div>
+<div class="lab" data-stepper>
+<div class="lab-head"><span class="lab-title"><span lang="en">Publishing build 41</span><span lang="fr">Publier la build 41</span></span><span class="lab-sub"><span lang="en">Launchers see nothing until the last step</span><span lang="fr">Les launchers ne voient rien avant la dernière étape</span></span></div>
+<div class="lab-body">
+<div class="fig-scroll">
+<svg viewBox="0 0 760 300" role="img" aria-label="Publication in four steps: hash the build folder, copy only the missing objects, write manifest 41, then rewrite latest.json; launchers read latest.json and see build 40 until the fourth step">
+  <defs><marker id="pub-arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs>
+  <rect x="20" y="50" width="190" height="130" rx="8" class="dg-box"/>
+  <text class="dg-text" x="115" y="72" text-anchor="middle" font-weight="700"><tspan lang="en">build folder</tspan><tspan lang="fr">dossier de build</tspan></text>
+  <text class="dg-small dg-mono" x="34" y="100">QwakClient.exe</text>
+  <text class="dg-small dg-mono" x="34" y="126">Data/level0</text>
+  <text class="dg-small dg-mono" x="34" y="152">Data/Managed/…</text>
+  <text class="dg-text" x="405" y="28" text-anchor="middle" font-weight="700"><tspan lang="en">update server</tspan><tspan lang="fr">serveur de mise à jour</tspan></text>
+  <rect x="280" y="40" width="250" height="110" rx="8" class="dg-box-2"/>
+  <text class="dg-small dg-mono" x="294" y="60" font-weight="700">objects/</text>
+  <text class="dg-small dg-mono" x="294" y="84">9f/9f2c…</text>
+  <text class="dg-small dg-mono" x="294" y="106">41/41ce…</text>
+  <rect x="280" y="164" width="250" height="56" rx="8" class="dg-box"/>
+  <text class="dg-small dg-mono" x="294" y="184" font-weight="700">game/manifests/</text>
+  <text class="dg-small dg-mono" x="294" y="208">40.json</text>
+  <rect x="280" y="232" width="250" height="58" rx="8" class="dg-hot"/>
+  <text class="dg-small dg-mono" x="294" y="252" font-weight="700">game/latest.json</text>
+  <text class="dg-small dg-mono" x="294" y="276">→ build 40</text>
+  <rect x="590" y="200" width="150" height="90" rx="8" class="dg-box"/>
+  <text class="dg-text" x="665" y="222" text-anchor="middle" font-weight="700">launcher</text>
+  <text class="dg-small" x="665" y="242" text-anchor="middle"><tspan lang="en">reads latest.json</tspan><tspan lang="fr">lit latest.json</tspan></text>
+  <text class="dg-small" x="665" y="262" text-anchor="middle"><tspan lang="en">sees build 40</tspan><tspan lang="fr">voit la build 40</tspan></text>
+  <line x1="590" y1="261" x2="536" y2="261" class="dg-line dg-dash" marker-end="url(#pub-arr)"/>
+  <text class="dg-small" x="665" y="92" text-anchor="middle"><tspan lang="en">Until step 4, every</tspan><tspan lang="fr">Jusqu'à l'étape 4,</tspan></text>
+  <text class="dg-small" x="665" y="110" text-anchor="middle"><tspan lang="en">launcher still sees</tspan><tspan lang="fr">chaque launcher voit</tspan></text>
+  <text class="dg-small" x="665" y="128" text-anchor="middle"><tspan lang="en">build 40.</tspan><tspan lang="fr">encore la build 40.</tspan></text>
+  <g data-step="1">
+    <circle cx="210" cy="50" r="11" class="dg-accent"/><text x="210" y="54" text-anchor="middle" class="dg-small" style="fill:var(--on-series);font-weight:700">1</text>
+    <text class="dg-small dg-mono" x="150" y="100">9f2c…</text>
+    <text class="dg-small dg-mono" x="150" y="126">5d3e…</text>
+    <text class="dg-small dg-mono" x="150" y="152">41ce…</text>
+  </g>
+  <g data-step="2">
+    <line class="dg-line seq-msg" x1="210" y1="126" x2="276" y2="126" marker-end="url(#pub-arr)"/>
+    <circle cx="243" cy="110" r="11" class="dg-accent"/><text x="243" y="114" text-anchor="middle" class="dg-small" style="fill:var(--on-series);font-weight:700">2</text>
+    <text class="dg-small dg-mono" x="294" y="128" font-weight="700">5d/5d3e…</text>
+    <text class="dg-small" x="518" y="84" text-anchor="end"><tspan lang="en">already there</tspan><tspan lang="fr">déjà là</tspan></text>
+    <text class="dg-small" x="518" y="106" text-anchor="end"><tspan lang="en">already there</tspan><tspan lang="fr">déjà là</tspan></text>
+    <text class="dg-small" x="518" y="128" text-anchor="end"><tspan lang="en">new: .tmp, then rename</tspan><tspan lang="fr">neuf : .tmp, puis renommé</tspan></text>
+  </g>
+  <g data-step="3">
+    <line class="dg-line seq-msg" x1="210" y1="170" x2="276" y2="196" marker-end="url(#pub-arr)"/>
+    <circle cx="236" cy="198" r="11" class="dg-accent"/><text x="236" y="202" text-anchor="middle" class="dg-small" style="fill:var(--on-series);font-weight:700">3</text>
+    <text class="dg-small dg-mono" x="370" y="208" font-weight="700">41.json</text>
+  </g>
+  <g data-step="4">
+    <circle cx="530" cy="232" r="11" class="dg-accent"/><text x="530" y="236" text-anchor="middle" class="dg-small" style="fill:var(--on-series);font-weight:700">4</text>
+    <line x1="292" y1="272" x2="372" y2="272" class="dg-line"/>
+    <text class="dg-small dg-mono" x="390" y="276" font-weight="700">→ build 41</text>
+    <line x1="612" y1="258" x2="718" y2="258" class="dg-line"/>
+    <text class="dg-small" x="665" y="282" text-anchor="middle" font-weight="700"><tspan lang="en">sees build 41</tspan><tspan lang="fr">voit la build 41</tspan></text>
+  </g>
+</svg>
+</div>
+<ol class="steps">
+<li><span lang="en"><strong>Hash.</strong> Every file of the build folder is hashed, in sorted order. The next build number is derived from the manifests already on the server, never from a counter kept aside: a local counter falls out of sync as soon as someone publishes from another machine or restores a backup.</span><span lang="fr"><strong>Hacher.</strong> Chaque fichier du dossier de build est haché, dans un ordre trié. Le numéro de version suivant se déduit des manifestes déjà présents sur le serveur, jamais d'un compteur tenu à part : un compteur local se désynchronise dès que quelqu'un publie depuis une autre machine ou restaure une sauvegarde.</span></li>
+<li><span lang="en"><strong>Copy what is missing.</strong> An object already present under its hash is, by definition, the right one: this is where the "diff" happens, with no version comparison at all. New objects are copied beside their final name and renamed, so an interrupted copy never leaves a truncated file under a name that promises a content.</span><span lang="fr"><strong>Copier ce qui manque.</strong> Un objet déjà présent sous son hachage est, par définition, le bon : c'est ici que se fait le « diff », sans aucune comparaison de versions. Les nouveaux objets sont copiés à côté de leur nom final puis renommés : une copie interrompue ne laisse jamais un fichier tronqué sous un nom qui promet un contenu.</span></li>
+<li><span lang="en"><strong>Write the manifest.</strong> <code>41.json</code> now exists, and every object it names exists too. Still, no launcher knows about it.</span><span lang="fr"><strong>Écrire le manifeste.</strong> <code>41.json</code> existe désormais, et chaque objet qu'il nomme existe aussi. Pourtant, aucun launcher n'en sait rien.</span></li>
+<li><span lang="en"><strong>Move the pointer.</strong> <code>latest.json</code> is written beside and renamed over the old one, carrying the hash of manifest 41. From the next read, every launcher sees build 41, complete. A power cut at any earlier step leaves only orphan objects.</span><span lang="fr"><strong>Déplacer le pointeur.</strong> <code>latest.json</code> est écrit à côté puis renommé par-dessus l'ancien, avec le hachage du manifeste 41. Dès la lecture suivante, chaque launcher voit la build 41, complète. Une coupure de courant à n'importe quelle étape antérieure ne laisse que des objets orphelins.</span></li>
+</ol>
+</div>
+</div>
+<div class="code"><div class="code-head"><span class="file">Qwak.Patcher/Publisher.cs · Publish, simplified</span></div><pre><code data-lang="cs">// The next number is derived from the manifests already published.
+var build = NextBuild(serverRoot, channel);
+
+// 1. Hash every file of the build.
+var scan = BuildScanner.Scan(buildDir, channel, build, label, protocol, executable);
+
+// 2. Copy the objects that are missing. An object already present under its
+//    hash is, by definition, the right one: this is where the "diff" happens.
+foreach (var file in scan.Manifest.Files)
+{
+    var target = ObjectPath(file.Sha256);
+    if (File.Exists(target)) continue;
+    File.Copy(Source(file), target + ".tmp", overwrite: true);  // copy beside...
+    File.Move(target + ".tmp", target, overwrite: true);        // ...then rename
+}
+
+// 3. The manifest.
+File.WriteAllText(ManifestPath(channel, build), manifestJson);
+
+// 4. The pointer, LAST, in one move. It carries sha256(manifest).
+File.WriteAllText(latest + ".tmp", pointer.ToJson());
+File.Move(latest + ".tmp", latest, overwrite: true);</code></pre></div>
+<div lang="en">
+<p>Swap two lines, and a power cut during a publication would hand every player a manifest describing files that do not exist. The pointer, too, is written beside and renamed rather than overwritten: publishing while the server is serving is the normal case here, and a plain write leaves a few microseconds during which a request can read an empty or half-written file. The launcher would then report "unreadable" on a perfectly successful publication: rare, impossible to reproduce, and searched for on the wrong side.</p>
+<div class="note rule"><p class="note-label">Rule</p><p>When readers follow a pointer, publish everything the pointer leads to before moving the pointer, and move it atomically.</p><p>The order of writes is the only atomicity such a system needs. It works on any storage that can rename a file.</p></div>
+</div>
+<div lang="fr">
+<p>Inversez deux lignes, et une coupure de courant pendant une publication donnerait à tous les joueurs un manifeste décrivant des fichiers qui n'existent pas. Le pointeur, lui aussi, est écrit à côté puis renommé plutôt qu'écrasé : publier pendant que le serveur sert est le cas normal ici, et une écriture directe laisse quelques microsecondes pendant lesquelles une requête peut lire un fichier vide ou à moitié écrit. Le launcher dirait alors « illisible » sur une publication parfaitement réussie : rare, impossible à reproduire, et cherché du mauvais côté.</p>
+<div class="note rule"><p class="note-label">Règle</p><p>Quand des lecteurs suivent un pointeur, publier tout ce vers quoi mène le pointeur avant de déplacer le pointeur, et le déplacer de façon atomique.</p><p>L'ordre des écritures est la seule atomicité dont un tel système a besoin. Elle fonctionne sur n'importe quel stockage capable de renommer un fichier.</p></div>
+</div>
+</section>
+
+<section class="sec" id="channels">
+<div lang="en">
+<h2>Two channels, one store</h2>
+<p>The game and the launcher are published separately: they change at unrelated rhythms (the game three times an evening, the launcher three times a year), and each has its own pointer and its own build numbering. Mixing the numbering would make a number jump without any version being published. They share one object store anyway, not to save space (they share almost nothing) but because one store means one clean-up, one download path and one thing to back up.</p>
+<p>Every manifest and every pointer names its channel, redundantly with the URL it came from, and the launcher refuses a manifest from the wrong one: a mistyped URL would otherwise install the launcher in the game's folder, then the game over the launcher. On the publishing side, the channel is a mandatory word with no default. A default of "game" would be handy nine times out of ten and catastrophic the tenth: publishing the launcher on the game channel would replace everyone's build with an executable that cannot play.</p>
+</div>
+<div lang="fr">
+<h2>Deux canaux, un magasin</h2>
+<p>Le jeu et le launcher se publient séparément : ils changent à des rythmes sans rapport (le jeu trois fois par soirée, le launcher trois fois par an), et chacun a son propre pointeur et sa propre numérotation. Mélanger les numérotations ferait bondir un numéro sans qu'aucune version n'ait été publiée. Ils partagent quand même un seul magasin d'objets, non pour économiser (ils ne partagent presque rien) mais parce qu'un seul magasin veut dire un seul nettoyage, un seul chemin de téléchargement et une seule chose à sauvegarder.</p>
+<p>Chaque manifeste et chaque pointeur nomme son canal, de façon redondante avec l'URL d'où il vient, et le launcher refuse un manifeste du mauvais canal : une URL mal recopiée installerait sinon le launcher dans le dossier du jeu, puis le jeu par-dessus le launcher. Côté publication, le canal est un mot obligatoire, sans valeur par défaut. Un défaut « game » serait pratique neuf fois sur dix et catastrophique la dixième : publier le launcher sur le canal du jeu remplacerait la build de tout le monde par un exécutable qui ne sait pas jouer.</p>
+</div>
+</section>
+
+<section class="sec" id="never-ships">
+<div lang="en">
+<h2>What never ships</h2>
+<p>Some files in a build folder must never reach a player. The exclusion list is short and explicit, never a clever filter: the day a legitimate file disappears from players' installations, you want to read why in five seconds.</p>
+<div class="table-wrap"><table>
+<thead><tr><th>Excluded</th><th>Why</th></tr></thead>
+<tbody>
+<tr><td><code>.pdb</code>, <code>.mdb</code></td><td>Debug symbols: heavy, useless to a player.</td></tr>
+<tr><td>folders ending in <code>_BurstDebugInformation_DoNotShip</code> or <code>_BackUpThisFolder_ButDontShipItWithYourGame</code></td><td>Unity says so in the folder name. Hundreds of megabytes that the home upload link would carry to every new player.</td></tr>
+<tr><td><code>.qwak-installed.json</code>, <code>launcher.json</code>, anywhere in the tree</td><td>Files the launcher writes itself. Publishing them creates a cycle (below).</td></tr>
+<tr><td>the <code>launcher-neuf/</code> folder</td><td>The launcher's staging folder for its own updates (chapter <a href="launcher.html#self-update">8.2</a>).</td></tr>
+</tbody></table></div>
+<div class="note pitfall"><p class="note-label">Pitfall I hit</p><p>Unity <em>prefixes</em> those debug folders with the product name: the real folder is <code>QwakClient_BurstDebugInformation_DoNotShip</code>. The first filter tested equality with <code>_BurstDebugInformation_DoNotShip</code>, so it could never match, and debug symbols were published from the very beginning. Silently: the "skipped" counter faithfully displayed zero. The filter now tests the suffix. A filter that never matches looks exactly like a filter with nothing to do; test it once against the real case.</p></div>
+<p>The launcher's control files deserve their own rule. <code>.qwak-installed.json</code> records which manifest was last applied; it is written by the launcher at the end of every update. Published inside a manifest, it describes a file whose content depends on the manifest itself. That exact cycle produced an infinite update loop, told in chapter <a href="launcher.html#loop">8.2</a>. The player's <code>launcher.json</code> is excluded for a second reason, just as serious: publishing it would overwrite, at every launcher update, the server address each person typed.</p>
+<div class="note rule"><p class="note-label">Rule</p><p>A manifest never describes a file that depends on it.</p></div>
+</div>
+<div lang="fr">
+<h2>Ce qui ne part jamais</h2>
+<p>Certains fichiers d'un dossier de build ne doivent jamais atteindre un joueur. La liste d'exclusion est courte et explicite, jamais un filtre malin : le jour où un fichier légitime disparaît des installations des joueurs, on veut pouvoir lire pourquoi en cinq secondes.</p>
+<div class="table-wrap"><table>
+<thead><tr><th>Exclu</th><th>Pourquoi</th></tr></thead>
+<tbody>
+<tr><td><code>.pdb</code>, <code>.mdb</code></td><td>Symboles de débogage : lourds, inutiles à un joueur.</td></tr>
+<tr><td>dossiers finissant par <code>_BurstDebugInformation_DoNotShip</code> ou <code>_BackUpThisFolder_ButDontShipItWithYourGame</code></td><td>Unity le dit dans le nom du dossier. Des centaines de mégaoctets que le lien montant domestique porterait à chaque nouveau joueur.</td></tr>
+<tr><td><code>.qwak-installed.json</code>, <code>launcher.json</code>, n'importe où dans l'arborescence</td><td>Des fichiers que le launcher écrit lui-même. Les publier crée un cycle (plus bas).</td></tr>
+<tr><td>le dossier <code>launcher-neuf/</code></td><td>Le dossier de transit du launcher pour ses propres mises à jour (chapitre <a href="launcher.html#self-update">8.2</a>).</td></tr>
+</tbody></table></div>
+<div class="note pitfall"><p class="note-label">Piège rencontré</p><p>Unity <em>préfixe</em> ces dossiers de débogage du nom du produit : le vrai dossier s'appelle <code>QwakClient_BurstDebugInformation_DoNotShip</code>. Le premier filtre testait l'égalité avec <code>_BurstDebugInformation_DoNotShip</code> : il ne pouvait jamais correspondre, et les symboles de débogage ont été publiés depuis le tout début. En silence : le compteur « ignoré(s) » affichait consciencieusement zéro. Le filtre teste maintenant le suffixe. Un filtre qui ne correspond jamais ressemble exactement à un filtre qui n'a rien à faire ; le tester une fois contre le cas réel.</p></div>
+<p>Les fichiers de contrôle du launcher méritent leur propre règle. <code>.qwak-installed.json</code> enregistre quel manifeste a été appliqué en dernier ; le launcher l'écrit à la fin de chaque mise à jour. Publié dans un manifeste, il décrit un fichier dont le contenu dépend du manifeste lui-même. Ce cycle précis a produit une boucle de mise à jour infinie, racontée au chapitre <a href="launcher.html#loop">8.2</a>. Le <code>launcher.json</code> du joueur est exclu pour une seconde raison, tout aussi grave : le publier écraserait, à chaque mise à jour du launcher, l'adresse de serveur que chacun a saisie.</p>
+<div class="note rule"><p class="note-label">Règle</p><p>Un manifeste ne décrit jamais un fichier qui dépend de lui.</p></div>
+</div>
+</section>
+
+<section class="sec" id="dumb-server">
+<div lang="en">
+<h2>An update server with no logic at all</h2>
+<p>The update server computes nothing, compares nothing, knows neither versions nor players. It serves bytes under paths, like a file share, and all the intelligence lives in the manifest the publishing tool wrote and the launcher interprets. That is a property, not laziness: the day the home upload link is not enough, the program can be replaced by an object-storage bucket or any static host behind a CDN, and the launcher will not notice. It changes a URL.</p>
+<p>Its whole configuration is a caching policy of two lines, and it follows directly from the design:</p>
+<div class="table-wrap"><table>
+<thead><tr><th>File</th><th>Cache header</th><th>Why</th></tr></thead>
+<tbody>
+<tr><td>Objects and manifests</td><td><code>public, max-age=31536000, immutable</code></td><td>An object's name is its content: it can never change, so any cache in front can keep it for a year. A manifest's number is never reused either.</td></tr>
+<tr><td><code>latest.json</code></td><td><code>no-store</code></td><td>The one mutable file of the system. A one-hour cache here and a player would download a build an hour old while believing it is current, a failure nobody could diagnose, since everything looks "up to date" from their side.</td></tr>
+</tbody></table></div>
+<p>The rule matches the file <em>name</em>, not the full path, so it covers both channels' pointers without listing channels, and it will cover the third. Two more settings exist only because objects are unusual files: they have no extension, and the static-file middleware refuses unknown types by default, which would answer 404 to every file of the build. They are served as <code>application/octet-stream</code>, the most neutral type, since no browser is meant to interpret them. Directory listing and default pages are off: a silent redirect would make a 404 indistinguishable from a malformed path.</p>
+<p>At startup, the server reads each pointer once, only to print what it is serving. "The server is running" and "the server has something to serve" are two different states, and confusing them costs the quarter of an hour spent wondering why the launcher says "up to date" right after a publication.</p>
+</div>
+<div lang="fr">
+<h2>Un serveur de mise à jour sans aucune logique</h2>
+<p>Le serveur de mise à jour ne calcule rien, ne compare rien, ne connaît ni versions ni joueurs. Il sert des octets sous des chemins, comme un partage de fichiers, et toute l'intelligence vit dans le manifeste qu'a écrit l'outil de publication et qu'interprète le launcher. C'est une propriété, pas de la paresse : le jour où le lien montant domestique ne suffira plus, le programme pourra être remplacé par un seau de stockage d'objets ou n'importe quel hébergement statique derrière un CDN, et le launcher ne s'en apercevra pas. Il change une URL.</p>
+<p>Toute sa configuration tient en une politique de cache de deux lignes, qui découle directement de la conception :</p>
+<div class="table-wrap"><table>
+<thead><tr><th>Fichier</th><th>En-tête de cache</th><th>Pourquoi</th></tr></thead>
+<tbody>
+<tr><td>Objets et manifestes</td><td><code>public, max-age=31536000, immutable</code></td><td>Le nom d'un objet est son contenu : il ne peut jamais changer, et n'importe quel cache devant peut le garder un an. Le numéro d'un manifeste n'est jamais réutilisé non plus.</td></tr>
+<tr><td><code>latest.json</code></td><td><code>no-store</code></td><td>Le seul fichier modifiable du système. Un cache d'une heure ici, et un joueur téléchargerait une version vieille d'une heure en la croyant à jour, une panne que personne ne saurait diagnostiquer, puisque tout semble « à jour » de son côté.</td></tr>
+</tbody></table></div>
+<p>La règle porte sur le <em>nom</em> du fichier, pas sur le chemin complet : elle couvre les pointeurs des deux canaux sans énumérer les canaux, et couvrira le troisième. Deux autres réglages n'existent que parce que les objets sont des fichiers inhabituels : ils n'ont pas d'extension, et le middleware de fichiers statiques refuse par défaut les types inconnus, ce qui répondrait 404 à tous les fichiers de la build. Ils sont servis en <code>application/octet-stream</code>, le type le plus neutre, puisqu'aucun navigateur n'est censé les interpréter. L'affichage des dossiers et les pages par défaut sont coupés : une redirection silencieuse rendrait un 404 indiscernable d'un chemin mal formé.</p>
+<p>Au démarrage, le serveur lit chaque pointeur une fois, seulement pour afficher ce qu'il sert. « Le serveur tourne » et « le serveur a quelque chose à servir » sont deux états différents, et les confondre coûte le quart d'heure passé à se demander pourquoi le launcher dit « à jour » juste après une publication.</p>
+</div>
+</section>
+
+<section class="sec" id="publishing">
+<div lang="en">
+<h2>Publishing: a keyboard, not a route</h2>
+<p>Publishing happens from the update server's own console while it keeps serving, or from a small command-line tool for scripts. Both call the same <code>Publisher</code>: one implementation means one order of steps to keep right. A copy in each program would drift, and the day one side changed the order, the other would keep writing <code>latest.json</code> too early without anyone noticing until an interrupted publication broke someone's installation. The command-line tool returns a non-zero exit code on failure, because it will end up in a script, and a failed publication that returns zero lets the chain carry on and "successfully" deploy a version that never went up.</p>
+<div class="note tradeoff"><p class="note-label">Trade-off</p><p>An HTTP route to publish would have been handier still: publish from anywhere. That is exactly the problem. The process is exposed to the Internet through a NAT rule, and a route that reads a folder and rewrites what every launcher will download is remote code execution disguised as a convenience. A token to protect it would live in plain text on the very machine it protects. The machine's keyboard is the authentication, and it is free: the server gives bytes and accepts none.</p></div>
+<p>After each publication, the console prints the number that matters next: how many new bytes a player will actually download from the previous build. It is also the measurement that will decide whether binary deltas are worth their complexity on these particular files. Twelve new megabytes justify no binary-diff machinery; 340 justify it at once. A <code>patches/</code> folder is already reserved in the layout, and a delta will go from one object to another, two stable identities, without ever talking about versions.</p>
+</div>
+<div lang="fr">
+<h2>Publier : un clavier, pas une route</h2>
+<p>La publication se fait depuis la console du serveur de mise à jour, pendant qu'il continue de servir, ou depuis un petit outil en ligne de commande pour les scripts. Les deux appellent le même <code>Publisher</code> : une seule implémentation veut dire un seul ordre d'étapes à garder juste. Une copie dans chaque programme dériverait, et le jour où un côté changerait l'ordre, l'autre continuerait d'écrire <code>latest.json</code> trop tôt sans que personne ne s'en aperçoive avant qu'une publication interrompue ne casse l'installation de quelqu'un. L'outil en ligne de commande rend un code de sortie non nul en cas d'échec, parce qu'il finira dans un script, et une publication ratée qui rend zéro laisse la chaîne continuer et déployer « avec succès » une version qui n'est jamais montée.</p>
+<div class="note tradeoff"><p class="note-label">Compromis</p><p>Une route HTTP pour publier aurait été plus pratique encore : publier de n'importe où. C'est précisément le problème. Le processus est exposé à Internet par une règle NAT, et une route qui lit un dossier et réécrit ce que tous les launchers vont télécharger est une exécution de code à distance déguisée en commodité. Un jeton pour la protéger vivrait en clair sur la machine même qu'il protège. Le clavier de la machine est l'authentification, et elle est gratuite : le serveur rend des octets et n'en accepte aucun.</p></div>
+<p>Après chaque publication, la console affiche le chiffre qui compte pour la suite : combien d'octets neufs un joueur téléchargera réellement depuis la version précédente. C'est aussi la mesure qui dira si des deltas binaires valent leur complexité sur ces fichiers-là. Douze mégaoctets neufs ne justifient aucune machinerie de diff binaire ; 340 la justifient tout de suite. Un dossier <code>patches/</code> est déjà réservé dans le rangement, et un delta ira d'un objet à un autre, deux identités stables, sans jamais parler de versions.</p>
+</div>
+</section>
+
+<section class="sec" id="prune">
+<div lang="en">
+<h2>Cleaning up: mark, then sweep</h2>
+<p>Content-addressed storage never rewrites an object, so it never frees anything by itself. Each build adds what is unique to it, and after twenty publications the unique objects of the first nineteen sleep on the disk. The <code>prune</code> command keeps the last N builds of each channel and deletes the objects that no remaining manifest cites. It is a small garbage collector, and it is built like one: mark everything that is alive first, sweep after. Deleting while walking would remove an object shared with a build being kept.</p>
+</div>
+<div lang="fr">
+<h2>Faire le ménage : marquer, puis balayer</h2>
+<p>Le stockage par contenu ne réécrit jamais un objet, donc il ne libère jamais rien tout seul. Chaque version ajoute ce qui lui est propre, et au bout de vingt publications les objets uniques des dix-neuf premières dorment sur le disque. La commande <code>prune</code> garde les N dernières versions de chaque canal et supprime les objets qu'aucun manifeste restant ne cite. C'est un petit ramasse-miettes, construit comme tel : marquer d'abord tout ce qui est vivant, balayer ensuite. Supprimer en parcourant effacerait un objet partagé avec une version qu'on garde.</p>
+</div>
+<figure class="fig fig-scroll">
+<svg viewBox="0 0 760 240" role="img" aria-label="Prune with keep 2: manifests 40 and 41 of the game and 3 of the launcher are kept, 39 is dropped; objects cited by a kept manifest of any channel survive; an object cited only by 39 and a leftover .tmp file are swept">
+  <text class="dg-label" x="20" y="22"><tspan lang="en">manifests (keep 2)</tspan><tspan lang="fr">manifestes (garder 2)</tspan></text>
+  <text class="dg-label" x="440" y="22">objects/</text>
+  <rect x="20" y="34" width="230" height="30" rx="6" class="dg-box dg-dash" style="opacity:0.6"/>
+  <text class="dg-small dg-mono" x="32" y="54">game/39.json</text><text class="dg-small" x="238" y="54" text-anchor="end"><tspan lang="en">dropped</tspan><tspan lang="fr">retiré</tspan></text>
+  <rect x="20" y="74" width="230" height="30" rx="6" class="dg-box"/>
+  <text class="dg-small dg-mono" x="32" y="94">game/40.json</text><text class="dg-small" x="238" y="94" text-anchor="end"><tspan lang="en">kept</tspan><tspan lang="fr">gardé</tspan></text>
+  <rect x="20" y="114" width="230" height="30" rx="6" class="dg-hot"/>
+  <text class="dg-small dg-mono" x="32" y="134">game/41.json</text><text class="dg-small" x="238" y="134" text-anchor="end"><tspan lang="en">online</tspan><tspan lang="fr">en ligne</tspan></text>
+  <rect x="20" y="154" width="230" height="30" rx="6" class="dg-hot"/>
+  <text class="dg-small dg-mono" x="32" y="174">launcher/3.json</text><text class="dg-small" x="238" y="174" text-anchor="end"><tspan lang="en">online</tspan><tspan lang="fr">en ligne</tspan></text>
+  <line x1="250" y1="89" x2="440" y2="49" class="dg-line"/>
+  <line x1="250" y1="129" x2="440" y2="49" class="dg-line"/>
+  <line x1="250" y1="129" x2="440" y2="89" class="dg-line"/>
+  <line x1="250" y1="169" x2="440" y2="169" class="dg-line"/>
+  <line x1="250" y1="49" x2="440" y2="129" class="dg-line dg-dash"/>
+  <rect x="440" y="34" width="300" height="30" rx="6" class="dg-box"/>
+  <text class="dg-small dg-mono" x="452" y="54">9f2c… <tspan lang="en">· cited by 40, 41</tspan><tspan lang="fr">· cité par 40, 41</tspan></text><text class="dg-small" x="728" y="54" text-anchor="end" style="fill:var(--good-ink)"><tspan lang="en">kept</tspan><tspan lang="fr">gardé</tspan></text>
+  <rect x="440" y="74" width="300" height="30" rx="6" class="dg-box"/>
+  <text class="dg-small dg-mono" x="452" y="94">41ce… <tspan lang="en">· cited by 41</tspan><tspan lang="fr">· cité par 41</tspan></text><text class="dg-small" x="728" y="94" text-anchor="end" style="fill:var(--good-ink)"><tspan lang="en">kept</tspan><tspan lang="fr">gardé</tspan></text>
+  <rect x="440" y="114" width="300" height="30" rx="6" class="dg-box dg-crit-stroke"/>
+  <text class="dg-small dg-mono" x="452" y="134">77b1… <tspan lang="en">· only 39</tspan><tspan lang="fr">· seulement 39</tspan></text><text class="dg-small" x="728" y="134" text-anchor="end" style="fill:var(--crit-ink)"><tspan lang="en">swept</tspan><tspan lang="fr">balayé</tspan></text>
+  <rect x="440" y="154" width="300" height="30" rx="6" class="dg-box"/>
+  <text class="dg-small dg-mono" x="452" y="174">c0de… · launcher/3</text><text class="dg-small" x="728" y="174" text-anchor="end" style="fill:var(--good-ink)"><tspan lang="en">kept</tspan><tspan lang="fr">gardé</tspan></text>
+  <rect x="440" y="194" width="300" height="30" rx="6" class="dg-box dg-crit-stroke"/>
+  <text class="dg-small dg-mono" x="452" y="214">5d3e….tmp <tspan lang="en">· interrupted copy</tspan><tspan lang="fr">· copie interrompue</tspan></text><text class="dg-small" x="728" y="214" text-anchor="end" style="fill:var(--crit-ink)"><tspan lang="en">swept</tspan><tspan lang="fr">balayé</tspan></text>
+</svg>
+<figcaption><span lang="en"><strong>Mark across every channel, then sweep.</strong> An object survives if any kept manifest of any channel cites it. Leftover <code>.tmp</code> files from interrupted publications are cited by nothing, by construction.</span><span lang="fr"><strong>Marquer sur tous les canaux, puis balayer.</strong> Un objet survit si un manifeste gardé, de n'importe quel canal, le cite. Les <code>.tmp</code> laissés par des publications interrompues ne sont cités par rien, par construction.</span></figcaption>
+</figure>
+<div lang="en">
+<p>Three details make it safe:</p>
+<ul>
+<li><strong>Marking always covers every channel</strong>, even when you only meant to tidy one. Objects are shared, so a sweep that looked only at the launcher channel would delete the game's files. No error, no trace: the first sign would be a player's download failing with a 404 on an object the manifest promises.</li>
+<li><strong>The online build of each channel is untouchable</strong>, whatever N says. Even a mistyped <code>prune 1</code> leaves <code>latest.json</code> pointing at a manifest whose objects all exist.</li>
+<li><strong>Without the word <code>go</code>, it only reports.</strong> <code>prune 3</code> shows what would be deleted; <code>prune 3 go</code> deletes it. Old builds exist nowhere else, so two extra characters are cheap insurance.</li>
+</ul>
+</div>
+<div lang="fr">
+<p>Trois détails la rendent sûre :</p>
+<ul>
+<li><strong>Le marquage couvre toujours tous les canaux</strong>, même quand on ne voulait ranger que l'un d'eux. Les objets sont partagés : un balayage qui ne regarderait que le canal du launcher effacerait les fichiers du jeu. Sans erreur, sans trace : le premier signe serait le téléchargement d'un joueur qui échoue sur un 404, pour un objet que le manifeste promet.</li>
+<li><strong>La version en ligne de chaque canal est intouchable</strong>, quoi que dise N. Même un <code>prune 1</code> mal tapé laisse <code>latest.json</code> pointer vers un manifeste dont tous les objets existent.</li>
+<li><strong>Sans le mot <code>go</code>, elle ne fait que rapporter.</strong> <code>prune 3</code> montre ce qui serait supprimé ; <code>prune 3 go</code> le supprime. Les anciennes versions n'existent nulle part ailleurs : deux caractères de plus sont une assurance bon marché.</li>
+</ul>
+</div>
+</section>
+
+<section class="sec" id="trust">
+<div lang="en">
+<h2>Integrity is not authenticity</h2>
+<p>Hashes prove that a file is the one the manifest describes: nothing truncated, corrupted or mis-copied. They prove nothing about <em>who</em> wrote the manifest. Over plain HTTP, anyone on the path can serve a coherent manifest with the files of their choice, and the launcher will diligently verify that they match before running them. This is a channel that delivers code, and the source says so once, plainly, rather than spreading a false sense of security over three files.</p>
+<p>The remedy is already prepared in the format. The pointer carries the hash of the manifest, which carries the hashes of every object, so the whole chain goes back to one small file: signing <code>latest.json</code> authenticates everything. The repository already has the RSA machinery (the one game servers use to prove their identity to the gateway, chapter <a href="gateway.html">2.1</a>). Nothing verifies a signature yet; the point is that the day it is added, no format has to change. Meanwhile, the manifest hash in the pointer already catches two very real failures: a manifest half written by an interrupted publication, and an HTTP cache serving one version of the pointer and another of the manifest.</p>
+<div class="note pitfall"><p class="note-label">Pitfall I hit</p><p>A build was published with its executable given as a full path, and the manifest went out with <code>C:/Users/&lt;me&gt;/…/QwakClient.exe</code>. The check "does the executable exist?" confirmed it, because combining a folder with an absolute path returns the absolute path, and on the publishing machine it existed. The other player's launcher looked for a folder that only existed on mine. Harmless that time, and it revealed a real hole: the launcher writes where the manifest says and runs what it names, so a path like <code>C:/Windows/…</code> or <code>../../..</code> would make it write, and run, anywhere on the machine. Now the publishing tool converts a full path that points inside the build into a relative one (pasting a path from the file explorer is the natural gesture) and refuses one outside it. The launcher checks every path again before believing anything, and a single bad path rejects the whole manifest.</p></div>
+<div class="note rule"><p class="note-label">Rule</p><p>A path that comes from the network is data, never a location. Check that it stays inside, where it enters.</p></div>
+</div>
+<div lang="fr">
+<h2>L'intégrité n'est pas l'authenticité</h2>
+<p>Les hachages prouvent qu'un fichier est celui que décrit le manifeste : rien de tronqué, corrompu ou mal recopié. Ils ne prouvent rien sur <em>qui</em> a écrit le manifeste. En HTTP simple, n'importe qui sur le chemin peut servir un manifeste cohérent avec les fichiers de son choix, et le launcher vérifiera consciencieusement qu'ils correspondent avant de les lancer. C'est un canal qui livre du code, et le source le dit une fois, clairement, plutôt que de répandre un faux sentiment de sécurité sur trois fichiers.</p>
+<p>Le remède est déjà préparé dans le format. Le pointeur porte le hachage du manifeste, qui porte les hachages de chaque objet : toute la chaîne remonte à un seul petit fichier, et signer <code>latest.json</code> authentifie tout. Le dépôt a déjà la mécanique RSA (celle qu'utilisent les serveurs de jeu pour prouver leur identité à la gateway, chapitre <a href="gateway.html">2.1</a>). Rien ne vérifie encore de signature ; l'intérêt est que le jour où on l'ajoute, aucun format n'a à changer. En attendant, le hachage du manifeste dans le pointeur attrape déjà deux pannes bien réelles : un manifeste à moitié écrit par une publication interrompue, et un cache HTTP qui sert une version du pointeur et une autre du manifeste.</p>
+<div class="note pitfall"><p class="note-label">Piège rencontré</p><p>Une build a été publiée avec son exécutable donné en chemin complet, et le manifeste est parti avec <code>C:/Users/&lt;moi&gt;/…/QwakClient.exe</code>. La vérification « l'exécutable existe-t-il ? » l'a confirmé, parce que combiner un dossier avec un chemin absolu rend le chemin absolu, et que sur la machine qui publiait, il existait. Le launcher de l'autre joueur a cherché un dossier qui n'existait que chez moi. Sans conséquence cette fois, et cela a révélé un vrai trou : le launcher écrit où dit le manifeste et lance ce qu'il nomme, donc un chemin comme <code>C:/Windows/…</code> ou <code>../../..</code> le ferait écrire, et exécuter, n'importe où sur la machine. Désormais, l'outil de publication convertit un chemin complet qui pointe dans la build en chemin relatif (coller un chemin depuis l'explorateur est le geste naturel) et refuse celui qui en sort. Le launcher revérifie chaque chemin avant de croire quoi que ce soit, et un seul mauvais chemin fait rejeter tout le manifeste.</p></div>
+<div class="note rule"><p class="note-label">Règle</p><p>Un chemin venu du réseau est une donnée, jamais un emplacement. Vérifier qu'il reste à l'intérieur, là où il entre.</p></div>
+</div>
+</section>
+
+<section class="sec" id="takeaways">
+<div class="takeaways">
+<div lang="en"><h2>Key takeaways</h2><ul>
+<li>Identify files by the SHA-256 of their content, streamed; any client in any state then needs only "the missing objects".</li>
+<li>Store objects once, under their hash, and describe builds as manifests; sharing between builds comes for free.</li>
+<li>Publish objects, then the manifest, then a tiny pointer, each by write-then-rename; interruptions leave only orphans.</li>
+<li>Keep the update server logic-free: cache immutable objects for a year and the pointer never.</li>
+<li>Exclude debug output and every file the launcher writes itself; a manifest never describes a file that depends on it.</li>
+<li>Collect garbage by marking across all channels before sweeping, never touch the online build, and default to a dry run.</li>
+<li>Treat hashes as integrity only; prepare a signature on the pointer, and reject any manifest path that leaves the installation.</li>
+</ul></div>
+<div lang="fr"><h2>À retenir</h2><ul>
+<li>Identifier les fichiers par le SHA-256 de leur contenu, calculé en flux ; tout client, dans n'importe quel état, n'a alors besoin que des « objets manquants ».</li>
+<li>Stocker les objets une fois, sous leur hachage, et décrire les versions par des manifestes ; le partage entre versions vient gratuitement.</li>
+<li>Publier les objets, puis le manifeste, puis un minuscule pointeur, chacun par écriture puis renommage ; les interruptions ne laissent que des orphelins.</li>
+<li>Garder le serveur de mise à jour sans logique : mettre en cache les objets immuables pour un an et le pointeur jamais.</li>
+<li>Exclure les sorties de débogage et chaque fichier que le launcher écrit lui-même ; un manifeste ne décrit jamais un fichier qui dépend de lui.</li>
+<li>Ramasser les miettes en marquant sur tous les canaux avant de balayer, ne jamais toucher la version en ligne, et faire d'un essai à blanc le comportement par défaut.</li>
+<li>Traiter les hachages comme de l'intégrité seulement ; préparer une signature sur le pointeur, et rejeter tout chemin de manifeste qui sort de l'installation.</li>
+</ul></div>
+</div>
+</section>
+
+</div>
+<div data-chapter-foot></div>
+</article>
+</main>
+<aside class="rail" id="mq-rail"></aside>
+</div>
+<footer class="site-footer" id="mq-footer"></footer>
+<script src="assets/js/site-data.js" defer></script>
+<script src="assets/js/glossary-data.js" defer></script>
+<script src="assets/js/app.js" defer></script>
+<script src="assets/js/widgets.js" defer></script>
+</body>
+</html>

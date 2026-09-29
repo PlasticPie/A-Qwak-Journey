@@ -1,0 +1,304 @@
+<!doctype html>
+<html lang="en" data-lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Entities, ids and membership · MoonQwak</title>
+<meta name="description" content="How objects join a map, tick, get a network id, and act through composable behaviours.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Chakra+Petch:wght@500;600&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="assets/css/site.css">
+<script>(function(){var r=document.documentElement,l,t;try{l=localStorage.getItem("mq-lang");t=localStorage.getItem("mq-theme");}catch(e){}if(l!=="en"&&l!=="fr"){l=(navigator.language||"").toLowerCase().indexOf("fr")===0?"fr":"en";}r.setAttribute("data-lang",l);r.setAttribute("lang",l);if(t==="light"||t==="dark")r.setAttribute("data-theme",t);})();</script>
+</head>
+<body data-page="entities">
+<a class="skip-link" href="#main"><span lang="en">Skip to content</span><span lang="fr">Aller au contenu</span></a>
+<header class="site-header" id="mq-header"></header>
+<div class="layout">
+<aside class="sidebar" id="mq-sidebar"></aside>
+<main class="content" id="main">
+<article>
+<header class="chapter-head">
+  <div class="eyebrow" data-auto></div>
+  <h1><span lang="en">Entities, ids and membership</span><span lang="fr">Entités, identifiants et appartenance</span></h1>
+  <p class="dek"><span lang="en">How objects join a map, tick, get a network id, and act through composable behaviours.</span><span lang="fr">Comment les objets rejoignent une carte, tickent, reçoivent un identifiant réseau et agissent par comportements composables.</span></p>
+  <div class="meta-row" data-auto></div>
+</header>
+
+<div class="prose">
+
+<section class="sec" id="what">
+<div lang="en">
+<h2>What an entity is here</h2>
+<p>Everything that exists on a map implements one small interface: an id, a position, a rotation, and a way to be disposed. On top of that, each kind of object picks only the capabilities it needs: a body in the physics world, a tick of its own, a description sent once to clients, or a compact state sent every tick. MoonQwak does not use a general-purpose entity-component system on the server; it uses a shallow hierarchy (a hull base class, then player ships, NPC ships and stations) split into partial files by concern (power, physics, shields, serialization), and composition for behaviour. What matters more than the style is that every kind answers the same few questions explicitly:</p>
+</div>
+<div lang="fr">
+<h2>Ce qu'est une entité ici</h2>
+<p>Tout ce qui existe sur une carte implémente une petite interface : un identifiant, une position, une rotation, et un moyen d'être libéré. Par-dessus, chaque sorte d'objet ne prend que les capacités dont elle a besoin : un corps dans le monde physique, un tick à elle, une description envoyée une fois aux clients, ou un état compact envoyé à chaque tick. MoonQwak n'utilise pas de système entité-composant généraliste côté serveur ; il utilise une hiérarchie peu profonde (une classe de base de coque, puis vaisseaux de joueurs, vaisseaux PNJ et stations) découpée en fichiers partiels par préoccupation (énergie, physique, boucliers, sérialisation), et la composition pour les comportements. Ce qui compte plus que le style, c'est que chaque sorte réponde explicitement aux mêmes quelques questions :</p>
+</div>
+<div class="table-wrap"><table>
+<thead><tr><th><span lang="en">Object</span><span lang="fr">Objet</span></th><th><span lang="en">Physics body</span><span lang="fr">Corps physique</span></th><th><span lang="en">Description on first sight</span><span lang="fr">Description à la première vue</span></th><th><span lang="en">Why</span><span lang="fr">Pourquoi</span></th></tr></thead>
+<tbody>
+<tr><td><span lang="en">Ship, station</span><span lang="fr">Vaisseau, station</span></td><td><span lang="en">Dynamic / static</span><span lang="fr">Dynamique / statique</span></td><td><span lang="en">Yes, asked for by the client</span><span lang="fr">Oui, demandée par le client</span></td><td><span lang="en">A hull's layout is large and rarely changes; send it once, then only movement and state.</span><span lang="fr">La disposition d'une coque est grosse et change rarement ; l'envoyer une fois, puis seulement le mouvement et l'état.</span></td></tr>
+<tr><td><span lang="en">Character</span><span lang="fr">Personnage</span></td><td><span lang="en">Yes</span><span lang="fr">Oui</span></td><td><span lang="en">Yes</span><span lang="fr">Oui</span></td><td><span lang="en">Same reasoning: appearance once, position every tick.</span><span lang="fr">Même raisonnement : l'apparence une fois, la position à chaque tick.</span></td></tr>
+<tr><td><span lang="en">Bullet</span><span lang="fr">Balle</span></td><td><span lang="en">No</span><span lang="fr">Non</span></td><td><span lang="en">No</span><span lang="fr">Non</span></td><td><span lang="en">A spawn and a hit are enough: the client flies it from its launch state (chapter <a href="deltas.html">4.4</a>).</span><span lang="fr">Une apparition et un impact suffisent : le client la fait voler depuis son état de départ (chapitre <a href="deltas.html">4.4</a>).</span></td></tr>
+<tr><td><span lang="en">Missile</span><span lang="fr">Missile</span></td><td><span lang="en">Kinematic, only to be shootable</span><span lang="fr">Cinématique, seulement pour être abattable</span></td><td><span lang="en">No</span><span lang="fr">Non</span></td><td><span lang="en">Rare enough to afford a full state every tick, and a guided path cannot be predicted.</span><span lang="fr">Assez rare pour s'offrir un état complet à chaque tick, et une trajectoire guidée ne se prédit pas.</span></td></tr>
+<tr><td><span lang="en">Asteroid, debris, portal, jump wake</span><span lang="fr">Astéroïde, débris, portail, sillage de saut</span></td><td><span lang="en">Asteroid only</span><span lang="fr">Astéroïde seulement</span></td><td><span lang="en">No</span><span lang="fr">Non</span></td><td><span lang="en">Their state carries a catalog id, and the client resolves the rest from shared game data.</span><span lang="fr">Leur état porte un identifiant de catalogue, et le client résout le reste depuis les données de jeu partagées.</span></td></tr>
+</tbody></table></div>
+</section>
+
+<section class="sec" id="membership">
+<div lang="en">
+<h2>One door in, one door out</h2>
+<p>An object enters a map through one method and leaves through one method, and both are <em>deferred</em>: they enqueue the work for the tick's "apply pending" phase (chapter <a href="threading.html">3.3</a>), because they are usually called from the network thread (a connection, a docking request, a disconnection) and must not touch the physics world directly.</p>
+<p>Inside the map, the single registration method does everything in one branch: it adds the object to the id table, to the list of tickables if it has a tick, and to the typed lists of hulls or characters. Nothing else has to remember to register. The single removal method is the mirror, and it is also the only place that announces the departure to clients. Any reason an object leaves (death, docking, a jump, a disconnection, an NPC expiring) goes through it, so the "gone" announcement cannot be forgotten for one of them.</p>
+</div>
+<div lang="fr">
+<h2>Une porte pour entrer, une porte pour sortir</h2>
+<p>Un objet entre dans une carte par une méthode et en sort par une méthode, et les deux sont <em>différées</em> : elles mettent le travail en file pour la phase « appliquer l'attente » du tick (chapitre <a href="threading.html">3.3</a>), parce qu'elles sont en général appelées depuis le thread réseau (une connexion, une demande d'amarrage, une déconnexion) et ne doivent pas toucher directement au monde physique.</p>
+<p>Dans la carte, l'unique méthode d'enregistrement fait tout dans une seule branche : elle ajoute l'objet à la table des identifiants, à la liste des objets qui tickent s'il a un tick, et aux listes typées des coques ou des personnages. Rien d'autre n'a à penser à s'enregistrer. L'unique méthode de retrait est son miroir, et c'est aussi le seul endroit qui annonce le départ aux clients. Toute raison qu'a un objet de partir (mort, amarrage, saut, déconnexion, PNJ qui expire) passe par elle, donc l'annonce « parti » ne peut être oubliée pour aucune.</p>
+</div>
+<div class="code"><div class="code-head"><span class="file">GameServer/Maps/MapInstance.cs · simplified</span></div><pre><code data-lang="cs">public void Update(IMetaObject obj)                 // tick thread, from "apply pending"
+{
+    if (!Objects.TryAdd(obj.Id, obj)) return;       // first insertion only
+    lock (_tickLock)
+    {
+        if (obj is ITickable t) _tickables.Add(t);  // ticking follows membership
+        if (obj is Ship ship) _ships.Add(ship);     // stations included: Station : Ship
+        else if (obj is Character c) _characters.Add(c);
+    }
+    // No interest-grid registration: the grid is rebuilt from Objects every tick.
+}
+
+public void Remove(ulong id)
+{
+    if (!Objects.TryRemove(id, out var removed)) return;
+    lock (_tickLock)
+    {
+        if (removed is ITickable t) _tickables.Remove(t);
+        if (removed is Ship ship) _ships.Remove(ship);
+        else if (removed is Character c) _characters.Remove(c);
+    }
+    AnnounceGone(id);                               // the one place departures are announced
+}</code></pre></div>
+<div lang="en">
+<div class="note pitfall"><p class="note-label">Pitfall I hit</p><p>A disconnected player's ship sometimes reappeared as a ghost. Box2D can report a movement event for a body in the very step it is destroyed, and the code that kept the interest grid up to date re-inserted any object that moved, including one that had just been removed. The first fix guarded the re-insertion. The real fix removed the whole class of bug: the grid is rebuilt from the object table every tick, so it cannot contain an object the table does not.</p></div>
+<div class="note rule"><p class="note-label">Rule</p><p>Derive secondary structures from the primary one instead of maintaining them in parallel.</p><p>Every extra bookkeeping path that must "stay in sync" is a place where one day it will not. An index rebuilt from what exists cannot contain what does not.</p></div>
+</div>
+<div lang="fr">
+<div class="note pitfall"><p class="note-label">Piège rencontré</p><p>Le vaisseau d'un joueur déconnecté réapparaissait parfois en fantôme. Box2D peut signaler un mouvement pour un corps dans le pas même où il est détruit, et le code qui tenait la grille d'intérêt à jour réinsérait tout objet qui bougeait, y compris celui qu'on venait de retirer. La première correction gardait la réinsertion. La vraie correction a supprimé toute la famille de bugs : la grille est reconstruite depuis la table des objets à chaque tick, donc elle ne peut pas contenir un objet que la table ne contient pas.</p></div>
+<div class="note rule"><p class="note-label">Règle</p><p>Dériver les structures secondaires de la structure principale plutôt que de les tenir en parallèle.</p><p>Chaque chemin de comptabilité supplémentaire qui doit « rester synchronisé » est un endroit où, un jour, il ne le sera plus. Un index reconstruit à partir de ce qui existe ne peut pas contenir ce qui n'existe pas.</p></div>
+</div>
+</section>
+
+<section class="sec" id="ticking">
+<div lang="en">
+<h2>Ticking follows membership</h2>
+<p>An object that needs its own per-tick logic (a piloted ship consuming input, an NPC running its behaviours) implements a single <code>WorldTick(dt)</code> method. It is called because the object is on a map, and stops the instant it leaves. That replaced a static "world tick" event that every object subscribed to and was supposed to unsubscribe from by hand. That discipline leaked twice: NPC ships kept dead handlers alive after their map was unloaded, still ticking objects nobody could see.</p>
+<p>The map ticks its objects from a copy: under the lock it copies the tickables into a reusable buffer, then ticks outside the lock, because an object's tick is allowed to do anything, including adding or removing objects. The unused tail of the buffer is cleared each tick so the map does not keep dead hulls alive through a stale reference.</p>
+<p>The typed lists exist for a reason that only shows in a fight. The id table holds everything: hulls, characters, and every bullet, missile and debris. Almost every question the game asks is narrow ("the nearest player ship", "characters in the blast"), and answering it by scanning everything makes its cost grow with the fight itself: three hundred bullets in flight make finding four ships a hundred times more expensive, exactly when it must not be. The lists are two plain fields rather than a dictionary keyed by type, because a station <em>is</em> a ship and almost every caller means "any hull, stations included".</p>
+</div>
+<div lang="fr">
+<h2>Le tick suit l'appartenance</h2>
+<p>Un objet qui a besoin de sa propre logique par tick (un vaisseau piloté qui consomme des entrées, un PNJ qui fait tourner ses comportements) implémente une seule méthode <code>WorldTick(dt)</code>. Elle est appelée parce que l'objet est sur une carte, et s'arrête à l'instant où il la quitte. Cela a remplacé un événement statique de « tick du monde » auquel chaque objet s'abonnait et était censé se désabonner à la main. Cette discipline a fui deux fois : des vaisseaux PNJ gardaient des gestionnaires morts en vie après le déchargement de leur carte, et continuaient de faire ticker des objets que personne ne voyait.</p>
+<p>La carte fait ticker ses objets depuis une copie : sous le verrou, elle copie les objets à ticker dans un tampon réutilisé, puis les fait ticker hors du verrou, parce que le tick d'un objet a le droit de tout faire, y compris ajouter ou retirer des objets. La queue inutilisée du tampon est effacée à chaque tick pour que la carte ne garde pas des coques mortes en vie par une référence périmée.</p>
+<p>Les listes typées existent pour une raison qui ne se voit qu'en combat. La table des identifiants contient tout : coques, personnages, et chaque balle, missile et débris. Presque toutes les questions que pose le jeu sont étroites (« le vaisseau de joueur le plus proche », « les personnages dans l'explosion »), et y répondre en parcourant tout fait grandir leur coût avec le combat lui-même : trois cents balles en vol rendent la recherche de quatre vaisseaux cent fois plus chère, précisément quand elle ne doit pas l'être. Les listes sont deux simples champs plutôt qu'un dictionnaire indexé par type, parce qu'une station <em>est</em> un vaisseau et que presque tous les appelants veulent dire « n'importe quelle coque, stations comprises ».</p>
+</div>
+</section>
+
+<section class="sec" id="ids">
+<div lang="en">
+<h2>Network ids: two lifetimes, two regimes</h2>
+<p>Every object needs an id that the client can use as a key. The naive answer, one global counter, collides with the encoding of chapter <a href="encoding.html">1.3</a>: ids are variable-length integers, two bytes up to 16,382 and four bytes after, with no three-byte size. Bullets live about a second and hundreds are fired per second, so on a global counter their ids crossed 16,383 within minutes, and every bullet id in every snapshot cost four bytes.</p>
+<div class="note measured"><p class="note-label">Measured</p><p>About 140 bytes of bullet ids per snapshot, 7 % of the whole packet, spent numbering objects the client forgets two seconds later.</p></div>
+<p>So ids follow two regimes. <strong>Durable</strong> objects (hulls, characters, stations, missiles, debris) draw from a monotonic 64-bit counter and are never reused: on a server that runs for days, a 32-bit counter would eventually overflow. <strong>Bullets</strong> rent ids from a reserved band, 8,192 to 16,382, where every id fits in two bytes, and return them when they die. The durable counter jumps over the band, so a bullet and a ship can never share a number, now or in ten hours.</p>
+</div>
+<div lang="fr">
+<h2>Identifiants réseau : deux durées de vie, deux régimes</h2>
+<p>Chaque objet a besoin d'un identifiant que le client peut utiliser comme clé. La réponse naïve, un compteur global, se heurte à l'encodage du chapitre <a href="encoding.html">1.3</a> : les identifiants sont des entiers de taille variable, deux octets jusqu'à 16 382 et quatre au-delà, sans taille de trois octets. Les balles vivent environ une seconde et il en part des centaines par seconde : sur un compteur global, leurs identifiants dépassaient 16 383 en quelques minutes, et chaque identifiant de balle de chaque snapshot coûtait quatre octets.</p>
+<div class="note measured"><p class="note-label">Mesuré</p><p>Environ 140 octets d'identifiants de balles par snapshot, 7 % du paquet entier, dépensés à numéroter des objets que le client oublie deux secondes plus tard.</p></div>
+<p>Les identifiants suivent donc deux régimes. Les objets <strong>durables</strong> (coques, personnages, stations, missiles, débris) puisent dans un compteur monotone de 64 bits et ne sont jamais réutilisés : sur un serveur qui tourne des jours, un compteur de 32 bits finirait par déborder. Les <strong>balles</strong> louent leurs identifiants dans une bande réservée, de 8 192 à 16 382, où chaque identifiant tient sur deux octets, et les rendent à leur mort. Le compteur durable saute par-dessus la bande : une balle et un vaisseau ne peuvent jamais porter le même numéro, ni maintenant ni dans dix heures.</p>
+</div>
+<figure class="fig fig-scroll">
+<svg viewBox="0 0 760 170" role="img" aria-label="The id space: durable ids from 1 to 8191 and from 16383 upward come from a counter that skips the band; the band from 8192 to 16382 is rented by bullets, always two bytes, returned after a 10 second quarantine">
+  <defs><marker id="id-arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="currentColor" opacity="0.7"/></marker></defs>
+  <path d="M 300 66 C 360 18, 520 18, 584 66" class="dg-line" style="fill:none" marker-end="url(#id-arr)"/>
+  <text class="dg-small" x="442" y="30" text-anchor="middle"><tspan lang="en">the durable counter jumps over the band</tspan><tspan lang="fr">le compteur durable saute la bande</tspan></text>
+  <rect x="40" y="70" width="68" height="36" rx="5" class="dg-box"/>
+  <text class="dg-small dg-mono" x="74" y="93" text-anchor="middle">1 B</text>
+  <rect x="110" y="70" width="218" height="36" rx="5" class="dg-box"/>
+  <text class="dg-small" x="219" y="93" text-anchor="middle"><tspan lang="en">2 bytes · durable</tspan><tspan lang="fr">2 octets · durables</tspan></text>
+  <rect x="330" y="70" width="228" height="36" rx="5" class="dg-hot"/>
+  <text class="dg-small" x="444" y="93" text-anchor="middle" font-weight="700"><tspan lang="en">2 bytes · bullet band</tspan><tspan lang="fr">2 octets · bande des balles</tspan></text>
+  <rect x="560" y="70" width="160" height="36" rx="5" class="dg-box-2"/>
+  <text class="dg-small" x="640" y="93" text-anchor="middle"><tspan lang="en">4 bytes · durable</tspan><tspan lang="fr">4 octets · durables</tspan></text>
+  <text class="dg-small dg-mono" x="40" y="124">1</text>
+  <text class="dg-small dg-mono" x="110" y="124">127</text>
+  <text class="dg-small dg-mono" x="330" y="124">8 192</text>
+  <text class="dg-small dg-mono" x="560" y="124">16 383</text>
+  <text class="dg-small" x="40" y="152"><tspan lang="en">durable: monotonic, never reused</tspan><tspan lang="fr">durables : monotones, jamais réutilisés</tspan></text>
+  <text class="dg-small" x="444" y="152" text-anchor="middle"><tspan lang="en">rent · release · 10 s quarantine</tspan><tspan lang="fr">louer · rendre · quarantaine de 10 s</tspan></text>
+</svg>
+<figcaption><span lang="en"><strong>One id space, two regimes.</strong> The varint has no three-byte size, so the bullet band sits just below the four-byte cliff and every rented id costs two bytes.</span><span lang="fr"><strong>Un espace d'identifiants, deux régimes.</strong> Le varint n'a pas de taille de trois octets : la bande des balles se place juste sous la falaise des quatre octets, et chaque identifiant loué coûte deux octets.</span></figcaption>
+</figure>
+<div class="code"><div class="code-head"><span class="file">GameServer/Domain/MetaObjectId.cs · simplified</span></div><pre><code data-lang="cs">public const ulong TransientFirst = 8192, TransientLast = 16382;   // last two-byte id
+private const long QuarantineMs = 10_000;
+
+public static ulong Next()                                         // durable ids
+{
+    while (true)
+    {
+        var n = Interlocked.Increment(ref _next);
+        if (n &lt; TransientFirst || n &gt; TransientLast) return n;
+        Interlocked.CompareExchange(ref _next, TransientLast, n);  // push past the band, retry
+    }
+}
+
+public static ulong RentTransient()                                // bullets
+{
+    lock (_gate)
+    {
+        if (_quarantine.Count &gt; 0 &amp;&amp; _quarantine.Peek().FreeAtMs &lt;= Environment.TickCount64)
+            return _quarantine.Dequeue().Id;  // oldest id out of quarantine
+        if (_nextTransientFresh &lt;= TransientLast) return _nextTransientFresh++;
+    }
+    return Next();                                                 // band exhausted: still correct
+}
+
+public static void ReleaseTransient(ulong id)
+{
+    if (id &lt; TransientFirst || id &gt; TransientLast) return;
+    lock (_gate) _quarantine.Enqueue((id, Environment.TickCount64 + QuarantineMs));
+}</code></pre></div>
+<div lang="en">
+<p>The quarantine is what makes recycling safe. The client keeps a bullet under its id until the bullet expires on its side, about two seconds plus an impact grace. An id handed out again sooner would teleport the old bullet onto the new one. Ten seconds is five times that lifetime, and the sizing holds: about 300 live bullets plus 250 spawns per second times 10 seconds is roughly 2,800 ids in circulation, for 8,191 in the band. If a burst ever exhausts the band anyway, bullets fall back on the durable counter: larger ids, still correct.</p>
+<div class="note rule"><p class="note-label">Rule</p><p>Reuse an identifier only after everyone who could still hold it has forgotten it, and size the delay from their memory, not yours.</p><p>The server forgets a bullet the tick it dies. The client does not, and it is the client's memory that decides when the number is free.</p></div>
+</div>
+<div lang="fr">
+<p>La quarantaine est ce qui rend le recyclage sûr. Le client garde une balle sous son identifiant jusqu'à ce qu'elle expire de son côté, environ deux secondes plus une grâce d'impact. Un identifiant redonné plus tôt téléporterait la vieille balle sur la nouvelle. Dix secondes, c'est cinq fois cette durée de vie, et le dimensionnement tient : environ 300 balles vivantes plus 250 apparitions par seconde fois 10 secondes, c'est à peu près 2 800 identifiants en circulation, pour 8 191 dans la bande. Si une salve épuise quand même la bande, les balles se rabattent sur le compteur durable : des identifiants plus gros, toujours justes.</p>
+<div class="note rule"><p class="note-label">Règle</p><p>Ne réutiliser un identifiant qu'une fois que tous ceux qui pourraient encore le tenir l'ont oublié, et dimensionner le délai sur leur mémoire, pas sur la sienne.</p><p>Le serveur oublie une balle au tick où elle meurt. Le client, non, et c'est la mémoire du client qui décide quand le numéro est libre.</p></div>
+</div>
+</section>
+
+<section class="sec" id="intentions">
+<div lang="en">
+<h2>Players and NPCs speak the same language</h2>
+<p>A player's ship is driven by a few intention fields that the network thread writes: move this way, aim there, trigger held. An NPC ship is driven by the same kind of fields, written by its behaviours instead. In both cases the ship's own tick <em>applies</em> the intentions through the same physics, so a heavy NPC is slow for the same reasons as a heavy player, and an under-powered sentry visibly stutters under the same power budget players live with. Behaviours desire; the actor applies.</p>
+<p>That split has a second rule: <strong>mechanism upkeep stays on the actor, never in a behaviour</strong>. Weapon cooldowns tick in the ship's own update whether or not anything is trying to fire. If they lived in the firing behaviour, detaching that behaviour in the middle of a fight would freeze every hardpoint mid-cooldown forever. The same split is what lets a disconnected player's lingering hull (chapter <a href="handover.html#disconnects">2.3</a>) become an inert wreck: its intentions are cleared, and its mechanisms keep running.</p>
+</div>
+<div lang="fr">
+<h2>Joueurs et PNJ parlent la même langue</h2>
+<p>Le vaisseau d'un joueur est piloté par quelques champs d'intention que le thread réseau écrit : aller par là, viser là-bas, gâchette tenue. Un vaisseau PNJ est piloté par le même genre de champs, écrits par ses comportements. Dans les deux cas, le tick du vaisseau <em>applique</em> ces intentions par la même physique : un PNJ lourd est lent pour les mêmes raisons qu'un joueur lourd, et une tourelle sous-alimentée hoquette visiblement sous le même budget d'énergie que celui des joueurs. Les comportements désirent ; l'acteur applique.</p>
+<p>Ce partage a une seconde règle : <strong>l'entretien des mécanismes reste sur l'acteur, jamais dans un comportement</strong>. Les temps de recharge des armes s'écoulent dans la mise à jour du vaisseau, que quelque chose essaie de tirer ou non. S'ils vivaient dans le comportement de tir, détacher ce comportement en plein combat figerait chaque point d'emport au milieu de sa recharge, pour toujours. Le même partage est ce qui permet à la coque rémanente d'un joueur déconnecté (chapitre <a href="handover.html#disconnects">2.3</a>) de devenir une épave inerte : ses intentions sont vidées, et ses mécanismes continuent de tourner.</p>
+</div>
+</section>
+
+<section class="sec" id="behaviours">
+<div lang="en">
+<h2>Behaviour by composition</h2>
+<p>What an NPC <em>does</em> is not decided by its class but by the behaviours attached to it at spawn. "A sentry that sweeps and fires" and "a ship that aims at the nearest target and fires" are the same NPC class with different parts, not two subclasses.</p>
+</div>
+<div lang="fr">
+<h2>Le comportement par composition</h2>
+<p>Ce que <em>fait</em> un PNJ n'est pas décidé par sa classe mais par les comportements qu'on lui attache à l'apparition. « Une sentinelle qui balaie et tire » et « un vaisseau qui vise la cible la plus proche et tire » sont la même classe de PNJ avec des pièces différentes, pas deux sous-classes.</p>
+</div>
+<div class="code"><div class="code-head"><span class="file">GameServer/Domain/AI · simplified</span></div><pre><code data-lang="cs">public interface IBehavior&lt;in TActor&gt;  // contravariant: a behaviour written for
+{                                        // Character works on every NpcCharacter
+    void Tick(TActor actor, double dt);  // actor passed in, never captured
+}
+
+public sealed class BehaviorSet&lt;TActor&gt;
+{
+    private readonly List&lt;IBehavior&lt;TActor&gt;&gt; _behaviors = new();
+
+    public BehaviorSet&lt;TActor&gt; Add(IBehavior&lt;TActor&gt; b) { _behaviors.Add(b); return this; }
+
+    public void Tick(TActor actor, double dt)
+    {
+        for (var i = 0; i &lt; _behaviors.Count; i++)  // by index: a behaviour may add or remove
+            _behaviors[i].Tick(actor, dt);          // another; additions run next tick
+    }
+}
+
+// At a spawn site: order is meaningful, aim before fire.
+sentry.Behaviors
+    .Add(new ShipAimAtNearestBehavior(range))
+    .Add(new ShipContinuousFireBehavior());</code></pre></div>
+<div lang="en">
+<p>Three small decisions make this work well:</p>
+<ul>
+<li><strong>Contravariance.</strong> The interface is <code>IBehavior&lt;in TActor&gt;</code>. A behaviour written against the loosest type it needs (anything that can aim) drops into the set of any more specific actor with no adapter and no cast. Write each behaviour against the smallest type it needs and it stays reusable by construction.</li>
+<li><strong>The actor is a parameter.</strong> Behaviours do not capture their actor, so they hold no back-reference that would keep a despawned NPC alive, and a single stateless behaviour instance could be shared.</li>
+<li><strong>Order instead of a scheduler.</strong> Behaviours run in insertion order, with no priorities and no arbitration. That covers everything in the game today; inventing a scheduler before a case needs one would be guessing at requirements. The set is its own small type precisely so that arbitration has an obvious place to grow later, without touching any actor.</li>
+</ul>
+</div>
+<div lang="fr">
+<p>Trois petites décisions font que ça marche bien :</p>
+<ul>
+<li><strong>La contravariance.</strong> L'interface est <code>IBehavior&lt;in TActor&gt;</code>. Un comportement écrit pour le type le plus large dont il a besoin (tout ce qui peut viser) se glisse dans l'ensemble de n'importe quel acteur plus précis, sans adaptateur ni conversion. Écrire chaque comportement contre le plus petit type dont il a besoin, et il reste réutilisable par construction.</li>
+<li><strong>L'acteur est un paramètre.</strong> Les comportements ne capturent pas leur acteur : ils ne tiennent aucune référence arrière qui garderait en vie un PNJ disparu, et une même instance sans état pourrait être partagée.</li>
+<li><strong>L'ordre plutôt qu'un ordonnanceur.</strong> Les comportements tournent dans l'ordre d'insertion, sans priorités ni arbitrage. Cela couvre tout ce qu'il y a dans le jeu aujourd'hui ; inventer un ordonnanceur avant qu'un cas en ait besoin, ce serait deviner des besoins. L'ensemble est son propre petit type justement pour que l'arbitrage ait un endroit évident où grandir plus tard, sans toucher aucun acteur.</li>
+</ul>
+</div>
+</section>
+
+<section class="sec" id="pools">
+<div lang="en">
+<h2>Pools, and the double release</h2>
+<p>Bullets and missiles are pooled per map: the C# object graph is reused across shots instead of allocated for each one. The pool is per map because a bullet's simulation slot lives in that map's bullet array, which sweeps against that map's physics world; an instance pooled in one map can never be handed out in another.</p>
+<p>Pools come with their own classic bug: releasing the same instance twice. A bullet can run out of range <em>and</em> take a hit in the same tick, and both paths scheduled its return to the pool. Returned twice, the instance would later be handed out twice, and two logically distinct future shots would share one object. A "pending despawn" flag, set by whichever path gets there first, makes the second attempt a no-op.</p>
+<div class="note rule"><p class="note-label">Rule</p><p>Make every release idempotent before you pool anything.</p><p>A double free in a pool is not a crash; it is two live objects sharing one identity, discovered much later somewhere else.</p></div>
+</div>
+<div lang="fr">
+<h2>Les réserves, et la double restitution</h2>
+<p>Les balles et les missiles sont gérés en réserve par carte : le graphe d'objets C# est réutilisé d'un tir à l'autre au lieu d'être alloué à chaque fois. La réserve est par carte parce que la case de simulation d'une balle vit dans le tableau de balles de cette carte, qui balaie le monde physique de cette carte ; une instance mise en réserve dans une carte ne peut jamais être distribuée dans une autre.</p>
+<p>Les réserves viennent avec leur bug classique : restituer deux fois la même instance. Une balle peut arriver en bout de portée <em>et</em> toucher au même tick, et les deux chemins planifiaient son retour en réserve. Rendue deux fois, l'instance serait plus tard distribuée deux fois, et deux tirs futurs, logiquement distincts, partageraient un seul objet. Un drapeau « retrait en attente », posé par le premier chemin qui arrive, fait de la seconde tentative une opération nulle.</p>
+<div class="note rule"><p class="note-label">Règle</p><p>Rendre chaque restitution idempotente avant de mettre quoi que ce soit en réserve.</p><p>Une double libération dans une réserve n'est pas un plantage ; ce sont deux objets vivants qui partagent une identité, découverts bien plus tard ailleurs.</p></div>
+</div>
+</section>
+
+<section class="sec" id="swap">
+<div lang="en">
+<h2>Data read by several threads: swap, do not mutate</h2>
+<p>A hull's list of hex parts is read from several threads: the tick rebuilds it after construction work, the network thread reads it while answering inventory and interaction requests, the snapshot builder reads it too. It used to be rebuilt in place, clear then refill, so any reader enumerating it during that window hit "collection was modified". It needed a player to press a key at the exact moment a build was applied: rare, load-dependent, impossible to reproduce on demand.</p>
+<p>The list is now never mutated: a new list is built and swapped in with one reference assignment. A reader holding the old list keeps a complete, coherent one and simply sees the layout from a moment ago. One tick stale beats one exception. The comment next to it also says what this does <em>not</em> allow: the ship's computed stats come from a cache without that guarantee, so only the part list itself is safe to read off-thread.</p>
+</div>
+<div lang="fr">
+<h2>Des données lues par plusieurs threads : échanger, pas modifier</h2>
+<p>La liste des pièces hexagonales d'une coque est lue depuis plusieurs threads : le tick la reconstruit après des travaux de construction, le thread réseau la lit en répondant aux demandes d'inventaire et d'interaction, et le constructeur de snapshots la lit aussi. Elle était autrefois reconstruite sur place, vidée puis remplie : tout lecteur qui la parcourait pendant cette fenêtre tombait sur « collection was modified ». Il fallait qu'un joueur appuie sur une touche à l'instant précis où une construction s'appliquait : rare, dépendant de la charge, impossible à reproduire à la demande.</p>
+<p>La liste n'est maintenant jamais modifiée : une nouvelle liste est construite puis échangée par une seule affectation de référence. Un lecteur qui tient l'ancienne garde une liste complète et cohérente, et voit simplement la disposition d'il y a un instant. Un tick de retard vaut mieux qu'une exception. Le commentaire à côté dit aussi ce que ça ne permet <em>pas</em> : les statistiques calculées du vaisseau viennent d'un cache sans cette garantie, donc seule la liste des pièces se lit sans risque hors du tick.</p>
+</div>
+</section>
+
+<section class="sec" id="takeaways">
+<div class="takeaways">
+<div lang="en"><h2>Key takeaways</h2><ul>
+<li>Give every object one way in and one way out of a map, deferred to the tick, and announce departures from the single exit.</li>
+<li>Let ticking follow map membership instead of manual subscriptions, and keep typed lists for the narrow questions.</li>
+<li>Choose id regimes from lifetimes and encoding: a never-reused counter for durable objects, a recycled two-byte band with a quarantine for bullets.</li>
+<li>Drive players and NPCs through the same intention fields, keep mechanism upkeep on the actor, and compose behaviours.</li>
+<li>Make pool releases idempotent, and swap shared lists instead of mutating them.</li>
+</ul></div>
+<div lang="fr"><h2>À retenir</h2><ul>
+<li>Donner à chaque objet une seule entrée et une seule sortie de carte, différées vers le tick, et annoncer les départs depuis la sortie unique.</li>
+<li>Faire suivre le tick à l'appartenance à la carte plutôt qu'à des abonnements manuels, et garder des listes typées pour les questions étroites.</li>
+<li>Choisir les régimes d'identifiants selon les durées de vie et l'encodage : un compteur jamais réutilisé pour les objets durables, une bande recyclée sur deux octets avec quarantaine pour les balles.</li>
+<li>Piloter joueurs et PNJ par les mêmes champs d'intention, garder l'entretien des mécanismes sur l'acteur, et composer les comportements.</li>
+<li>Rendre les restitutions en réserve idempotentes, et échanger les listes partagées au lieu de les modifier.</li>
+</ul></div>
+</div>
+</section>
+
+</div>
+<div data-chapter-foot></div>
+</article>
+</main>
+<aside class="rail" id="mq-rail"></aside>
+</div>
+<footer class="site-footer" id="mq-footer"></footer>
+<script src="assets/js/site-data.js" defer></script>
+<script src="assets/js/glossary-data.js" defer></script>
+<script src="assets/js/app.js" defer></script>
+<script src="assets/js/widgets.js" defer></script>
+</body>
+</html>

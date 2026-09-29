@@ -1,0 +1,310 @@
+<!doctype html>
+<html lang="en" data-lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Threads without tears · MoonQwak</title>
+<meta name="description" content="Maps as islands, deferred mutation, immutable publication, and dedicated workers instead of the thread pool.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Chakra+Petch:wght@500;600&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="assets/css/site.css">
+<script>(function(){var r=document.documentElement,l,t;try{l=localStorage.getItem("mq-lang");t=localStorage.getItem("mq-theme");}catch(e){}if(l!=="en"&&l!=="fr"){l=(navigator.language||"").toLowerCase().indexOf("fr")===0?"fr":"en";}r.setAttribute("data-lang",l);r.setAttribute("lang",l);if(t==="light"||t==="dark")r.setAttribute("data-theme",t);})();</script>
+</head>
+<body data-page="threading">
+<a class="skip-link" href="#main"><span lang="en">Skip to content</span><span lang="fr">Aller au contenu</span></a>
+<header class="site-header" id="mq-header"></header>
+<div class="layout">
+<aside class="sidebar" id="mq-sidebar"></aside>
+<main class="content" id="main">
+<article>
+<header class="chapter-head">
+  <div class="eyebrow" data-auto></div>
+  <h1><span lang="en">Threads without tears</span><span lang="fr">Des threads sans larmes</span></h1>
+  <p class="dek"><span lang="en">Maps as islands, deferred mutation, immutable publication, and dedicated workers instead of the thread pool.</span><span lang="fr">Les cartes comme des îles, la mutation différée, la publication immuable, et des ouvriers dédiés plutôt que le ThreadPool.</span></p>
+  <div class="meta-row" data-auto></div>
+</header>
+
+<div class="prose">
+
+<section class="sec" id="who-owns">
+<div lang="en">
+<h2>Ownership first, locks last</h2>
+<p>A game server is concurrent whether you want it or not: packets arrive on a network thread while the world ticks on another. The approach that worked for me is not "add locks where things break" but the opposite: decide which thread <strong>owns</strong> each piece of state, and make every other thread go through a small number of well-defined handoffs. Locks then become rare, short, and easy to reason about.</p>
+<div class="note beginner"><p class="note-label">Beginner note</p><p>A <em>data race</em> happens when two threads touch the same memory at the same time and at least one of them writes. The result depends on timing, so the bug appears once in a thousand runs, usually under load, usually in production. You cannot test your way out of races; you have to make them impossible by structure.</p></div>
+<p>These are the threads of one MoonQwak game server, and the only paths between them:</p>
+</div>
+<div lang="fr">
+<h2>La propriété d'abord, les verrous en dernier</h2>
+<p>Un serveur de jeu est concurrent qu'on le veuille ou non : les paquets arrivent sur un thread réseau pendant que le monde tourne sur un autre. L'approche qui a marché pour moi n'est pas « ajouter des verrous là où ça casse », mais l'inverse : décider quel thread <strong>possède</strong> chaque morceau d'état, et obliger tous les autres à passer par un petit nombre de passages bien définis. Les verrous deviennent alors rares, courts, et faciles à raisonner.</p>
+<div class="note beginner"><p class="note-label">Pour débuter</p><p>Une <em>course de données</em> survient quand deux threads touchent la même mémoire au même moment et qu'au moins l'un écrit. Le résultat dépend du minutage : le bug apparaît une fois sur mille, en général sous charge, en général en production. On ne se sort pas des courses par les tests ; il faut les rendre impossibles par la structure.</p></div>
+<p>Voici les threads d'un serveur de jeu MoonQwak, et les seuls chemins entre eux :</p>
+</div>
+<figure class="fig fig-scroll">
+<svg viewBox="0 0 760 320" role="img" aria-label="Threads of a game server: the world tick thread in the centre owns the maps; the network pump hands it inputs and queued mutations; tick workers run its parallel loops; the snapshot sender receives one pending packet per player and sends sequentially; the background writer receives database jobs">
+  <defs><marker id="th-arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="currentColor" opacity="0.7"/></marker></defs>
+  <rect x="20" y="20" width="190" height="56" rx="8" class="dg-box"/>
+  <text class="dg-text" x="115" y="44" text-anchor="middle" font-weight="700"><tspan lang="en">Network pump</tspan><tspan lang="fr">Pompe réseau</tspan></text>
+  <text class="dg-small" x="115" y="63" text-anchor="middle"><tspan lang="en">Normal · one per socket</tspan><tspan lang="fr">Normal · une par socket</tspan></text>
+  <rect x="550" y="20" width="190" height="56" rx="8" class="dg-box"/>
+  <text class="dg-text" x="645" y="44" text-anchor="middle" font-weight="700"><tspan lang="en">Snapshot sender</tspan><tspan lang="fr">Envoi des snapshots</tspan></text>
+  <text class="dg-small" x="645" y="63" text-anchor="middle"><tspan lang="en">AboveNormal · own 25 Hz clock</tspan><tspan lang="fr">AboveNormal · horloge 25 Hz</tspan></text>
+  <rect x="285" y="137" width="190" height="56" rx="8" class="dg-hot"/>
+  <text class="dg-text" x="380" y="161" text-anchor="middle" font-weight="700"><tspan lang="en">World tick</tspan><tspan lang="fr">Tick du monde</tspan></text>
+  <text class="dg-small" x="380" y="180" text-anchor="middle"><tspan lang="en">Highest · owns the maps</tspan><tspan lang="fr">Highest · possède les cartes</tspan></text>
+  <rect x="20" y="254" width="190" height="56" rx="8" class="dg-box-2"/>
+  <text class="dg-text" x="115" y="278" text-anchor="middle" font-weight="700"><tspan lang="en">Tick workers × N</tspan><tspan lang="fr">Ouvriers du tick × N</tspan></text>
+  <text class="dg-small" x="115" y="297" text-anchor="middle"><tspan lang="en">AboveNormal · dedicated</tspan><tspan lang="fr">AboveNormal · dédiés</tspan></text>
+  <rect x="550" y="254" width="190" height="56" rx="8" class="dg-box-2"/>
+  <text class="dg-text" x="645" y="278" text-anchor="middle" font-weight="700"><tspan lang="en">Background writer</tspan><tspan lang="fr">Écrivain de fond</tspan></text>
+  <text class="dg-small" x="645" y="297" text-anchor="middle"><tspan lang="en">Normal · one thread, in order</tspan><tspan lang="fr">Normal · un thread, dans l'ordre</tspan></text>
+  <line x1="172" y1="78" x2="298" y2="135" class="dg-line" marker-end="url(#th-arr)"/>
+  <text class="dg-small" x="228" y="118" text-anchor="end"><tspan lang="en">inputs · queued mutations</tspan><tspan lang="fr">entrées · mutations en file</tspan></text>
+  <line x1="462" y1="135" x2="588" y2="78" class="dg-line" marker-end="url(#th-arr)"/>
+  <text class="dg-small" x="532" y="118"><tspan lang="en">one packet per player</tspan><tspan lang="fr">un paquet par joueur</tspan></text>
+  <line x1="548" y1="40" x2="214" y2="40" class="dg-line" marker-end="url(#th-arr)"/>
+  <text class="dg-small" x="380" y="33" text-anchor="middle"><tspan lang="en">sends, sequentially</tspan><tspan lang="fr">envois, séquentiels</tspan></text>
+  <line x1="298" y1="195" x2="172" y2="252" class="dg-line" marker-end="url(#th-arr)"/>
+  <text class="dg-small" x="228" y="222" text-anchor="end"><tspan lang="en">parallel loops</tspan><tspan lang="fr">boucles parallèles</tspan></text>
+  <line x1="462" y1="195" x2="588" y2="252" class="dg-line" marker-end="url(#th-arr)"/>
+  <text class="dg-small" x="532" y="222"><tspan lang="en">database jobs</tspan><tspan lang="fr">travaux en base</tspan></text>
+</svg>
+<figcaption><span lang="en"><strong>One owner, five handoffs.</strong> The world thread owns every map. Other threads never touch a map directly: they leave something for it (inputs, queued mutations) or receive something from it (packets, jobs, published read-only data).</span><span lang="fr"><strong>Un propriétaire, cinq passages.</strong> Le thread du monde possède toutes les cartes. Les autres threads ne touchent jamais une carte directement : ils lui laissent quelque chose (entrées, mutations en file) ou reçoivent quelque chose d'elle (paquets, travaux, données publiées en lecture seule).</span></figcaption>
+</figure>
+</section>
+
+<section class="sec" id="islands">
+<div lang="en">
+<h2>Maps as islands</h2>
+<p>The unit of parallelism is the map. Each map owns its objects, its Box2D world, its bullet pool and its scratch buffers, and its tick returns its timings rather than adding them to shared counters. Two maps ticking at the same time touch no common state, so the world thread can hand the maps to workers without a single lock in the simulation.</p>
+<p>That property did not come for free. The per-tick working buffers (pre-step velocities, bullet hits, detonations) used to live on the host object and be reused by every map in turn. Correct while the map loop was sequential, and the single thing standing between that loop and being parallel. Moving them onto the map removed the sharing <em>by construction</em> instead of by convention. The results follow the same idea: each map writes its timings into its own slot of a pre-sized array, because <code>double +=</code> is not atomic and a shared <code>List.Add</code> corrupts under concurrency. The sums are computed afterwards, back on the world thread.</p>
+</div>
+<div lang="fr">
+<h2>Les cartes comme des îles</h2>
+<p>L'unité de parallélisme est la carte. Chaque carte possède ses objets, son monde Box2D, sa réserve de balles et ses tampons de travail, et son tick rend ses temps au lieu de les ajouter à des compteurs partagés. Deux cartes qui tickent en même temps ne touchent aucun état commun : le thread du monde peut confier les cartes à des ouvriers sans un seul verrou dans la simulation.</p>
+<p>Cette propriété n'est pas venue gratuitement. Les tampons de travail du tick (vitesses d'avant le pas, impacts de balles, détonations) vivaient sur l'objet hôte et servaient à chaque carte à tour de rôle. Correct tant que la boucle des cartes était séquentielle, et c'était la seule chose qui l'empêchait de devenir parallèle. Les déplacer sur la carte a supprimé le partage <em>par construction</em> plutôt que par convention. Les résultats suivent la même idée : chaque carte écrit ses temps dans sa propre case d'un tableau prédimensionné, parce que <code>double +=</code> n'est pas atomique et qu'un <code>List.Add</code> partagé se corrompt en concurrence. Les sommes se font après, de retour sur le thread du monde.</p>
+</div>
+<div lang="en">
+<div class="note rule"><p class="note-label">Rule</p><p>Remove sharing by construction, not by convention.</p><p>"Only one thread uses this at a time" is a promise nobody re-reads when the loop becomes parallel. An object that belongs to one map cannot be touched by another map's tick, whatever anyone forgets.</p></div>
+</div>
+<div lang="fr">
+<div class="note rule"><p class="note-label">Règle</p><p>Supprimer le partage par construction, pas par convention.</p><p>« Un seul thread s'en sert à la fois » est une promesse que personne ne relit le jour où la boucle devient parallèle. Un objet qui appartient à une carte ne peut pas être touché par le tick d'une autre, quoi que l'on oublie.</p></div>
+</div>
+</section>
+
+<section class="sec" id="handoffs">
+<div lang="en">
+<h2>Four ways across</h2>
+<p>Everything that crosses from one thread to another in the server uses one of four patterns. Each fits a different kind of data, and each has one rule that makes it safe.</p>
+<h3>1. Last-writer-wins fields, read once</h3>
+<p>Player input is continuous state, not a sequence of events: "thrust this way, aim there, trigger held". The network thread writes the latest value into a few fields of the ship; the tick reads them when it gets to that ship. If two inputs arrive between two ticks, the older one is simply overwritten, which is exactly right for state. The rule is on the reading side: every such field is read <strong>once</strong> into a local variable. Testing a field and then using it reads two different values when another thread writes in between.</p>
+</div>
+<div lang="fr">
+<h2>Quatre façons de traverser</h2>
+<p>Tout ce qui passe d'un thread à l'autre dans le serveur emprunte l'un de quatre motifs. Chacun convient à un genre de données, et chacun a une règle qui le rend sûr.</p>
+<h3>1. Des champs où le dernier écrit gagne, lus une fois</h3>
+<p>L'entrée du joueur est un état continu, pas une suite d'événements : « pousser par là, viser là-bas, gâchette tenue ». Le thread réseau écrit la dernière valeur dans quelques champs du vaisseau ; le tick les lit quand il arrive à ce vaisseau. Si deux entrées arrivent entre deux ticks, la plus ancienne est simplement écrasée, ce qui est exactement ce qu'on veut pour un état. La règle est côté lecture : chaque champ de ce genre est lu <strong>une fois</strong> dans une variable locale. Tester un champ puis s'en servir, c'est lire deux valeurs différentes quand un autre thread écrit entre les deux.</p>
+</div>
+<div class="code"><div class="code-head"><span class="file">GameServer/Players/Player.cs · network thread</span></div><pre><code data-lang="cs">public bool HandleInput(PlayerInput input)
+{
+    var ship = Ship;  // ONE read: a map transition can null Ship at any moment
+    if (ship == null || State != PlayerState.Seated) return true;
+
+    ship.PendingMove = input.HasMovement ? new Vector2(input.MoveX, input.MoveY) : null;
+    ship.AimWorld    = new Vector2((float)input.AimWorldX, (float)input.AimWorldY);
+    ship.PendingFire = input.Fire;
+    return true;
+}</code></pre></div>
+<div lang="en">
+<div class="note measured"><p class="note-label">Measured</p><p>The handler used to test <code>Ship</code> for null and then read <code>Ship</code> again on the next line. During a one-hour bench at 1,200 players, one map transition out of tens of thousands landed exactly between the test and the use. The null reference was thrown on a background thread, which terminates a .NET process: one missing local variable cost a whole game server and its 136 players. Chapter <a href="receiving.html">1.5</a> covers the second fix, the exception boundary in the dispatcher.</p></div>
+<h3>2. Queued mutations, applied between steps</h3>
+<p>Some changes must happen on the world thread and nowhere else: creating or destroying a physics body, adding an object to a map. Other threads (a connection completing, a docking request, a disconnection) enqueue an action on the map, and the tick drains that queue in its "apply pending" phase, between two physics steps. The queue is a concurrent queue of delegates; the tick's own frequent removals (dozens of spent bullets per second) use plain lists instead, because a closure per bullet is an allocation per shot and those lists are only ever touched by the tick itself.</p>
+</div>
+<div lang="fr">
+<div class="note measured"><p class="note-label">Mesuré</p><p>Le gestionnaire testait autrefois <code>Ship</code> contre null puis relisait <code>Ship</code> à la ligne suivante. Pendant un banc d'une heure à 1 200 joueurs, une transition de carte parmi des dizaines de milliers est tombée exactement entre le test et l'usage. La référence nulle a été levée sur un thread de fond, ce qui termine un processus .NET : une variable locale manquante a coûté un serveur de jeu entier et ses 136 joueurs. Le chapitre <a href="receiving.html">1.5</a> couvre la seconde correction, la frontière d'exceptions du dispatcher.</p></div>
+<h3>2. Des mutations en file, appliquées entre deux pas</h3>
+<p>Certains changements doivent se faire sur le thread du monde et nulle part ailleurs : créer ou détruire un corps physique, ajouter un objet à une carte. Les autres threads (une connexion qui aboutit, une demande d'amarrage, une déconnexion) mettent une action en file sur la carte, et le tick vide cette file dans sa phase « appliquer l'attente », entre deux pas physiques. La file est une file concurrente de délégués ; les retraits fréquents du tick lui-même (des dizaines de balles usées par seconde) utilisent de simples listes, parce qu'une fermeture par balle est une allocation par tir et que ces listes ne sont jamais touchées que par le tick.</p>
+</div>
+<div lang="en">
+<div class="note pitfall"><p class="note-label">Pitfall I hit</p><p>Loading a map creates dozens of Box2D bodies (stations, resource nodes, NPCs). For a long time it did so on the thread that received the gateway's "host this map" message, while the tick was stepping sixty other worlds. The symptom was not an exception I could catch: it was an <code>ExecutionEngineException</code> inside <code>b2CreateBody</code>, native memory corruption, and the runtime stopping dead. Map creation had been the last place in the server that touched Box2D from outside the tick. It is now split in two: the slow part (reading the map and its content from the database) runs on the calling thread, and only the body creation is queued to the tick, under a 3 ms budget per tick.</p></div>
+<h3>3. Immutable publication</h3>
+<p>Some data is written by one thread and read by many: the spatial index that every player's snapshot queries, the list of loaded maps, the game-data catalogs. For those, the writer builds a complete new version off to the side and publishes it with a single reference assignment. A reference assignment is atomic, so a reader sees either the whole old version or the whole new one, never a half-built one, and no reader ever takes a lock.</p>
+<p>The spatial index used to be protected by one global lock held for every read. The query runs once per player per tick on a parallel path, so that lock serialized exactly the work the parallel loop existed to spread out. It never showed in a CPU profile: <strong>a lock costs cores waiting, not cycles burned</strong>, which is why it survived so long. Readers of a published version follow two rules: capture it into a local once (reading the property twice can straddle two versions), and never keep it beyond the current tick (its buffers are recycled two rebuilds later).</p>
+<h3>4. Copy under the lock, compute outside</h3>
+<p>The last case is a rare reader on another thread that needs a consistent view of a list the tick mutates. The reader copies the references under the tick's lock (nanoseconds for a few hundred references) and does its real work on the copy, outside the lock.</p>
+</div>
+<div lang="fr">
+<div class="note pitfall"><p class="note-label">Piège rencontré</p><p>Charger une carte crée des dizaines de corps Box2D (stations, nœuds de ressources, PNJ). Longtemps, cela se faisait sur le thread qui recevait le message « héberge cette carte » de la gateway, pendant que le tick faisait avancer soixante autres mondes. Le symptôme n'était pas une exception que j'aurais pu rattraper : c'était une <code>ExecutionEngineException</code> dans <code>b2CreateBody</code>, de la corruption de mémoire native, et le runtime qui s'arrête net. La création de carte était le dernier endroit du serveur qui touchait Box2D hors du tick. Elle est maintenant coupée en deux : la partie lente (lire la carte et son contenu en base) tourne sur le thread appelant, et seule la création des corps est mise en file pour le tick, avec un budget de 3 ms par tick.</p></div>
+<h3>3. La publication immuable</h3>
+<p>Certaines données sont écrites par un thread et lues par beaucoup : l'index spatial que le snapshot de chaque joueur interroge, la liste des cartes chargées, les catalogues de données de jeu. Pour celles-là, l'écrivain construit une nouvelle version complète à côté et la publie par une seule affectation de référence. Une affectation de référence est atomique : un lecteur voit soit toute l'ancienne version, soit toute la nouvelle, jamais une version à moitié construite, et aucun lecteur ne prend jamais de verrou.</p>
+<p>L'index spatial était autrefois protégé par un verrou global tenu pendant chaque lecture. La requête tourne une fois par joueur et par tick sur un chemin parallèle : ce verrou sérialisait précisément le travail que la boucle parallèle existait pour répartir. Il n'apparaissait dans aucun profil CPU : <strong>un verrou coûte des cœurs qui attendent, pas des cycles brûlés</strong>, et c'est pourquoi il a survécu si longtemps. Les lecteurs d'une version publiée suivent deux règles : la capturer une fois dans une locale (lire la propriété deux fois peut chevaucher deux versions), et ne jamais la garder au-delà du tick courant (ses tampons sont recyclés deux reconstructions plus tard).</p>
+<h3>4. Copier sous le verrou, calculer dehors</h3>
+<p>Le dernier cas est un lecteur rare, sur un autre thread, qui a besoin d'une vue cohérente d'une liste que le tick modifie. Le lecteur copie les références sous le verrou du tick (quelques nanosecondes pour quelques centaines de références) et fait son vrai travail sur la copie, hors du verrou.</p>
+</div>
+<div lang="en">
+<div class="note measured"><p class="note-label">Measured</p><p>Choosing where a newly arrived ship appears used to enumerate the map's ship list directly from the network thread while the tick was adding a hull: "Collection was modified; enumeration operation may not execute". The network handler caught the exception and dropped the packet, so that one connection simply never entered the world. Observed once in 200 arrivals on a bench. In production that is "one login in N falls into the void", the worst kind of bug to diagnose.</p></div>
+</div>
+<div lang="fr">
+<div class="note measured"><p class="note-label">Mesuré</p><p>Le choix de l'endroit où apparaît un vaisseau qui arrive énumérait directement la liste des vaisseaux de la carte depuis le thread réseau, pendant que le tick ajoutait une coque : « Collection was modified; enumeration operation may not execute ». Le gestionnaire réseau rattrapait l'exception et jetait le paquet : cette connexion-là n'entrait tout simplement jamais dans le monde. Observé une fois sur 200 arrivées au banc. En production, c'est « une connexion sur N tombe dans le vide », le pire genre de bug à diagnostiquer.</p></div>
+</div>
+</section>
+
+<section class="sec" id="workers">
+<div lang="en">
+<h2>Dedicated workers instead of the thread pool</h2>
+<p>The parallel loops of the tick (maps, bullets, snapshot builds) first used <code>Parallel.For</code>. On a 400-bot bench, the tick started stalling for 100 to 600 ms at a time, always in a section containing a parallel loop, with almost no CPU consumed. The diagnostic line said it plainly:</p>
+</div>
+<div lang="fr">
+<h2>Des ouvriers dédiés plutôt que le ThreadPool</h2>
+<p>Les boucles parallèles du tick (cartes, balles, construction des snapshots) utilisaient d'abord <code>Parallel.For</code>. Sur un banc à 400 bots, le tick s'est mis à décrocher de 100 à 600 ms d'un coup, toujours dans une section contenant une boucle parallèle, avec presque aucun CPU consommé. La ligne de diagnostic le disait en clair :</p>
+</div>
+<div class="code"><div class="code-head"><span class="file">GameServer console · 400-bot bench</span></div><pre><code data-lang="txt">[Tick lent] tick 2585 : 616,9 ms — pire section « snap build » 601,6 ms mur / 0,0 ms CPU → ATTENTE
+  | pool : 20 threads (plancher 20, libres 32767), 0 items en attente ; snapshots : 385 pair(s) bâtis par 2 thread(s)</code></pre></div>
+<div lang="en">
+<p>600 ms of wall time, zero CPU, 385 snapshots built by two threads. The tick thread had done the whole loop alone, then waited for the thread pool to run the replicas it had queued, replicas that had nothing left to do once they started. Thread-pool workers run at normal priority, and on a machine where 800 bot network threads wake up constantly, a normal-priority worker waits its turn behind hundreds of others. The tick was at the highest priority, but <code>Parallel.For</code> made it depend on threads that were not.</p>
+<div class="compare">
+<div><h4>Parallel.For on the pool</h4><p>Workers are shared, normal-priority threads. The loop waits for every replica it scheduled, including replicas that start after the work is finished. A starved pool stalls the tick with zero CPU used.</p></div>
+<div class="pick"><h4>TickWorkers</h4><p>N threads created once, at a tick priority, sleeping on a semaphore. The caller participates, indices are taken from a shared counter, and the join waits only for threads that are actually working. A worker the OS never scheduled is never waited for.</p></div>
+</div>
+</div>
+<div lang="fr">
+<p>600 ms de temps mural, zéro CPU, 385 snapshots bâtis par deux threads. Le thread du tick avait fait toute la boucle seul, puis attendu que le pool exécute les répliques qu'il avait mises en file, répliques qui n'avaient plus rien à faire une fois lancées. Les ouvriers du pool tournent en priorité normale, et sur une machine où 800 threads réseau de bots se réveillent sans cesse, un ouvrier de priorité normale attend son tour derrière des centaines d'autres. Le tick était en priorité maximale, mais <code>Parallel.For</code> le faisait dépendre de threads qui ne l'étaient pas.</p>
+<div class="compare">
+<div><h4>Parallel.For sur le pool</h4><p>Les ouvriers sont des threads partagés, de priorité normale. La boucle attend chaque réplique qu'elle a planifiée, y compris celles qui démarrent après la fin du travail. Un pool affamé fige le tick avec zéro CPU consommé.</p></div>
+<div class="pick"><h4>TickWorkers</h4><p>N threads créés une fois, à une priorité de tick, endormis sur un sémaphore. L'appelant participe, les indices se prennent sur un compteur partagé, et la jointure n'attend que les threads qui travaillent vraiment. Un ouvrier que l'OS n'a jamais ordonnancé n'est jamais attendu.</p></div>
+</div>
+</div>
+<div class="code"><div class="code-head"><span class="file">GameServer/Services/TickWorkers.cs · simplified</span></div><pre><code data-lang="cs">public static void For(int count, Action&lt;int&gt; body)
+{
+    // No workers, a single item, or a nested call (the map loop contains the bullet loop): inline.
+    if (WorkerCount == 0 || count == 1 || _depth &gt; 0) { RunInline(count, body); return; }
+
+    // Never wait for another loop: if the workers are busy, do this one inline.
+    if (!Monitor.TryEnter(_jobLock)) { RunInline(count, body); return; }
+    try
+    {
+        var job = new Job(body, count);      // one object per loop: a late worker can never
+        Volatile.Write(ref _job, job);       // take an index of loop B and run the body of A
+        Interlocked.Increment(ref _active);  // the caller counts as active BEFORE the reset
+        _done.Reset();
+        for (var w = 0; w &lt; Math.Min(WorkerCount, count - 1); w++) _wake[w].Release();
+
+        Run(alreadyActive: true);            // the caller participates
+        _done.Wait();                        // until the last ACTIVE thread has finished
+        job.Error?.Throw();                  // first exception rethrown on the caller
+    }
+    finally { Monitor.Exit(_jobLock); }
+}
+
+static void Run(bool alreadyActive)
+{
+    if (!alreadyActive) Interlocked.Increment(ref _active);
+    var job = Volatile.Read(ref _job);
+    int i;
+    while (job != null &amp;&amp; (i = Interlocked.Increment(ref job.Next) - 1) &lt; job.Count)
+        job.Body(i);
+    if (Interlocked.Decrement(ref _active) == 0) _done.Set();
+}</code></pre></div>
+<div lang="en">
+<p>With the dedicated workers, the next bench went from a worst tick of 778 ms to 164 ms, and the snapshot build's maximum from 600 ms to 20 ms. Two details are worth copying. The job is a fresh object per loop, because with three static fields a worker woken late could read the body of loop A and then take an index of loop B, which had just reset the counter. And the snapshot <em>send</em> went back to being sequential on its own thread: 400 sends take about 10 ms at 25 Hz, which fits, and it keeps the network library's internal locks (held by a normal-priority thread) out of the tick's workers, where they could have made the world thread wait behind a priority inversion.</p>
+</div>
+<div lang="fr">
+<p>Avec les ouvriers dédiés, le banc suivant est passé d'un pire tick de 778 ms à 164 ms, et le maximum de la construction des snapshots de 600 ms à 20 ms. Deux détails méritent d'être copiés. Le job est un objet neuf par boucle, parce qu'avec trois champs statiques un ouvrier réveillé en retard pouvait lire le corps de la boucle A puis prendre un indice de la boucle B, qui venait de remettre le compteur à zéro. Et l'<em>envoi</em> des snapshots est redevenu séquentiel sur son propre thread : 400 envois prennent environ 10 ms à 25 Hz, ce qui tient, et ça garde les verrous internes de la bibliothèque réseau (tenus par un thread de priorité normale) hors des ouvriers du tick, où ils auraient pu faire attendre le thread du monde derrière une inversion de priorité.</p>
+</div>
+</section>
+
+<section class="sec" id="cores">
+<div lang="en">
+<h2>Never more ready high-priority threads than cores</h2>
+<p>The first sizing was "cores minus one" workers. Add the world thread and the snapshot thread, and that is cores <em>plus one</em> high-priority threads that can be ready at the same moment, typically when the snapshot build runs on every worker while the world is ticking. One of them then waits a full scheduling quantum, 20 to 30 ms on a desktop Windows. If it is the world thread, or a worker holding a slice the world waits for, the tick gets a 22 ms hole in the middle of a step that costs nothing.</p>
+<div class="note measured"><p class="note-label">Measured</p><p>The object profiler reported "layout 22.3 ms": a step that takes an uncontended lock and tests a null. It was the world thread losing its core to its own helpers. With "cores − 2" workers and the world thread alone at <code>Highest</code>, "layout" went from 22.3 ms to 0.1 ms. The next two benches blamed "pilot input" (46 µs per ship for code bounded by about 1 µs), then "fire" and "gas": one object at about 21 ms, on a different step each time. The world thread again, preempted this time by the bots' threads during the connection ramp. Three benches in a row the profiler pointed at an innocent step; the culprit was always the scheduler. Each step now reports its share of the thread's CPU next to its share of wall time (chapter <a href="observability.html">10.1</a>).</p></div>
+<p>The rule became a formula once several game-server instances shared one machine. Each instance saw all the cores and took "cores − 2" workers, so ten instances on twenty logical processors created 180 high-priority threads. The worker count is now derived from the number of instances on the machine, which the node agent passes to each server (chapter <a href="node-agents.html">7.3</a>):</p>
+</div>
+<div lang="fr">
+<h2>Jamais plus de threads prioritaires prêts que de cœurs</h2>
+<p>Le premier dimensionnement était « cœurs moins un » ouvriers. Ajoutez le thread du monde et celui des snapshots : cela fait cœurs <em>plus un</em> threads prioritaires qui peuvent être prêts au même instant, typiquement quand la construction des snapshots tourne sur tous les ouvriers pendant que le monde ticke. L'un d'eux attend alors un quantum entier, 20 à 30 ms sur un Windows de bureau. Si c'est le thread du monde, ou un ouvrier qui tient une tranche que le monde attend, le tick prend un trou de 22 ms au milieu d'une étape qui ne coûte rien.</p>
+<div class="note measured"><p class="note-label">Mesuré</p><p>Le profileur des objets signalait « layout 22,3 ms » : une étape qui prend un verrou non contendu et teste un null. C'était le thread du monde qui perdait son cœur au profit de ses propres aides. Avec « cœurs − 2 » ouvriers et le thread du monde seul en <code>Highest</code>, « layout » est passé de 22,3 ms à 0,1 ms. Les deux bancs suivants ont accusé « entrée pilote » (46 µs par vaisseau pour un code borné vers 1 µs), puis « tir » et « gaz » : un seul objet à environ 21 ms, sur une étape différente à chaque fois. Encore le thread du monde, préempté cette fois par les threads des bots pendant la rampe de connexion. Trois bancs de suite, le profileur a désigné une étape innocente ; le coupable était toujours l'ordonnanceur. Chaque étape rapporte maintenant sa part du CPU du thread à côté de sa part du temps mural (chapitre <a href="observability.html">10.1</a>).</p></div>
+<p>La règle est devenue une formule quand plusieurs instances de serveur de jeu ont partagé une machine. Chaque instance voyait tous les cœurs et prenait « cœurs − 2 » ouvriers : dix instances sur vingt processeurs logiques créaient 180 threads prioritaires. Le nombre d'ouvriers se déduit maintenant du nombre d'instances de la machine, que l'agent de machine transmet à chaque serveur (chapitre <a href="node-agents.html">7.3</a>) :</p>
+</div>
+<div class="code"><div class="code-head"><span class="file">sizing, agent and game server</span></div><pre><code data-lang="txt">agent       : instances = min( MaxInstances , processors / (wanted workers + 2) )
+game server : workers   = processors / instances − 2        (floor 0: loops run inline)</code></pre></div>
+<div lang="en">
+<p>The "+ 2" and "− 2" are the world and snapshot threads that every instance owns: a fixed cost, which is why it is subtracted after the division. A result of zero is not a fallback but the right answer: when two high-priority threads per instance already use every core, a worker nobody has a core for costs a wake-up, and if it is scheduled late in the middle of a slice, the caller waits a quantum for it. Both processes print their computation at startup, including when it is zero, because a sequential tick that does not announce itself is rediscovered three hours later in a report line saying "291 snapshots built by 2 threads".</p>
+<div class="note rule"><p class="note-label">Rule</p><p>Count your high-priority threads against the cores that will actually run them, across every process on the machine.</p><p>Priorities only order threads that are ready together. With more ready threads than cores, one of them waits a quantum, and nothing in its own code explains why.</p></div>
+</div>
+<div lang="fr">
+<p>Les « + 2 » et « − 2 » sont les threads du monde et des snapshots que possède chaque instance : un coût fixe, c'est pourquoi on le retire après la division. Un résultat nul n'est pas un repli mais la bonne réponse : quand deux threads prioritaires par instance occupent déjà tous les cœurs, un ouvrier pour lequel aucun cœur n'est libre coûte un réveil, et s'il est ordonnancé en retard au milieu d'une tranche, l'appelant l'attend un quantum. Les deux processus impriment leur calcul au démarrage, y compris quand il vaut zéro, parce qu'un tick séquentiel qui ne s'annonce pas se redécouvre trois heures plus tard dans une ligne de rapport disant « 291 snapshots bâtis par 2 threads ».</p>
+<div class="note rule"><p class="note-label">Règle</p><p>Compter ses threads prioritaires face aux cœurs qui les exécuteront vraiment, tous processus de la machine confondus.</p><p>Les priorités n'ordonnent que des threads prêts ensemble. Avec plus de threads prêts que de cœurs, l'un d'eux attend un quantum, et rien dans son propre code ne dit pourquoi.</p></div>
+</div>
+</section>
+
+<section class="sec" id="lock-order">
+<div lang="en">
+<h2>Locks that are allowed to exist</h2>
+<p>A few locks remain, and each follows the same discipline: held briefly, never around I/O, and always taken in the same order. The one that almost went wrong is worth showing. The network client needed a lock so that sending and closing the socket could not race. The tempting version held that lock around packet <em>dispatching</em> too. But dispatching runs application code, which takes its own locks, and in the game server that produced two threads acquiring the same two locks in opposite orders:</p>
+</div>
+<div lang="fr">
+<h2>Les verrous qui ont le droit d'exister</h2>
+<p>Il reste quelques verrous, et chacun suit la même discipline : tenu brièvement, jamais autour d'une entrée-sortie, et toujours pris dans le même ordre. Celui qui a failli mal tourner mérite d'être montré. Le client réseau avait besoin d'un verrou pour qu'envoyer et fermer la socket ne puissent pas se croiser. La version tentante tenait aussi ce verrou pendant la <em>distribution</em> des paquets. Mais distribuer, c'est exécuter du code applicatif, qui prend ses propres verrous, et dans le serveur de jeu cela donnait deux threads prenant les deux mêmes verrous dans des ordres opposés :</p>
+</div>
+<div class="code"><div class="code-head"><span class="file">the deadlock that was never shipped</span></div><pre><code data-lang="txt">tick thread    : holds the map-set lock (unloading a map)  → sends a packet   → wants the network lock
+gateway pump   : holds the network lock (dispatching)      → "host this map"  → wants the map-set lock</code></pre></div>
+<div lang="en">
+<p>The server would have frozen the first time a map load coincided with an unload. The network lock therefore covers sending, closing and opening, but not dispatching, except in the load-test client's manual mode where the analysis is different and written down next to the code.</p>
+<div class="note rule"><p class="note-label">Rule</p><p>Never hold a lock while running code you do not control, and a callback is code you do not control.</p><p>A lock added to fix one race that creates a deadlock is a bad trade. Write the two acquisition orders side by side before adding any lock that wraps a callback.</p></div>
+<p>The background writer is deliberately a single thread. The server's writes already serialize behind the inventory locks, so parallel writers would gain nothing and multiply the possible deadlocks, and one thread gives ordering for free: two writes for the same character reach the database in the order the game produced them. If one day a long write blocks others, the answer will be one queue <em>per character</em>, not several threads on one shared queue, which would lose the ordering without saying so.</p>
+</div>
+<div lang="fr">
+<p>Le serveur se serait figé la première fois qu'un chargement de carte aurait croisé un déchargement. Le verrou réseau couvre donc l'envoi, la fermeture et l'ouverture, mais pas la distribution, sauf dans le mode manuel du client de test de charge, où l'analyse est différente et écrite à côté du code.</p>
+<div class="note rule"><p class="note-label">Règle</p><p>Ne jamais tenir un verrou pendant qu'on exécute du code qu'on ne contrôle pas, et un rappel est du code qu'on ne contrôle pas.</p><p>Un verrou ajouté pour réparer une course et qui crée un interblocage est un mauvais échange. Écrire les deux ordres d'acquisition côte à côte avant d'ajouter un verrou qui enveloppe un rappel.</p></div>
+<p>L'écrivain de fond est délibérément un seul thread. Les écritures du serveur se sérialisent déjà derrière les verrous d'inventaire : des écrivains parallèles ne gagneraient rien et multiplieraient les interblocages possibles, et un thread unique donne l'ordre gratuitement : deux écritures pour le même personnage atteignent la base dans l'ordre où le jeu les a produites. Si un jour une écriture longue en bloque d'autres, la réponse sera une file <em>par personnage</em>, pas plusieurs threads sur une file commune, qui perdrait l'ordre sans le dire.</p>
+</div>
+</section>
+
+<section class="sec" id="network-thread">
+<div lang="en">
+<h2>The network thread is shared too</h2>
+<p>The "no database in the tick" rule of the next chapter does not apply to the network thread, which may wait for a query. But the game server has one network pump per socket, shared by every player on it, so waiting there is never free.</p>
+<div class="note measured"><p class="note-label">Measured</p><p>On a 2,500-bot bench, a wave of map transitions sent dozens of bots to the same unloaded map in the same second. Each one arrived in the map loader, did not find the map (queued, not built yet), redid the same seven queries of the preparation and queued one more request. Behind the per-map lock, those redundant preparations ran one after another on the network thread. The world ticked at a steady 25 Hz while the network thread was clogged: no input processed, clients' two-second grace expiring, and 2,505 sessions fell to 923. No tick counter could have shown it.</p></div>
+<p>The fix treats a load in flight as a shared thing: the first thread to ask prepares the map and publishes its request; every later thread waits for that same request. One preparation, one queue entry, and all the waiting network threads resume together when the map is born. The per-map lock now only guards a decision ("am I the one preparing?") and is never held during the wait.</p>
+</div>
+<div lang="fr">
+<h2>Le thread réseau est partagé, lui aussi</h2>
+<p>La règle « pas de base dans le tick » du chapitre suivant ne s'applique pas au thread réseau, qui a le droit d'attendre une requête. Mais le serveur de jeu a une pompe réseau par socket, partagée par tous les joueurs qui y sont : y attendre n'est jamais gratuit.</p>
+<div class="note measured"><p class="note-label">Mesuré</p><p>Sur un banc à 2 500 bots, une vague de transitions de carte envoyait des dizaines de bots vers la même carte non chargée dans la même seconde. Chacun arrivait dans le chargeur de cartes, ne trouvait pas la carte (en file, pas encore bâtie), refaisait les sept mêmes requêtes de préparation et ajoutait une requête de plus. Derrière le verrou par carte, ces préparations redondantes s'exécutaient à la queue leu leu sur le thread réseau. Le monde tournait à 25 Hz bien stables pendant que le thread réseau était bouché : plus une entrée traitée, la grâce de deux secondes des clients qui expire, et 2 505 sessions tombées à 923. Aucun compteur de tick n'aurait pu le montrer.</p></div>
+<p>La correction traite un chargement en vol comme une chose partagée : le premier thread qui demande prépare la carte et publie sa requête ; tous les suivants attendent cette même requête. Une préparation, une entrée de file, et tous les threads réseau en attente repartent ensemble quand la carte naît. Le verrou par carte ne garde plus qu'une décision (« est-ce moi qui prépare ? ») et n'est jamais tenu pendant l'attente.</p>
+</div>
+</section>
+
+<section class="sec" id="takeaways">
+<div class="takeaways">
+<div lang="en"><h2>Key takeaways</h2><ul>
+<li>Give every piece of state one owning thread, and make the map the unit of parallelism.</li>
+<li>Cross threads through four patterns only: last-writer-wins fields read once, queued mutations, immutable publication, copy under the lock.</li>
+<li>Touch the physics engine only from the thread that steps it; native corruption is not an exception you can catch.</li>
+<li>Run the tick's parallel loops on dedicated, prioritized workers whose join waits only for active threads.</li>
+<li>Keep high-priority threads at or below the core count, machine-wide, and never hold a lock around a callback.</li>
+</ul></div>
+<div lang="fr"><h2>À retenir</h2><ul>
+<li>Donner à chaque morceau d'état un thread propriétaire, et faire de la carte l'unité de parallélisme.</li>
+<li>Ne traverser les threads que par quatre motifs : champs où le dernier écrit gagne lus une fois, mutations en file, publication immuable, copie sous le verrou.</li>
+<li>Ne toucher au moteur physique que depuis le thread qui le fait avancer ; une corruption native n'est pas une exception qu'on rattrape.</li>
+<li>Faire tourner les boucles parallèles du tick sur des ouvriers dédiés et prioritaires dont la jointure n'attend que les threads actifs.</li>
+<li>Garder les threads prioritaires sous le nombre de cœurs, à l'échelle de la machine, et ne jamais tenir un verrou autour d'un rappel.</li>
+</ul></div>
+</div>
+</section>
+
+</div>
+<div data-chapter-foot></div>
+</article>
+</main>
+<aside class="rail" id="mq-rail"></aside>
+</div>
+<footer class="site-footer" id="mq-footer"></footer>
+<script src="assets/js/site-data.js" defer></script>
+<script src="assets/js/glossary-data.js" defer></script>
+<script src="assets/js/app.js" defer></script>
+<script src="assets/js/widgets.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,286 @@
+<!doctype html>
+<html lang="en" data-lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Choosing a transport · MoonQwak</title>
+<meta name="description" content="TCP, raw UDP or reliable UDP: delivery guarantees, head-of-line blocking, packet size limits, and why LiteNetLib.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Chakra+Petch:wght@500;600&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="assets/css/site.css">
+<script>(function(){var r=document.documentElement,l,t;try{l=localStorage.getItem("mq-lang");t=localStorage.getItem("mq-theme");}catch(e){}if(l!=="en"&&l!=="fr"){l=(navigator.language||"").toLowerCase().indexOf("fr")===0?"fr":"en";}r.setAttribute("data-lang",l);r.setAttribute("lang",l);if(t==="light"||t==="dark")r.setAttribute("data-theme",t);})();</script>
+</head>
+<body data-page="transport">
+<a class="skip-link" href="#main"><span lang="en">Skip to content</span><span lang="fr">Aller au contenu</span></a>
+<header class="site-header" id="mq-header"></header>
+<div class="layout">
+<aside class="sidebar" id="mq-sidebar"></aside>
+<main class="content" id="main">
+<article>
+<header class="chapter-head">
+  <div class="eyebrow" data-auto></div>
+  <h1><span lang="en">Choosing a transport</span><span lang="fr">Choisir un transport</span></h1>
+  <p class="dek"><span lang="en">TCP, raw UDP or reliable UDP: delivery guarantees, head-of-line blocking, packet size limits, and why LiteNetLib.</span><span lang="fr">TCP, UDP brut ou UDP fiable : garanties de livraison, blocage en tête de file, taille des paquets, et pourquoi LiteNetLib.</span></p>
+  <div class="meta-row" data-auto></div>
+</header>
+
+<div class="prose">
+
+<section class="sec" id="two-kinds">
+<div lang="en">
+<h2>Two kinds of traffic</h2>
+<p>Before choosing a protocol, look at what the game actually sends. It falls into two families with opposite needs.</p>
+<ul>
+<li><strong>State that is refreshed all the time.</strong> Positions, velocities, the health of a hull. The server sends a fresh copy 25 times a second. If one copy is lost, the next one replaces it 40 ms later. An old copy that arrives late is worse than useless, because it would move the ship backwards.</li>
+<li><strong>Things that must happen exactly once.</strong> Logging in, buying an item, sending a chat line, "I want to dock". Losing one of these is a bug the player notices, and receiving it twice can be worse (paying twice).</li>
+</ul>
+<p>Latency matters far more than throughput for the first family. A game can live with a few hundred kilobits per second per player. It cannot live with a position that arrives 200 ms late because something else in front of it was waiting.</p>
+</div>
+<div lang="fr">
+<h2>Deux sortes de trafic</h2>
+<p>Avant de choisir un protocole, regardez ce que le jeu envoie vraiment. Ça se range en deux familles aux besoins opposés.</p>
+<ul>
+<li><strong>Un état rafraîchi en permanence.</strong> Positions, vitesses, santé d'une coque. Le serveur en envoie une copie fraîche 25 fois par seconde. Si une copie se perd, la suivante la remplace 40 ms plus tard. Une vieille copie qui arrive en retard est pire qu'inutile, car elle ferait reculer le vaisseau.</li>
+<li><strong>Ce qui doit arriver exactement une fois.</strong> Se connecter, acheter un objet, envoyer une ligne de chat, « je veux m'amarrer ». En perdre un est un bug que le joueur remarque, et le recevoir deux fois peut être pire (payer deux fois).</li>
+</ul>
+<p>Pour la première famille, la latence compte bien plus que le débit. Un jeu vit très bien avec quelques centaines de kilobits par seconde et par joueur. Il ne vit pas avec une position qui arrive 200 ms en retard parce qu'autre chose devant elle attendait.</p>
+</div>
+</section>
+
+<section class="sec" id="tcp">
+<div lang="en">
+<h2>TCP and head-of-line blocking</h2>
+<p>TCP gives you a reliable, ordered stream of bytes. Everything arrives, in order, exactly once. That is exactly right for the second family and exactly wrong for the first, for one reason: <a class="term" data-term="hol">head-of-line blocking</a>. When a segment is lost, TCP holds back every byte behind it until the missing one has been retransmitted, which takes at least one round trip. Your fresh position update is sitting in the receiver's buffer, fully arrived, and the game cannot read it because an older, already-useless one is missing.</p>
+</div>
+<div lang="fr">
+<h2>TCP et le blocage en tête de file</h2>
+<p>TCP fournit un flux d'octets fiable et ordonné. Tout arrive, dans l'ordre, exactement une fois. C'est parfait pour la deuxième famille et exactement faux pour la première, pour une raison : le <a class="term" data-term="hol">blocage en tête de file</a>. Quand un segment se perd, TCP retient tous les octets qui le suivent jusqu'à ce que le manquant ait été retransmis, ce qui prend au moins un aller-retour. Votre position toute fraîche est dans le tampon du récepteur, arrivée en entier, et le jeu ne peut pas la lire parce qu'une plus ancienne, déjà inutile, manque.</p>
+</div>
+<figure class="fig fig-scroll">
+<svg viewBox="0 0 760 270" role="img" aria-label="Comparison: with reliable ordered delivery, packets 3 to 6 wait for the retransmission of lost packet 2; with sequenced delivery they are delivered on arrival and packet 2 is simply dropped">
+  <defs><marker id="tr-arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="currentColor" opacity="0.6"/></marker></defs>
+  <text class="dg-label" x="16" y="24"><tspan lang="en">Reliable, ordered (TCP-like)</tspan><tspan lang="fr">Fiable, ordonné (façon TCP)</tspan></text>
+  <text class="dg-label" x="16" y="160"><tspan lang="en">Sequenced (newest wins)</tspan><tspan lang="fr">Séquencé (le plus récent gagne)</tspan></text>
+  <line x1="120" y1="50" x2="740" y2="50" class="dg-line"/><text class="dg-small" x="16" y="54"><tspan lang="en">sent</tspan><tspan lang="fr">envoyé</tspan></text>
+  <line x1="120" y1="110" x2="740" y2="110" class="dg-line"/><text class="dg-small" x="16" y="114"><tspan lang="en">game reads</tspan><tspan lang="fr">le jeu lit</tspan></text>
+  <line x1="120" y1="186" x2="740" y2="186" class="dg-line"/><text class="dg-small" x="16" y="190"><tspan lang="en">sent</tspan><tspan lang="fr">envoyé</tspan></text>
+  <line x1="120" y1="246" x2="740" y2="246" class="dg-line"/><text class="dg-small" x="16" y="250"><tspan lang="en">game reads</tspan><tspan lang="fr">le jeu lit</tspan></text>
+  <!-- TCP row: sends at 140,200,260,320,380,440 ; 2 lost, retransmit at ~520 -->
+  <g class="dg-mono">
+    <rect x="128" y="38" width="24" height="24" rx="4" class="dg-box-2"/><text x="140" y="55" text-anchor="middle">1</text>
+    <rect x="188" y="38" width="24" height="24" rx="4" class="dg-box-2" style="stroke:var(--crit)"/><text x="200" y="55" text-anchor="middle">2</text>
+    <rect x="248" y="38" width="24" height="24" rx="4" class="dg-box-2"/><text x="260" y="55" text-anchor="middle">3</text>
+    <rect x="308" y="38" width="24" height="24" rx="4" class="dg-box-2"/><text x="320" y="55" text-anchor="middle">4</text>
+    <rect x="368" y="38" width="24" height="24" rx="4" class="dg-box-2"/><text x="380" y="55" text-anchor="middle">5</text>
+    <rect x="428" y="38" width="24" height="24" rx="4" class="dg-box-2"/><text x="440" y="55" text-anchor="middle">6</text>
+    <rect x="528" y="38" width="24" height="24" rx="4" class="dg-hot"/><text x="540" y="55" text-anchor="middle">2</text>
+  </g>
+  <path d="M200 66 L214 92" class="dg-crit-stroke" stroke-width="2"/><path d="M214 66 L200 92" class="dg-crit-stroke" stroke-width="2"/>
+  <text class="dg-small" x="222" y="86" style="fill:var(--crit-ink)"><tspan lang="en">lost</tspan><tspan lang="fr">perdu</tspan></text>
+  <text class="dg-small" x="496" y="30"><tspan lang="en">retransmitted after ~1 round trip</tspan><tspan lang="fr">retransmis après ~1 aller-retour</tspan></text>
+  <line x1="140" y1="62" x2="160" y2="98" class="dg-line" marker-end="url(#tr-arr)"/>
+  <rect x="148" y="98" width="24" height="24" rx="4" class="dg-box"/><text class="dg-mono" x="160" y="115" text-anchor="middle">1</text>
+  <rect x="264" y="92" width="276" height="36" rx="6" fill="none" stroke-dasharray="4 4" style="stroke:var(--crit)"/>
+  <text class="dg-small" x="402" y="140" text-anchor="middle" style="fill:var(--crit-ink)"><tspan lang="en">3, 4, 5, 6 have arrived but wait, stalled behind 2</tspan><tspan lang="fr">3, 4, 5, 6 sont arrivés mais attendent, bloqués derrière 2</tspan></text>
+  <g class="dg-mono">
+    <rect x="556" y="98" width="24" height="24" rx="4" class="dg-box"/><text x="568" y="115" text-anchor="middle">2</text>
+    <rect x="584" y="98" width="24" height="24" rx="4" class="dg-box"/><text x="596" y="115" text-anchor="middle">3</text>
+    <rect x="612" y="98" width="24" height="24" rx="4" class="dg-box"/><text x="624" y="115" text-anchor="middle">4</text>
+    <rect x="640" y="98" width="24" height="24" rx="4" class="dg-box"/><text x="652" y="115" text-anchor="middle">5</text>
+    <rect x="668" y="98" width="24" height="24" rx="4" class="dg-box"/><text x="680" y="115" text-anchor="middle">6</text>
+  </g>
+  <line x1="540" y1="62" x2="566" y2="98" class="dg-line" marker-end="url(#tr-arr)"/>
+  <!-- Sequenced row -->
+  <g class="dg-mono">
+    <rect x="128" y="174" width="24" height="24" rx="4" class="dg-box-2"/><text x="140" y="191" text-anchor="middle">1</text>
+    <rect x="188" y="174" width="24" height="24" rx="4" class="dg-box-2" style="stroke:var(--crit)"/><text x="200" y="191" text-anchor="middle">2</text>
+    <rect x="248" y="174" width="24" height="24" rx="4" class="dg-box-2"/><text x="260" y="191" text-anchor="middle">3</text>
+    <rect x="308" y="174" width="24" height="24" rx="4" class="dg-box-2"/><text x="320" y="191" text-anchor="middle">4</text>
+    <rect x="368" y="174" width="24" height="24" rx="4" class="dg-box-2"/><text x="380" y="191" text-anchor="middle">5</text>
+    <rect x="428" y="174" width="24" height="24" rx="4" class="dg-box-2"/><text x="440" y="191" text-anchor="middle">6</text>
+    <rect x="148" y="234" width="24" height="24" rx="4" class="dg-box"/><text x="160" y="251" text-anchor="middle">1</text>
+    <rect x="268" y="234" width="24" height="24" rx="4" class="dg-hot"/><text x="280" y="251" text-anchor="middle">3</text>
+    <rect x="328" y="234" width="24" height="24" rx="4" class="dg-hot"/><text x="340" y="251" text-anchor="middle">4</text>
+    <rect x="388" y="234" width="24" height="24" rx="4" class="dg-hot"/><text x="400" y="251" text-anchor="middle">5</text>
+    <rect x="448" y="234" width="24" height="24" rx="4" class="dg-hot"/><text x="460" y="251" text-anchor="middle">6</text>
+  </g>
+  <path d="M200 202 L214 228" class="dg-crit-stroke" stroke-width="2"/><path d="M214 202 L200 228" class="dg-crit-stroke" stroke-width="2"/>
+  <line x1="140" y1="198" x2="160" y2="234" class="dg-line" marker-end="url(#tr-arr)"/>
+  <line x1="260" y1="198" x2="280" y2="234" class="dg-line" marker-end="url(#tr-arr)"/>
+  <line x1="320" y1="198" x2="340" y2="234" class="dg-line" marker-end="url(#tr-arr)"/>
+  <line x1="380" y1="198" x2="400" y2="234" class="dg-line" marker-end="url(#tr-arr)"/>
+  <line x1="440" y1="198" x2="460" y2="234" class="dg-line" marker-end="url(#tr-arr)"/>
+  <text class="dg-small" x="496" y="226"><tspan lang="en">each one read on arrival; 2 is never needed again</tspan><tspan lang="fr">chacun lu à l'arrivée ; 2 ne sert plus jamais</tspan></text>
+</svg>
+<figcaption><span lang="en"><strong>Head-of-line blocking.</strong> With ordered delivery, one lost packet delays everything behind it by a round trip. For position updates, the newer packets already contain everything the lost one had.</span><span lang="fr"><strong>Blocage en tête de file.</strong> Avec une livraison ordonnée, un paquet perdu retarde tout ce qui le suit d'un aller-retour. Pour des mises à jour de position, les paquets plus récents contiennent déjà tout ce qu'avait le paquet perdu.</span></figcaption>
+</figure>
+<div lang="en">
+<p>TCP has a second trap for small real-time messages: Nagle's algorithm, which delays small writes to coalesce them. It can be disabled (<code>NoDelay</code>), but that does not remove head-of-line blocking. TCP also delivers a stream, not messages, so you frame messages yourself. None of this makes TCP unusable: plenty of games ship on it, and for login, chat and trading it is perfectly adequate. The problem appears when losses appear, and on real consumer connections they always do.</p>
+</div>
+<div lang="fr">
+<p>TCP a un second piège pour les petits messages temps réel : l'algorithme de Nagle, qui retarde les petites écritures pour les regrouper. On peut le désactiver (<code>NoDelay</code>), mais ça ne supprime pas le blocage en tête de file. TCP livre aussi un flux, pas des messages : il faut encadrer les messages soi-même. Rien de tout ça ne rend TCP inutilisable : beaucoup de jeux tournent dessus, et pour le login, le chat ou les échanges, il convient parfaitement. Le problème apparaît quand les pertes apparaissent, et sur de vraies connexions grand public, elles apparaissent toujours.</p>
+</div>
+</section>
+
+<section class="sec" id="udp">
+<div lang="en">
+<h2>Raw UDP: freedom, and everything to build</h2>
+<p>UDP sends independent datagrams with no promise at all. They can be lost, duplicated or reordered, and there is no connection: nothing tells you that the other side has gone away. That freedom is what you want for state updates, but everything else becomes your job:</p>
+<ul>
+<li>a connection handshake, keep-alives, and timeouts to detect a peer that vanished;</li>
+<li>acknowledgements and retransmission for the messages that must arrive;</li>
+<li>ordering and duplicate removal where it matters;</li>
+<li>splitting and reassembling anything larger than the network's packet size limit;</li>
+<li>not flooding a connection that is already congested.</li>
+</ul>
+<p>Writing all of that correctly is a project in itself, and the bugs it produces (a retransmission timer that fires too early, a sequence number that wraps) are among the hardest to reproduce.</p>
+</div>
+<div lang="fr">
+<h2>UDP brut : la liberté, et tout à construire</h2>
+<p>UDP envoie des datagrammes indépendants sans aucune promesse. Ils peuvent se perdre, se dupliquer ou arriver dans le désordre, et il n'y a pas de connexion : rien ne vous dit que l'autre côté a disparu. Cette liberté est exactement ce qu'on veut pour les mises à jour d'état, mais tout le reste devient votre travail :</p>
+<ul>
+<li>une poignée de main de connexion, des messages de maintien et des délais pour détecter un pair disparu ;</li>
+<li>des accusés de réception et des retransmissions pour les messages qui doivent arriver ;</li>
+<li>l'ordre et l'élimination des doublons là où ça compte ;</li>
+<li>le découpage et le réassemblage de tout ce qui dépasse la taille maximale d'un paquet sur le réseau ;</li>
+<li>ne pas inonder une connexion déjà saturée.</li>
+</ul>
+<p>Écrire tout ça correctement est un projet en soi, et les bugs que ça produit (un minuteur de retransmission qui se déclenche trop tôt, un numéro de séquence qui boucle) sont parmi les plus durs à reproduire.</p>
+</div>
+</section>
+
+<section class="sec" id="reliable-udp">
+<div lang="en">
+<h2>Reliable UDP: channels with a delivery mode each</h2>
+<p>Reliable UDP libraries sit in the middle. They run over one UDP socket, handle connections, pings and timeouts, and let every message choose its delivery mode. <a href="https://github.com/RevenantX/LiteNetLib" rel="noopener">LiteNetLib</a>, which MoonQwak uses, offers these:</p>
+<div class="table-wrap"><table>
+<thead><tr><th>Mode</th><th>Guarantee</th><th>Good for</th></tr></thead>
+<tbody>
+<tr><td><code>Unreliable</code></td><td>None: may be lost, duplicated, reordered</td><td>Inputs that are resent every tick anyway</td></tr>
+<tr><td><code>Sequenced</code></td><td>Old packets are dropped; never delivered out of order</td><td>Continuous state where only the newest matters</td></tr>
+<tr><td><code>ReliableUnordered</code></td><td>Always arrives, in any order</td><td>Independent events</td></tr>
+<tr><td><code>ReliableOrdered</code></td><td>Always arrives, in order (TCP-like, per channel)</td><td>Requests, chat, anything transactional</td></tr>
+<tr><td><code>ReliableSequenced</code></td><td>Only the last one is guaranteed</td><td>A state where losing intermediate values is fine but the last must arrive</td></tr>
+</tbody></table></div>
+<p>The important property is that modes and channels are independent: a lost state update on an unreliable channel does not delay a chat message, and a retransmitted purchase does not delay positions. The library also measures round-trip time, handles fragmentation and splits large messages, which you would otherwise write yourself. Other libraries in this family include ENet and several QUIC-based options; the choice between them matters less than using one.</p>
+</div>
+<div lang="fr">
+<h2>UDP fiable : des canaux, chacun avec son mode de livraison</h2>
+<p>Les bibliothèques d'UDP fiable se placent au milieu. Elles tournent sur une seule socket UDP, gèrent connexions, pings et délais, et laissent chaque message choisir son mode de livraison. <a href="https://github.com/RevenantX/LiteNetLib" rel="noopener">LiteNetLib</a>, qu'utilise MoonQwak, propose ceux-ci :</p>
+<div class="table-wrap"><table>
+<thead><tr><th>Mode</th><th>Garantie</th><th>Adapté à</th></tr></thead>
+<tbody>
+<tr><td><code>Unreliable</code></td><td>Aucune : peut se perdre, se dupliquer, arriver dans le désordre</td><td>Des entrées renvoyées à chaque tick de toute façon</td></tr>
+<tr><td><code>Sequenced</code></td><td>Les vieux paquets sont jetés ; jamais livrés dans le désordre</td><td>Un état continu dont seul le plus récent compte</td></tr>
+<tr><td><code>ReliableUnordered</code></td><td>Arrive toujours, dans n'importe quel ordre</td><td>Des événements indépendants</td></tr>
+<tr><td><code>ReliableOrdered</code></td><td>Arrive toujours, dans l'ordre (façon TCP, par canal)</td><td>Requêtes, chat, tout ce qui est transactionnel</td></tr>
+<tr><td><code>ReliableSequenced</code></td><td>Seul le dernier est garanti</td><td>Un état dont les valeurs intermédiaires peuvent se perdre mais dont la dernière doit arriver</td></tr>
+</tbody></table></div>
+<p>La propriété importante est que modes et canaux sont indépendants : une mise à jour d'état perdue sur un canal non fiable ne retarde pas un message de chat, et un achat retransmis ne retarde pas les positions. La bibliothèque mesure aussi le temps d'aller-retour, gère la fragmentation et découpe les gros messages, ce qu'il faudrait sinon écrire soi-même. D'autres bibliothèques de cette famille existent, comme ENet ou plusieurs options basées sur QUIC ; le choix entre elles compte moins que le fait d'en utiliser une.</p>
+</div>
+</section>
+
+<section class="sec" id="what-moonqwak-does">
+<div lang="en">
+<h2>What MoonQwak actually sends, and how</h2>
+<div class="note project"><p class="note-label">In MoonQwak</p>
+<p>Today, almost every message, snapshots included, travels as <code>ReliableOrdered</code>, which is the default of the project's send methods. Client inputs are sent every tick and carry the full state of the controls ("thrust held, firing, aiming here") rather than key presses, so they are idempotent: the server keeps the latest one and a duplicate changes nothing. The load-testing bots send their inputs <code>Unreliable</code>, which is safe precisely because of that.</p></div>
+<p>Sending snapshots reliably is, in theory, the wrong channel for continuous state: a lost snapshot blocks the following ones and gets retransmitted after it is already stale. It stayed that way on purpose, because two replication tricks described in Part 4 relied on reliable delivery: a bullet is only sent twice (at spawn and at impact), and some blocks used to be sent as deltas against the previous send. Moving snapshots to an unreliable channel without changing those would silently lose bullets.</p>
+<p>What happened instead is that the protocol was made tolerant of loss, one mechanism at a time: the terminal state of a bullet is repeated for three snapshots, objects are removed after a grace period instead of on their first absence, per-hex damage is sent as an absolute list with a version rather than as a delta. Each of those changes was justified on its own. Together they mean that the snapshot stream no longer depends on reliability, and splitting traffic into a sequenced state channel and a reliable event channel has become a change of delivery mode rather than a redesign.</p>
+</div>
+<div lang="fr">
+<h2>Ce que MoonQwak envoie vraiment, et comment</h2>
+<div class="note project"><p class="note-label">Dans MoonQwak</p>
+<p>Aujourd'hui, presque tous les messages, snapshots compris, partent en <code>ReliableOrdered</code>, le mode par défaut des méthodes d'envoi du projet. Les entrées du client partent à chaque tick et portent l'état complet des commandes (« poussée enfoncée, tir, visée ici ») plutôt que des appuis de touches : elles sont donc idempotentes, le serveur garde la dernière et un doublon ne change rien. Les robots du banc de charge envoient leurs entrées en <code>Unreliable</code>, ce qui est sûr précisément pour cette raison.</p></div>
+<p>Envoyer les snapshots en fiable est, en théorie, le mauvais canal pour un état continu : un snapshot perdu bloque les suivants, et il est retransmis alors qu'il est déjà périmé. C'est resté ainsi volontairement, parce que deux astuces de réplication décrites dans la partie 4 reposaient sur la livraison fiable : une balle n'est envoyée que deux fois (à son apparition et à son impact), et certains blocs partaient autrefois en delta par rapport à l'envoi précédent. Passer les snapshots sur un canal non fiable sans changer ça aurait fait perdre des balles en silence.</p>
+<p>À la place, le protocole a été rendu tolérant aux pertes, un mécanisme à la fois : l'état final d'une balle est répété sur trois snapshots, les objets sont retirés après un délai de grâce plutôt qu'à leur première absence, les dégâts par hex partent en liste absolue versionnée plutôt qu'en delta. Chacun de ces changements était justifié pour lui-même. Ensemble, ils font que le flux de snapshots ne dépend plus de la fiabilité, et séparer le trafic en un canal d'état séquencé et un canal d'événements fiable est devenu un changement de mode de livraison plutôt qu'une refonte.</p>
+</div>
+<div lang="en">
+<div class="note rule"><p class="note-label">Rule</p><p>If a fact is sent only once over a best-effort path, it will be lost one day.</p><p>Either make it state that is repeated until it cannot matter any more, or send it on a reliable channel. Repeating usually costs a few bytes and no change to the format.</p></div>
+</div>
+<div lang="fr">
+<div class="note rule"><p class="note-label">Règle</p><p>Si un fait n'est envoyé qu'une fois sur un chemin sans garantie, il sera perdu un jour.</p><p>Soit on en fait un état répété jusqu'à ce qu'il ne puisse plus compter, soit on l'envoie sur un canal fiable. Répéter coûte en général quelques octets et aucun changement de format.</p></div>
+</div>
+</section>
+
+<section class="sec" id="mtu">
+<div lang="en">
+<h2>The packet size limit</h2>
+<p>Every network path has a maximum transmission unit, the largest packet it carries in one piece, typically around 1,500 bytes on Ethernet. Subtract the IP and UDP headers and the library's own header, and a little over 1,400 bytes remain for your data. A larger message is split into fragments. That works, but the message is only usable when every fragment has arrived: with a loss rate of <em>p</em> per packet, a message in <em>n</em> fragments is lost with probability close to <em>n × p</em>.</p>
+<div class="note measured"><p class="note-label">Measured</p><p>With 100 bots on one map, the average snapshot was 3,703 bytes: three fragments each, 25 times a second. The first snapshot a player receives on arrival, which describes everything around them at once, reached 15,687 bytes: eleven fragments, all of which must arrive before anything can be drawn.</p></div>
+<p>The per-player budget described in Part 4 brought regular snapshots back well under the limit. The first snapshot after arrival is still large, and splitting it into several independent packets is on the list of open problems. The rule to keep: size regular traffic against the limit, and treat anything above it as a deliberate exception.</p>
+</div>
+<div lang="fr">
+<h2>La taille maximale d'un paquet</h2>
+<p>Chaque chemin réseau a une unité de transmission maximale (MTU), le plus gros paquet qu'il transporte d'un seul tenant, en général autour de 1 500 octets sur Ethernet. Enlevez les en-têtes IP et UDP et celui de la bibliothèque, et il reste un peu plus de 1 400 octets pour vos données. Un message plus gros est découpé en fragments. Ça marche, mais le message n'est utilisable que quand tous ses fragments sont arrivés : avec un taux de perte <em>p</em> par paquet, un message en <em>n</em> fragments se perd avec une probabilité proche de <em>n × p</em>.</p>
+<div class="note measured"><p class="note-label">Mesuré</p><p>Avec 100 robots sur une carte, le snapshot moyen faisait 3 703 octets : trois fragments chacun, 25 fois par seconde. Le premier snapshot qu'un joueur reçoit à son arrivée, qui décrit tout ce qui l'entoure d'un coup, a atteint 15 687 octets : onze fragments, qui doivent tous arriver avant que quoi que ce soit ne s'affiche.</p></div>
+<p>Le budget par joueur décrit dans la partie 4 a ramené les snapshots réguliers bien sous la limite. Le premier snapshot après l'arrivée reste gros, et le découper en plusieurs paquets indépendants fait partie des problèmes ouverts. La règle à garder : dimensionner le trafic régulier par rapport à la limite, et traiter tout ce qui la dépasse comme une exception assumée.</p>
+</div>
+</section>
+
+<section class="sec" id="caps">
+<div lang="en">
+<h2>Connection limits that nobody chose</h2>
+<p>A transport library needs a maximum number of peers, and whatever number you pass once during development tends to stay. MoonQwak had two such limits, found the same way.</p>
+<div class="note pitfall"><p class="note-label">Pitfall I hit</p><p>The gateway's constructor had a default of 10 peers that <code>Program.cs</code> never overrode, so the eleventh player was refused. The game server had a literal 100. The load test found the first one at eleven bots and the second one at a hundred, when the developer's own client, joining to watch, was rejected. In both cases the refusal was silent on both sides: LiteNetLib's <code>Reject()</code> just closes the connection, and the client only saw a disconnect.</p></div>
+<p>Both limits are now environment settings, printed at startup, and a refusal writes a line with the current count and the cap. Limits of this kind break nothing while you stay under them, which is why they survive for months and then show up on the first day the game works.</p>
+</div>
+<div lang="fr">
+<h2>Des plafonds de connexions que personne n'a choisis</h2>
+<p>Une bibliothèque de transport demande un nombre maximal de pairs, et le nombre qu'on passe une fois en développement a tendance à rester. MoonQwak en avait deux, trouvés de la même façon.</p>
+<div class="note pitfall"><p class="note-label">Piège rencontré</p><p>Le constructeur de la gateway avait une valeur par défaut de 10 pairs que <code>Program.cs</code> ne surchargeait jamais : le onzième joueur était refusé. Le serveur de jeu avait un 100 écrit en dur. Le banc de charge a trouvé le premier à onze robots et le second à cent, quand le client du développeur, venu regarder, s'est fait rejeter. Dans les deux cas le refus était muet des deux côtés : le <code>Reject()</code> de LiteNetLib ferme simplement la connexion, et le client ne voyait qu'une déconnexion.</p></div>
+<p>Les deux plafonds sont maintenant des réglages d'environnement, affichés au démarrage, et un refus écrit une ligne avec le compte courant et le plafond. Ce genre de limite ne casse rien tant qu'on reste dessous, et c'est pour ça qu'elles survivent des mois puis se montrent le premier jour où le jeu marche.</p>
+</div>
+<div class="code"><div class="code-head"><span class="file">Network/Server.cs · connection requests</span></div><pre><code data-lang="cs">listener.ConnectionRequestEvent += request =>
+{
+    if (_netManager.ConnectedPeersCount &lt; _maxClient)
+    {
+        request.AcceptIfKey(ConnectionKey);
+        return;
+    }
+    // A refusal is information, not a detail: say it, with the numbers.
+    Console.WriteLine($"[Net] connection REFUSED from {request.RemoteEndPoint}: " +
+                      $"cap reached ({_netManager.ConnectedPeersCount}/{_maxClient} peers)");
+    request.Reject();
+};</code></pre></div>
+<div lang="en">
+<div class="note rule"><p class="note-label">Rule</p><p>Every hard limit gets a name, a setting, a line at startup and a line when it triggers.</p><p>A limit you cannot see is a limit you rediscover in production.</p></div>
+</div>
+<div lang="fr">
+<div class="note rule"><p class="note-label">Règle</p><p>Chaque limite dure a un nom, un réglage, une ligne au démarrage et une ligne quand elle se déclenche.</p><p>Une limite qu'on ne voit pas est une limite qu'on redécouvre en production.</p></div>
+</div>
+</section>
+
+<section class="sec" id="takeaways">
+<div class="takeaways">
+<div lang="en"><h2>Key takeaways</h2><ul>
+<li>Game traffic is two families: continuously refreshed state, and events that must happen exactly once. They want different delivery.</li>
+<li>TCP's ordered stream makes one lost packet delay everything behind it. Raw UDP makes you build connections, reliability and fragmentation yourself.</li>
+<li>A reliable UDP library gives per-message delivery modes over one socket; pick one rather than writing your own.</li>
+<li>Design messages to tolerate loss even when they currently travel reliably, so the delivery mode can change later.</li>
+<li>Keep regular packets under the MTU, and make every connection cap visible.</li>
+</ul></div>
+<div lang="fr"><h2>À retenir</h2><ul>
+<li>Le trafic d'un jeu forme deux familles : un état rafraîchi en continu, et des événements qui doivent arriver exactement une fois. Ils demandent des livraisons différentes.</li>
+<li>Le flux ordonné de TCP fait qu'un paquet perdu retarde tout ce qui le suit. UDP brut oblige à construire soi-même connexions, fiabilité et fragmentation.</li>
+<li>Une bibliothèque d'UDP fiable donne un mode de livraison par message sur une seule socket ; en choisir une plutôt qu'écrire la sienne.</li>
+<li>Concevoir les messages pour tolérer les pertes même s'ils voyagent aujourd'hui en fiable, pour pouvoir changer de mode plus tard.</li>
+<li>Garder les paquets réguliers sous le MTU, et rendre visible chaque plafond de connexions.</li>
+</ul></div>
+</div>
+</section>
+
+</div>
+<div data-chapter-foot></div>
+</article>
+</main>
+<aside class="rail" id="mq-rail"></aside>
+</div>
+<footer class="site-footer" id="mq-footer"></footer>
+<script src="assets/js/site-data.js" defer></script>
+<script src="assets/js/glossary-data.js" defer></script>
+<script src="assets/js/app.js" defer></script>
+<script src="assets/js/widgets.js" defer></script>
+</body>
+</html>

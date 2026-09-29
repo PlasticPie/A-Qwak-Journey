@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="en" data-lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Serialize once, copy many · MoonQwak</title>
+<meta name="description" content="Turning O(players × objects) serialization into O(objects), and the data race it hid until 780 players.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Chakra+Petch:wght@500;600&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="assets/css/site.css">
+<script>(function(){var r=document.documentElement,l,t;try{l=localStorage.getItem("mq-lang");t=localStorage.getItem("mq-theme");}catch(e){}if(l!=="en"&&l!=="fr"){l=(navigator.language||"").toLowerCase().indexOf("fr")===0?"fr":"en";}r.setAttribute("data-lang",l);r.setAttribute("lang",l);if(t==="light"||t==="dark")r.setAttribute("data-theme",t);})();</script>
+</head>
+<body data-page="serialize-once">
+<a class="skip-link" href="#main"><span lang="en">Skip to content</span><span lang="fr">Aller au contenu</span></a>
+<header class="site-header" id="mq-header"></header>
+<div class="layout">
+<aside class="sidebar" id="mq-sidebar"></aside>
+<main class="content" id="main">
+<article>
+<header class="chapter-head">
+  <div class="eyebrow" data-auto></div>
+  <h1><span lang="en">Serialize once, copy many</span><span lang="fr">Sérialiser une fois, copier souvent</span></h1>
+  <p class="dek"><span lang="en">Turning O(players × objects) serialization into O(objects), and the data race it hid until 780 players.</span><span lang="fr">Passer d'une sérialisation en O(joueurs × objets) à O(objets), et la course de données qu'elle a cachée jusqu'à 780 joueurs.</span></p>
+  <div class="meta-row" data-auto></div>
+</header>
+
+<div class="prose">
+
+<section class="sec" id="problem">
+<div lang="en">
+<h2>The same bytes, written once per viewer</h2>
+<p>Snapshots are built per player, in a parallel loop, and for each visible object the builder used to call that object's serializer. But an object's bytes are the same for every player who sees it. A ship serializing itself walks its list of parts several times; a hundred players who all see each other made that walk a hundred times per ship per tick, to produce a hundred identical byte sequences.</p>
+<p>The cost was only half the problem. Serializers carry small per-tick memos (for example "has this ship stopped moving since last tick?", chapter <a href="deltas.html">4.4</a>), and a hundred threads serializing the same ship all wrote to those memos at once. A real data race, invisible as long as there was one player per map, which was every test.</p>
+</div>
+<div lang="fr">
+<h2>Les mêmes octets, écrits une fois par spectateur</h2>
+<p>Les snapshots sont construits par joueur, dans une boucle parallèle, et pour chaque objet visible le constructeur appelait le sérialiseur de cet objet. Or les octets d'un objet sont les mêmes pour tous les joueurs qui le voient. Un vaisseau qui se sérialise parcourt plusieurs fois sa liste de pièces ; cent joueurs qui se voient tous faisaient ce parcours cent fois par vaisseau et par tick, pour produire cent suites d'octets identiques.</p>
+<p>Le coût n'était que la moitié du problème. Les sérialiseurs portent de petits mémos par tick (par exemple « ce vaisseau s'est-il arrêté depuis le tick dernier ? », chapitre <a href="deltas.html">4.4</a>), et cent threads qui sérialisent le même vaisseau écrivaient tous dans ces mémos en même temps. Une vraie course de données, invisible tant qu'il y avait un joueur par carte, c'est-à-dire dans tous les tests.</p>
+</div>
+</section>
+
+<section class="sec" id="prepare">
+<div lang="en">
+<h2>Prepare sequentially, copy in parallel</h2>
+<p>The answer fits in one ordering. After the world has finished changing for the tick (chapter <a href="tick-anatomy.html">3.2</a>, section 7), each map serializes the block of each of its hulls and characters <strong>once</strong>, on its own tick thread, sequentially. The parallel build that follows only <em>copies</em> those bytes into each player's packet. The race disappears because the writes and the reads no longer overlap in time, and the cost goes from O(players × visible objects) to O(objects on the map).</p>
+</div>
+<div lang="fr">
+<h2>Préparer en séquence, copier en parallèle</h2>
+<p>La réponse tient en un ordre. Une fois que le monde a fini de changer pour le tick (chapitre <a href="tick-anatomy.html">3.2</a>, section 7), chaque carte sérialise le bloc de chacune de ses coques et de chacun de ses personnages <strong>une fois</strong>, sur son propre thread de tick, en séquence. La construction parallèle qui suit ne fait plus que <em>recopier</em> ces octets dans le paquet de chaque joueur. La course disparaît parce que les écritures et les lectures ne se recouvrent plus dans le temps, et le coût passe de O(joueurs × objets visibles) à O(objets de la carte).</p>
+</div>
+<div class="code"><div class="code-head"><span class="file">Packet/Snapshot.cs · Build, the per-object loop</span></div><pre><code data-lang="cs">WriteUVarInt((ulong)_others.Count);
+foreach (var o in _others)
+{
+    WriteUVarInt(o.Id);
+    Write(o.ObjectType);
+
+    // The block already prepared for THIS tick, if any: copy it.
+    if (o is ISnapshotBlockProvider provider)
+    {
+        if (provider.TryWriteSnapshotBlock(Tick, this)) { CachedBlockWrites++; continue; }
+        UnpreparedBlocks++;  // expected to stay at zero
+    }
+
+    // Fallback: serialize directly. This runs in the PARALLEL loop, once per viewer,
+    // so Marshal must be pure for every type that can reach it.
+    ((IMarshalable)o).Marshal(this);
+}</code></pre></div>
+<div lang="en">
+<p>A block's validity is its tick number: a block prepared at tick N is used only by snapshots of tick N. There is no "dirty" flag to reset and no cache to invalidate each tick; last tick's blocks simply stop matching. The block is only explicitly invalidated when an object leaves a map or is recycled from a pool, so a reused object can never resurrect stale bytes.</p>
+<p>Only hulls and characters use prepared blocks, deliberately. They are the ones that cost (a part list to walk) and the only ones with per-tick memos. A bullet, a piece of debris or an asteroid serializes in a few varints with no shared state; routing them through a cache would pay the copy and save nothing.</p>
+</div>
+<div lang="fr">
+<p>La validité d'un bloc est son numéro de tick : un bloc préparé au tick N ne sert qu'aux snapshots du tick N. Il n'y a aucun drapeau « sale » à remettre à zéro et aucun cache à invalider à chaque tick ; les blocs du tick précédent cessent simplement de correspondre. Un bloc n'est explicitement invalidé que quand un objet quitte une carte ou est recyclé depuis une réserve, pour qu'un objet réutilisé ne puisse jamais ressusciter des octets périmés.</p>
+<p>Seuls les coques et les personnages utilisent des blocs préparés, délibérément. Ce sont eux qui coûtent (une liste de pièces à parcourir) et les seuls à porter des mémos par tick. Une balle, un débris ou un astéroïde se sérialise en quelques varints sans état partagé ; les faire passer par un cache paierait la recopie sans rien économiser.</p>
+</div>
+<div data-widget="serialize"></div>
+</section>
+
+<section class="sec" id="threshold">
+<div lang="en">
+<h2>When preparing loses: an inequality, not a heuristic</h2>
+<p>The cache pays when the copies (V, the sum over players of the objects each one sees) exceed the preparations (P, all the hulls and characters of the map). With a single viewer, V is what that one player sees, so V ≤ P by definition: a player cannot see more objects than the map holds. Preparing is then a loss every time, and a bigger loss the larger the map is compared with the field of view. The first report that measured both sides said so plainly: 9 blocks prepared, 5 copied. Maps with fewer than two viewers therefore skip preparation and serialize directly.</p>
+<div class="note pitfall"><p class="note-label">Pitfall I hit</p><p>The first version of the counter reported the total number of objects per snapshot as "copies". But bullets, debris and asteroids never go through the cache. The report announced a gain four times larger than the real one. A flattering measurement is worse than none: it hides the day the cache stops paying. Copies are now counted inside the loop above, only when a prepared block is actually used.</p></div>
+</div>
+<div lang="fr">
+<h2>Quand préparer perd : une inégalité, pas une heuristique</h2>
+<p>Le cache rapporte quand les recopies (V, la somme sur les joueurs des objets que chacun voit) dépassent les préparations (P, toutes les coques et tous les personnages de la carte). Avec un seul spectateur, V est ce que voit ce joueur, donc V ≤ P par définition : un joueur ne peut pas voir plus d'objets que la carte n'en contient. Préparer est alors perdant à tous les coups, et d'autant plus que la carte est grande par rapport au champ de vision. Le premier rapport qui a mesuré les deux côtés l'a dit en clair : 9 blocs préparés, 5 recopiés. Les cartes de moins de deux spectateurs sautent donc la préparation et sérialisent directement.</p>
+<div class="note pitfall"><p class="note-label">Piège rencontré</p><p>La première version du compteur rapportait le nombre total d'objets par snapshot comme des « recopies ». Or balles, débris et astéroïdes ne passent jamais par le cache. Le rapport annonçait un gain quatre fois supérieur au vrai. Une mesure qui flatte est pire qu'une mesure absente : elle cache le jour où le cache cesse de rapporter. Les recopies sont maintenant comptées dans la boucle ci-dessus, seulement quand un bloc préparé est réellement utilisé.</p></div>
+</div>
+</section>
+
+<section class="sec" id="race">
+<div lang="en">
+<h2>The race that waited for 780 players</h2>
+<p>A load test aimed at 1,000 clients on one map stopped around 780. Not on saturation: on an exception.</p>
+</div>
+<div lang="fr">
+<h2>La course qui attendait 780 joueurs</h2>
+<p>Un banc de charge visant 1 000 clients sur une carte s'est arrêté vers 780. Pas sur une saturation : sur une exception.</p>
+</div>
+<div class="code"><div class="code-head"><span class="file">GameServer · 19th bench</span></div><pre><code data-lang="txt">System.InvalidOperationException : Collection was modified; enumeration operation may not execute.
+  à GameServer.Domain.Ship.MarshalPartStates(BasePacket p)
+  à Packet.Packets.Snapshot.Build()
+  à GameServer.Player.BuildPendingSnapshot(Int64 tick, MapInstance map)
+  à GameServer.PlayerSessionService.ForEachPeer(...)    ← the PARALLEL loop</code></pre></div>
+<div lang="en">
+<p>The fallback path, direct serialization when no block was prepared for this tick, runs inside the parallel loop, once per viewer. And the ship's serializer began by <em>recomputing</em> its list of damaged hexes: clear a list, refill it, swap two references, bump a version number. Two viewers serializing the same unprepared ship at the same instant were enough. With forty players that is unlikely; with seven hundred it is a certainty every minute. The code had been there since the serialize-once change. <strong>The population was the revealer, not the cause.</strong></p>
+<p>But which objects reached the fallback, with preparation in place? Here is the gap. Preparation walks the map's own lists of hulls and characters. Snapshots read the <em>published interest index</em>, rebuilt earlier in the tick. Between the two runs the sequential "player deadlines" section, which removes objects from the map: a ship destroyed, a character who just sat down, a dead body picked up. Such an object is still in the index but has no block, so every one of its viewers falls back on serializing it, in parallel. It is probably also why a dead ship stayed on screen about two seconds before disappearing.</p>
+<div class="note measured"><p class="note-label">Measured</p><p>Three comments in the repository asserted the invariant that was being violated: "the damaged list is filled once per hull per tick, before the parallel phase"; "the viewer threshold is also the safety threshold"; "this separation in time, not a lock, is what makes the whole thing safe". All three were read as proof. None was checked by anything.</p></div>
+<p>The fix was not a lock, which would have been paid on every object of every snapshot to cover a rare case. The serializer was made <strong>pure</strong>: it only reads what the last preparation left. The damaged-hex list is absolute (chapter <a href="deltas.html">4.4</a>), so a list one tick old is a truth one tick old that the next tick replaces entirely, never a cumulative inconsistency. Where the pure path cannot know whether the ship moved this tick, it answers "yes, send the position": sending an unnecessary position costs twelve bytes, not sending a needed one freezes a ship on screen. And the fallback is now <em>counted</em>, per snapshot, with zero as the expected value.</p>
+<div class="note rule"><p class="note-label">Rule</p><p>A comment that describes an invariant does not hold it.</p><p>If a property matters, enforce it in the code's shape (a pure function cannot mutate) or measure it (a counter that should be zero), and treat the comment as documentation of the enforcement, not as the enforcement.</p></div>
+</div>
+<div lang="fr">
+<p>Le chemin de repli, la sérialisation directe quand aucun bloc n'a été préparé pour ce tick, tourne dans la boucle parallèle, une fois par spectateur. Et le sérialiseur du vaisseau commençait par <em>recalculer</em> sa liste d'hex abîmés : vider une liste, la remplir, échanger deux références, incrémenter un numéro de version. Deux spectateurs sérialisant le même vaisseau non préparé au même instant suffisaient. À quarante joueurs c'est improbable ; à sept cents, c'est une certitude à chaque minute. Le code était là depuis la sérialisation-une-fois. <strong>La population était le révélateur, pas la cause.</strong></p>
+<p>Mais quels objets atteignaient le repli, la préparation étant en place ? Voici l'écart. La préparation parcourt les listes propres à la carte, coques et personnages. Les snapshots lisent l'<em>index d'intérêt publié</em>, reconstruit plus tôt dans le tick. Entre les deux passe la section séquentielle des « échéances joueurs », qui retire des objets de la carte : un vaisseau détruit, un personnage qui vient de s'asseoir, un corps relevé. Un tel objet est encore dans l'index mais n'a pas de bloc : chacun de ses spectateurs retombe sur sa sérialisation, en parallèle. C'est probablement aussi pourquoi un vaisseau mort restait environ deux secondes à l'écran avant de disparaître.</p>
+<div class="note measured"><p class="note-label">Mesuré</p><p>Trois commentaires du dépôt affirmaient l'invariant qui était violé : « la liste des abîmés est remplie une fois par coque et par tick, avant la phase parallèle » ; « le seuil de spectateurs est aussi celui de la sûreté » ; « c'est cette séparation dans le temps, pas un verrou, qui rend l'ensemble sûr ». Les trois se relisaient comme une preuve. Aucun n'était vérifié par quoi que ce soit.</p></div>
+<p>La correction n'a pas été un verrou, qui se serait payé à chaque objet de chaque snapshot pour couvrir un cas rare. Le sérialiseur a été rendu <strong>pur</strong> : il ne fait que lire ce que la dernière préparation a laissé. La liste des hex abîmés est absolue (chapitre <a href="deltas.html">4.4</a>) : une liste d'un tick de retard est une vérité d'un tick de retard, que le tick suivant remplace en entier, jamais une incohérence cumulative. Là où le chemin pur ne peut pas savoir si le vaisseau a bougé à ce tick, il répond « oui, envoie la position » : envoyer une position inutile coûte douze octets, ne pas envoyer une position nécessaire fige un vaisseau à l'écran. Et le repli est maintenant <em>compté</em>, par snapshot, avec zéro comme valeur attendue.</p>
+<div class="note rule"><p class="note-label">Règle</p><p>Un commentaire qui décrit un invariant ne le tient pas.</p><p>Si une propriété compte, l'imposer par la forme du code (une fonction pure ne peut pas muter) ou la mesurer (un compteur qui devrait valoir zéro), et traiter le commentaire comme la documentation de ce mécanisme, pas comme le mécanisme.</p></div>
+</div>
+</section>
+
+<section class="sec" id="solo">
+<div lang="en">
+<h2>The bug nobody introduced</h2>
+<p>Two correct changes, each justified on its own, combined into a bug that only appeared when playing alone:</p>
+<ol>
+<li>"Only prepare when it can pay" added the two-viewer threshold, which returns before the preparation loop.</li>
+<li>"Make the fallback pure" (the 780-player fix) removed the fallback's right to recompute anything.</li>
+</ol>
+<p>Together they removed <em>both</em> places where the damaged-hex list was built. With a single viewer, the list stayed empty. An empty list on the wire means "no damaged hex: restore this hull to full", so the server applied damage and then repaired the client's health bars 25 times a second. The symptom: "I shoot, the damage numbers appear, the health does not go down", only in solo. With two players, preparation kicked in and everything worked, which is exactly why nobody saw it in multiplayer tests.</p>
+<p>The collection of per-tick state now runs unconditionally for every hull, before the threshold. The threshold went back to being what it should always have been: a cost decision, and nothing else.</p>
+<div class="note rule"><p class="note-label">Rule</p><p>Never let game state depend on a performance decision.</p><p>A cache may be skipped, a phase may be parallel or not, a threshold may change; what the game says about the world must be the same on every path. If a performance switch can change the outcome, the state is living in the wrong place.</p></div>
+</div>
+<div lang="fr">
+<h2>Le bug que personne n'a introduit</h2>
+<p>Deux changements justes, chacun justifié de son côté, se sont combinés en un bug qui n'apparaissait qu'en jouant seul :</p>
+<ol>
+<li>« Ne préparer que quand ça peut rapporter » a ajouté le seuil de deux spectateurs, qui sort avant la boucle de préparation.</li>
+<li>« Rendre le repli pur » (la correction des 780 joueurs) a retiré au repli le droit de recalculer quoi que ce soit.</li>
+</ol>
+<p>Ensemble, ils ont supprimé les <em>deux</em> seuls endroits où la liste des hex abîmés était construite. Avec un seul spectateur, la liste restait vide. Une liste vide sur le fil veut dire « aucun hex abîmé : remets cette coque à neuf » : le serveur appliquait les dégâts puis réparait les barres de vie du client 25 fois par seconde. Le symptôme : « je tire, les chiffres de dégâts s'affichent, la vie ne descend pas », seulement en solo. À deux joueurs, la préparation se déclenchait et tout marchait, ce qui explique exactement pourquoi personne ne l'a vu en test multijoueur.</p>
+<p>La collecte de l'état par tick tourne maintenant sans condition pour chaque coque, avant le seuil. Le seuil est redevenu ce qu'il aurait toujours dû être : une décision de coût, et rien d'autre.</p>
+<div class="note rule"><p class="note-label">Règle</p><p>Ne jamais faire dépendre l'état du jeu d'une décision de performance.</p><p>Un cache peut être sauté, une phase peut être parallèle ou non, un seuil peut changer ; ce que le jeu dit du monde doit être le même sur tous les chemins. Si un interrupteur de performance peut changer le résultat, l'état vit au mauvais endroit.</p></div>
+</div>
+</section>
+
+<section class="sec" id="takeaways">
+<div class="takeaways">
+<div lang="en"><h2>Key takeaways</h2><ul>
+<li>An object's bytes are the same for all its viewers: serialize once per tick, then copy.</li>
+<li>Prepare sequentially after all mutation, and make the parallel phase read-only; date blocks by tick instead of invalidating them.</li>
+<li>Cache only what is expensive and stateful, and decide when to prepare from the inequality copies &gt; preparations.</li>
+<li>Make every fallback that runs in parallel pure, and count how often it runs.</li>
+<li>Keep game state independent of performance switches, and do not trust comments to hold invariants.</li>
+</ul></div>
+<div lang="fr"><h2>À retenir</h2><ul>
+<li>Les octets d'un objet sont les mêmes pour tous ses spectateurs : sérialiser une fois par tick, puis recopier.</li>
+<li>Préparer en séquence après toutes les mutations, et rendre la phase parallèle en lecture seule ; dater les blocs par tick au lieu de les invalider.</li>
+<li>Ne mettre en cache que ce qui est coûteux et porte un état, et décider quand préparer à partir de l'inégalité recopies &gt; préparations.</li>
+<li>Rendre pur tout repli qui tourne en parallèle, et compter combien de fois il tourne.</li>
+<li>Garder l'état du jeu indépendant des interrupteurs de performance, et ne pas compter sur des commentaires pour tenir des invariants.</li>
+</ul></div>
+</div>
+</section>
+
+</div>
+<div data-chapter-foot></div>
+</article>
+</main>
+<aside class="rail" id="mq-rail"></aside>
+</div>
+<footer class="site-footer" id="mq-footer"></footer>
+<script src="assets/js/site-data.js" defer></script>
+<script src="assets/js/glossary-data.js" defer></script>
+<script src="assets/js/app.js" defer></script>
+<script src="assets/js/widgets.js" defer></script>
+</body>
+</html>

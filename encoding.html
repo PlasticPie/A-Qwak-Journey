@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="en" data-lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Squeezing bytes · MoonQwak</title>
+<meta name="description" content="Variable-length integers, zig-zag, quantization, and the size cliffs that quietly decide your bandwidth.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Chakra+Petch:wght@500;600&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="assets/css/site.css">
+<script>(function(){var r=document.documentElement,l,t;try{l=localStorage.getItem("mq-lang");t=localStorage.getItem("mq-theme");}catch(e){}if(l!=="en"&&l!=="fr"){l=(navigator.language||"").toLowerCase().indexOf("fr")===0?"fr":"en";}r.setAttribute("data-lang",l);r.setAttribute("lang",l);if(t==="light"||t==="dark")r.setAttribute("data-theme",t);})();</script>
+</head>
+<body data-page="encoding">
+<a class="skip-link" href="#main"><span lang="en">Skip to content</span><span lang="fr">Aller au contenu</span></a>
+<header class="site-header" id="mq-header"></header>
+<div class="layout">
+<aside class="sidebar" id="mq-sidebar"></aside>
+<main class="content" id="main">
+<article>
+<header class="chapter-head">
+  <div class="eyebrow" data-auto></div>
+  <h1><span lang="en">Squeezing bytes</span><span lang="fr">Économiser les octets</span></h1>
+  <p class="dek"><span lang="en">Variable-length integers, zig-zag, quantization, and the size cliffs that quietly decide your bandwidth.</span><span lang="fr">Les entiers de taille variable, le zig-zag, la quantification, et les falaises de taille qui décident en silence de la bande passante.</span></p>
+  <div class="meta-row" data-auto></div>
+</header>
+
+<div class="prose">
+
+<section class="sec" id="why-bytes">
+<div lang="en">
+<h2>Why one byte matters</h2>
+<p>A byte saved once is nothing. A byte saved on every object, in every snapshot, for every player is multiplied three times. One byte per ship, 60 ships in view, 25 snapshots a second, 600 players on a map: that is <strong>900 KB/s</strong> of outgoing traffic for one byte. The encodings below are how the average ship in a MoonQwak snapshot came down to about 19 bytes: its id, its type, a flag byte, its position, heading and velocities, and the angle of its turrets.</p>
+</div>
+<div lang="fr">
+<h2>Pourquoi un octet compte</h2>
+<p>Un octet économisé une fois, ce n'est rien. Un octet économisé sur chaque objet, dans chaque snapshot, pour chaque joueur est multiplié trois fois. Un octet par vaisseau, 60 vaisseaux en vue, 25 snapshots par seconde, 600 joueurs sur une carte : ça fait <strong>900 Ko/s</strong> de trafic sortant pour un octet. Les encodages ci-dessous expliquent comment le vaisseau moyen d'un snapshot de MoonQwak est descendu à environ 19 octets : son identifiant, son type, un octet de drapeaux, sa position, son cap et ses vitesses, et l'angle de ses tourelles.</p>
+</div>
+</section>
+
+<section class="sec" id="varint">
+<div lang="en">
+<h2>Variable-length integers</h2>
+<p>Most numbers in a game are small: counts, ids, quantities, small coordinates. Writing each one as a fixed 4- or 8-byte integer wastes most of those bytes. A <a class="term" data-term="varint">varint</a> uses fewer bytes for smaller values. MoonQwak's format puts the size in the top bits of the first byte, then stores the value big-endian:</p>
+<div class="table-wrap"><table>
+<thead><tr><th>Values</th><th class="num">Bytes</th><th>First byte</th></tr></thead>
+<tbody>
+<tr><td>0 to 126</td><td class="num">1</td><td><code>0xxxxxxx</code>, the value itself</td></tr>
+<tr><td>127 to 16,382</td><td class="num">2</td><td><code>10xxxxxx</code> + 1 byte</td></tr>
+<tr><td>16,383 to 536,870,910</td><td class="num">4</td><td><code>110xxxxx</code> + 3 bytes</td></tr>
+<tr><td>up to 2<sup>60</sup> − 2</td><td class="num">8</td><td><code>1110xxxx</code> + 7 bytes</td></tr>
+<tr><td>anything larger</td><td class="num">9</td><td><code>0xFF</code> + 8 bytes</td></tr>
+</tbody></table></div>
+<p>The reader looks at one byte, knows the total size, and reads the rest in one go. The encoder in the lab below is a direct port of the project's code, so you can check any value.</p>
+</div>
+<div lang="fr">
+<h2>Des entiers de taille variable</h2>
+<p>La plupart des nombres d'un jeu sont petits : comptes, identifiants, quantités, petites coordonnées. Écrire chacun sur 4 ou 8 octets fixes gaspille l'essentiel de ces octets. Un <a class="term" data-term="varint">varint</a> utilise moins d'octets pour les petites valeurs. Le format de MoonQwak met la taille dans les bits de poids fort du premier octet, puis stocke la valeur en gros-boutiste :</p>
+<div class="table-wrap"><table>
+<thead><tr><th>Valeurs</th><th class="num">Octets</th><th>Premier octet</th></tr></thead>
+<tbody>
+<tr><td>0 à 126</td><td class="num">1</td><td><code>0xxxxxxx</code>, la valeur elle-même</td></tr>
+<tr><td>127 à 16 382</td><td class="num">2</td><td><code>10xxxxxx</code> + 1 octet</td></tr>
+<tr><td>16 383 à 536 870 910</td><td class="num">4</td><td><code>110xxxxx</code> + 3 octets</td></tr>
+<tr><td>jusqu'à 2<sup>60</sup> − 2</td><td class="num">8</td><td><code>1110xxxx</code> + 7 octets</td></tr>
+<tr><td>au-delà</td><td class="num">9</td><td><code>0xFF</code> + 8 octets</td></tr>
+</tbody></table></div>
+<p>Le lecteur regarde un octet, connaît la taille totale, et lit le reste d'un coup. L'encodeur du labo ci-dessous est une transcription directe du code du projet : vous pouvez vérifier n'importe quelle valeur.</p>
+</div>
+<div data-widget="varint"></div>
+<div lang="en">
+<div class="note tradeoff"><p class="note-label">Trade-off</p><p>The format has no 3-byte size. The common alternative, LEB128 (used by Protocol Buffers), stores 7 bits per byte with a continuation bit and grows one byte at a time: 3 bytes reach 2,097,151. MoonQwak's layout decodes with a single branch but jumps from 2 to 4 bytes at 16,383. That jump is the "cliff" this chapter keeps coming back to. The format was kept because every byte already on the wire depends on it; the cliffs were worked around by choosing scales and id ranges instead.</p><p>One more oddity kept for compatibility: the one-byte test is "strictly less than 127", so the value 127 itself takes two bytes.</p></div>
+</div>
+<div lang="fr">
+<div class="note tradeoff"><p class="note-label">Compromis</p><p>Le format n'a pas de taille 3 octets. L'alternative courante, LEB128 (celle de Protocol Buffers), stocke 7 bits par octet avec un bit de continuation et grandit d'un octet à la fois : 3 octets vont jusqu'à 2 097 151. La disposition de MoonQwak se décode en une seule branche, mais saute de 2 à 4 octets à 16 383. Ce saut est la « falaise » dont ce chapitre reparle sans cesse. Le format a été gardé parce que chaque octet déjà sur le fil en dépend ; on a contourné les falaises en choisissant les échelles et les plages d'identifiants.</p><p>Une dernière bizarrerie gardée pour la compatibilité : le test à un octet est « strictement inférieur à 127 », donc la valeur 127 elle-même prend deux octets.</p></div>
+</div>
+<div class="code"><div class="code-head"><span class="file">Network/VarInt.cs · encoding without allocating</span></div><pre><code data-lang="cs">private static int EncodeUVarInt(ulong value, Span&lt;byte&gt; dst)
+{
+    if (value &lt; 0x7f) { dst[0] = (byte)value; return 1; }
+    if (value &lt; 0x3fff)
+    {
+        var v = (ushort)(value | 0x8000);    // prefix 10
+        dst[0] = (byte)(v >> 8); dst[1] = (byte)v;
+        return 2;
+    }
+    if (value &lt; 0x1fffffff)
+    {
+        var v = (uint)(value | 0xc0000000);  // prefix 110
+        dst[0] = (byte)(v >> 24); dst[1] = (byte)(v >> 16); dst[2] = (byte)(v >> 8); dst[3] = (byte)v;
+        return 4;
+    }
+    // ... 8-byte (prefix 1110) and 9-byte (0xFF marker) cases
+}
+
+public static void WriteUVarInt(ulong value, BinaryWriter writer)
+{
+    Span&lt;byte&gt; buf = stackalloc byte[9];  // no heap allocation per value
+    writer.Write(buf.Slice(0, EncodeUVarInt(value, buf)));
+}</code></pre></div>
+<div lang="en">
+<div class="note measured"><p class="note-label">Measured</p><p>The first version of this encoder created a lambda and at least one <code>byte[]</code> per value written, including single-byte values, and the reader mirrored it. Every varint field of every packet went through it, on the server and on the client. Rewriting both sides with <code>stackalloc</code> and direct reads, checked byte for byte against the old output, was one of the largest CPU wins of the whole performance pass.</p></div>
+</div>
+<div lang="fr">
+<div class="note measured"><p class="note-label">Mesuré</p><p>La première version de cet encodeur créait une lambda et au moins un <code>byte[]</code> par valeur écrite, y compris pour les valeurs d'un octet, et le lecteur faisait de même. Chaque champ varint de chaque paquet passait par là, côté serveur comme côté client. Réécrire les deux côtés avec <code>stackalloc</code> et des lectures directes, vérifiées octet pour octet contre l'ancienne sortie, a été l'un des plus gros gains CPU de toute la passe de performance.</p></div>
+</div>
+</section>
+
+<section class="sec" id="zigzag">
+<div lang="en">
+<h2>Negative numbers: zig-zag</h2>
+<p>A varint is unsigned. Cast −1 to an unsigned 64-bit integer and you get the largest possible value, which costs the maximum 9 bytes, the opposite of what you want for a small offset. <a class="term" data-term="zigzag">Zig-zag</a> encoding interleaves positive and negative values before the varint: 0, −1, 1, −2, 2 become 0, 1, 2, 3, 4. Small magnitudes stay small whatever their sign.</p>
+</div>
+<div lang="fr">
+<h2>Les nombres négatifs : le zig-zag</h2>
+<p>Un varint est non signé. Convertissez −1 en entier non signé de 64 bits et vous obtenez la plus grande valeur possible, qui coûte le maximum de 9 octets, l'inverse de ce qu'on veut pour un petit décalage. L'encodage <a class="term" data-term="zigzag">zig-zag</a> entrelace positifs et négatifs avant le varint : 0, −1, 1, −2, 2 deviennent 0, 1, 2, 3, 4. Les petites valeurs restent petites quel que soit leur signe.</p>
+</div>
+<div class="code"><div class="code-head"><span class="file">Network/VarInt.cs</span></div><pre><code data-lang="cs">private static ulong ZigZagEncode(long value) => (ulong)((value &lt;&lt; 1) ^ (value >> 63));
+private static long ZigZagDecode(ulong value) => (long)(value >> 1) ^ -(long)(value &amp; 1);</code></pre></div>
+<div lang="en">
+<p>The price of zig-zag is that it doubles every magnitude. A signed value fits in two bytes only while its zig-zag form stays under 16,383, which means between −8,191 and +8,191. That factor of two is easy to forget when you do the arithmetic in your head, and the next section shows what it costs when you do.</p>
+</div>
+<div lang="fr">
+<p>Le prix du zig-zag est qu'il double chaque valeur absolue. Une valeur signée ne tient sur deux octets que tant que sa forme zig-zag reste sous 16 383, c'est-à-dire entre −8 191 et +8 191. Ce facteur deux est facile à oublier quand on fait le calcul de tête, et la section suivante montre ce que ça coûte quand on l'oublie.</p>
+</div>
+</section>
+
+<section class="sec" id="quantization">
+<div lang="en">
+<h2>Quantization: floats as scaled integers</h2>
+<p>A <code>double</code> always costs 8 bytes and carries far more precision than a screen can show. <a class="term" data-term="quantization">Quantization</a> multiplies the value by a scale, rounds it, and sends the integer as a zig-zag varint. The receiver divides by the same scale. The scales live in one shared class, because a mismatched scale between writer and reader does not throw: it silently multiplies every position by the ratio.</p>
+<div class="table-wrap"><table>
+<thead><tr><th>Quantity</th><th class="num">Scale</th><th>Step</th><th>Two-byte range</th></tr></thead>
+<tbody>
+<tr><td>Ship and character position</td><td class="num">40</td><td>2.5 cm</td><td>±204.8 units</td></tr>
+<tr><td>Ship velocity</td><td class="num">100</td><td>1 cm/s</td><td>±81.9 units/s</td></tr>
+<tr><td>Bullet position and velocity</td><td class="num">10</td><td>10 cm</td><td>±819.1 units</td></tr>
+<tr><td>Angular velocity</td><td class="num">1,000</td><td>0.001 rad/s</td><td>±8.19 rad/s</td></tr>
+<tr><td>Heading</td><td colspan="3">fixed 16 bits: a fraction of a full turn, about 0.0001 rad per step</td></tr>
+</tbody></table></div>
+<p>The heading is the exception: a ship is as likely to point one way as another, so a varint (which rewards small values) would not help. Two fixed bytes covering the whole circle are four times smaller than a double and cost the same for every angle.</p>
+</div>
+<div lang="fr">
+<h2>La quantification : des flottants en entiers mis à l'échelle</h2>
+<p>Un <code>double</code> coûte toujours 8 octets et porte bien plus de précision qu'un écran ne peut en montrer. La <a class="term" data-term="quantization">quantification</a> multiplie la valeur par une échelle, l'arrondit, et envoie l'entier en varint zig-zag. Le récepteur divise par la même échelle. Les échelles vivent dans une seule classe partagée, parce qu'une échelle différente entre écrivain et lecteur ne lève pas d'erreur : elle multiplie en silence chaque position par le rapport.</p>
+<div class="table-wrap"><table>
+<thead><tr><th>Grandeur</th><th class="num">Échelle</th><th>Pas</th><th>Plage sur deux octets</th></tr></thead>
+<tbody>
+<tr><td>Position d'un vaisseau ou d'un personnage</td><td class="num">40</td><td>2,5 cm</td><td>±204,8 unités</td></tr>
+<tr><td>Vitesse d'un vaisseau</td><td class="num">100</td><td>1 cm/s</td><td>±81,9 unités/s</td></tr>
+<tr><td>Position et vitesse d'une balle</td><td class="num">10</td><td>10 cm</td><td>±819,1 unités</td></tr>
+<tr><td>Vitesse angulaire</td><td class="num">1 000</td><td>0,001 rad/s</td><td>±8,19 rad/s</td></tr>
+<tr><td>Cap</td><td colspan="3">16 bits fixes : une fraction de tour complet, environ 0,0001 rad par pas</td></tr>
+</tbody></table></div>
+<p>Le cap est l'exception : un vaisseau a autant de chances de pointer dans une direction que dans une autre, donc un varint (qui récompense les petites valeurs) n'aiderait pas. Deux octets fixes couvrant tout le cercle sont quatre fois plus petits qu'un double et coûtent pareil pour tous les angles.</p>
+</div>
+<div class="code"><div class="code-head"><span class="file">Packet/BasePacket.cs</span></div><pre><code data-lang="cs">public void WriteQuantized(double value, double scale) => WriteVarInt((long)Math.Round(value * scale));
+public double ReadQuantized(double scale) => ReadVarInt() / scale;
+
+public void WriteAngle(double radians)
+{
+    var turns = radians / (2 * Math.PI);
+    turns -= Math.Floor(turns);  // wrap into [0, 1)
+    Write((ushort)((int)Math.Round(turns * 65536.0) &amp; 0xFFFF));
+}</code></pre></div>
+</section>
+
+<section class="sec" id="cliffs">
+<div lang="en">
+<h2>The cliffs, three times</h2>
+<p>Because the size jumps from 2 to 4 bytes at a fixed threshold, a small change in a value can double its cost. Three separate optimizations in MoonQwak were about keeping frequent values on the right side of that edge.</p>
+<h3>Positions and the size of the map</h3>
+<p>When the map radius went from 100 to 400 units, ships spent most of their time far from the center, and their coordinates crossed the threshold. A trace showed the same ship weighing 23 bytes while cruising and 19 bytes in a fight near the center: the 4 extra bytes were two coordinates that had each grown to 4 bytes. The position scale went from 100 (1 cm) to 40 (2.5 cm), which moved the edge from 81.9 to 204.8 units from the center.</p>
+<div class="note pitfall"><p class="note-label">Pitfall I hit</p><p>The first calculation of this change divided 16,383 by the scale and concluded that ±409 units would fit in two bytes at a scale of 40, which would have covered the whole map. It forgot that zig-zag doubles the value first, so the real limit is 8,191 steps, ±204.8 units. On a map of radius 400, positions beyond about 205 units from the center still take four bytes per axis. The lab above shows it: try 204 and 206 in "Ship position". Covering the whole map in two bytes needs a scale of 20 (5 cm steps) or less.</p></div>
+<h3>Ids that kept growing</h3>
+<p>Every object gets a network id from a counter that is never reused. Bullets live about a second and hundreds are fired every second, so the counter passed 16,383 within minutes of a battle, and every id from then on cost four bytes. In a melee, ids were about 14% of the snapshot. The fix gives bullets their own recycled band of ids, 8,192 to 16,382, all of which fit in two bytes (ids are unsigned, so no zig-zag here). An id goes back to the band only after a 10-second quarantine, much longer than the client ever remembers a bullet, so a recycled id can never be confused with an old one. The counter for everything else skips the band. (<a href="entities.html">3.6</a>)</p>
+<h3>Bullet velocities</h3>
+<p>The fastest bullet in the catalog flies at 88 units per second. Written at the ship scale of 1/100, a velocity component that large is 8,800 steps before zig-zag and 17,600 after: four bytes. Bullets got their own scale of 1/10, where ±819 units per second fit in two bytes. The error is 5 cm on position and 5 cm/s on speed, which after a full second of flight puts the client's bullet 0.1 units away from the server's, on hulls whose cells have a radius of 3.</p>
+</div>
+<div lang="fr">
+<h2>Les falaises, trois fois</h2>
+<p>Comme la taille saute de 2 à 4 octets à un seuil fixe, un petit changement de valeur peut doubler son coût. Trois optimisations distinctes de MoonQwak ont consisté à garder des valeurs fréquentes du bon côté de ce bord.</p>
+<h3>Les positions et la taille de la carte</h3>
+<p>Quand le rayon de la carte est passé de 100 à 400 unités, les vaisseaux ont passé l'essentiel de leur temps loin du centre, et leurs coordonnées ont franchi le seuil. Une trace a montré le même vaisseau à 23 octets en croisière et à 19 octets dans un combat près du centre : les 4 octets de plus étaient deux coordonnées passées chacune à 4 octets. L'échelle des positions est passée de 100 (1 cm) à 40 (2,5 cm), ce qui a déplacé le bord de 81,9 à 204,8 unités du centre.</p>
+<div class="note pitfall"><p class="note-label">Piège rencontré</p><p>Le premier calcul de ce changement divisait 16 383 par l'échelle et concluait qu'à 40, ±409 unités tiendraient sur deux octets, ce qui aurait couvert toute la carte. Il oubliait que le zig-zag double d'abord la valeur : la vraie limite est de 8 191 pas, soit ±204,8 unités. Sur une carte de rayon 400, les positions au-delà d'environ 205 unités du centre prennent encore quatre octets par axe. Le labo ci-dessus le montre : essayez 204 et 206 en « Position de coque ». Couvrir toute la carte sur deux octets demande une échelle de 20 (pas de 5 cm) ou moins.</p></div>
+<h3>Des identifiants qui grandissaient</h3>
+<p>Chaque objet reçoit un identifiant réseau d'un compteur jamais réutilisé. Une balle vit environ une seconde et il en part des centaines par seconde : le compteur a dépassé 16 383 en quelques minutes de bataille, et chaque identifiant a ensuite coûté quatre octets. Dans une mêlée, les identifiants faisaient environ 14 % du snapshot. La correction donne aux balles leur propre bande d'identifiants recyclés, de 8 192 à 16 382, qui tiennent tous sur deux octets (les identifiants sont non signés, donc sans zig-zag). Un identifiant ne revient dans la bande qu'après une quarantaine de 10 secondes, bien plus longue que la mémoire qu'a le client d'une balle : un identifiant recyclé ne peut jamais être confondu avec l'ancien. Le compteur de tout le reste saute la bande. (<a href="entities.html">3.6</a>)</p>
+<h3>La vitesse des balles</h3>
+<p>La balle la plus rapide du catalogue vole à 88 unités par seconde. Écrite à l'échelle des vaisseaux de 1/100, une composante de vitesse de cette taille fait 8 800 pas avant zig-zag et 17 600 après : quatre octets. Les balles ont reçu leur propre échelle de 1/10, où ±819 unités par seconde tiennent sur deux octets. L'erreur est de 5 cm sur la position et 5 cm/s sur la vitesse, ce qui, après une seconde de vol, place la balle du client à 0,1 unité de celle du serveur, sur des coques dont les cellules ont un rayon de 3.</p>
+</div>
+<div lang="en">
+<div class="note rule"><p class="note-label">Rule</p><p>For every frequent value, know which side of the size cliff it lives on, and compute it with the encoding actually used.</p><p>With a signed varint, the two-byte range is ±8,191 steps, not 16,383. Divide by the scale, then compare with the real range of the value (map radius, top speed, id lifetime).</p></div>
+</div>
+<div lang="fr">
+<div class="note rule"><p class="note-label">Règle</p><p>Pour chaque valeur fréquente, savoir de quel côté de la falaise de taille elle vit, et le calculer avec l'encodage réellement utilisé.</p><p>Avec un varint signé, la plage sur deux octets est de ±8 191 pas, pas 16 383. Diviser par l'échelle, puis comparer avec la plage réelle de la valeur (rayon de la carte, vitesse maximale, durée de vie des identifiants).</p></div>
+</div>
+</section>
+
+<section class="sec" id="flags">
+<div lang="en">
+<h2>Flag bytes: pay only for what changed</h2>
+<p>The cheapest field is the one you do not send. Each ship in a snapshot starts with a flag byte whose bits announce which optional blocks follow: movement, a hull rebuild, per-hex state, turret angles, laser beams, effects, crew posts, fire. A ship sitting still with nothing happening costs its id, its type and that byte.</p>
+<p>Two details made this work. The movement bit is also sent on the exact tick a ship stops, so every viewer settles on the final position instead of extrapolating past it. And the per-hex state block covers every field it sends: an early version compared four of five fields, so the fifth (a hex running short of power) never triggered a send and was silently invisible to other players. Chapter <a href="deltas.html">4.4</a> tells the full story of that block.</p>
+</div>
+<div lang="fr">
+<h2>Les octets de drapeaux : ne payer que ce qui a changé</h2>
+<p>Le champ le moins cher est celui qu'on n'envoie pas. Chaque vaisseau d'un snapshot commence par un octet de drapeaux dont les bits annoncent quels blocs optionnels suivent : mouvement, reconstruction de coque, état par hex, angles des tourelles, rayons laser, effets, postes d'équipage, feu. Un vaisseau immobile à qui rien n'arrive coûte son identifiant, son type et cet octet.</p>
+<p>Deux détails ont rendu ça correct. Le bit de mouvement est aussi envoyé au tick exact où un vaisseau s'arrête, pour que chaque spectateur se cale sur la position finale au lieu d'extrapoler au-delà. Et le bloc d'état par hex couvre tous les champs qu'il envoie : une première version comparait quatre champs sur cinq, si bien que le cinquième (un hex à court d'énergie) ne déclenchait jamais d'envoi et restait invisible aux autres joueurs. Le chapitre <a href="deltas.html">4.4</a> raconte toute l'histoire de ce bloc.</p>
+</div>
+</section>
+
+<section class="sec" id="measure-first">
+<div lang="en">
+<h2>Measure what the bytes are made of</h2>
+<p>Encoding work is easy to aim at the wrong target, and MoonQwak did it twice in a row.</p>
+<div class="note pitfall"><p class="note-label">Pitfall I hit</p><p>A batch "bullets at 1/10 plus one less angle" was expected to save 15% of snapshot size. It saved 0.7%. Two assumptions were wrong: bullets had been sent only at spawn and impact for a long time (so they were a small share of each snapshot), and most of their speeds were already under the two-byte threshold. Neither assumption had been measured.</p></div>
+<p>The response was an instrument, not another optimization: a trace, switched on by an environment variable, that re-serializes one player's snapshot object by object once per second and prints the size by object type, the bytes spent on ids, and how many ships carry each optional block. A typical line from the 600-player bench:</p>
+</div>
+<div lang="fr">
+<h2>Mesurer de quoi sont faits les octets</h2>
+<p>Le travail d'encodage vise facilement la mauvaise cible, et MoonQwak l'a fait deux fois de suite.</p>
+<div class="note pitfall"><p class="note-label">Piège rencontré</p><p>Un lot « balles au dixième plus un angle de moins » devait économiser 15 % de la taille des snapshots. Il en a économisé 0,7 %. Deux hypothèses étaient fausses : les balles n'étaient plus envoyées qu'à leur apparition et à leur impact depuis longtemps (donc une petite part de chaque snapshot), et la plupart de leurs vitesses étaient déjà sous le seuil des deux octets. Aucune des deux n'avait été mesurée.</p></div>
+<p>La réponse a été un instrument, pas une optimisation de plus : une trace, activée par une variable d'environnement, qui re-sérialise le snapshot d'un joueur objet par objet une fois par seconde et affiche la taille par type d'objet, les octets passés en identifiants, et combien de vaisseaux portent chaque bloc optionnel. Une ligne typique du banc à 600 joueurs :</p>
+</div>
+<div class="code"><div class="code-head"><span class="file">GameServer console · QWAK_SNAP_TRACE=1</span></div><pre><code data-lang="txt">[Snap bytes] peer 0: total 1449 · self+header 31 · ids 116 · Ship 60x22=1371 · Bullet 5x9=47
+   hull blocks: movement 60 · turrets 60 · rebuild 0 · state 0 · beams 0 · effects 0 · posts 0 · fire 0</code></pre></div>
+<div lang="en">
+<p>That line ended a debate: 95% of the snapshot was the fixed base of each ship, every optional block was already at zero, and there was nothing left to gain from encoding. The only remaining lever was how often each ship is sent, which is the subject of <a href="freshness-budget.html">4.5</a>.</p>
+<div class="note rule"><p class="note-label">Rule</p><p>Before optimizing an encoding, break the real payload down by what it contains.</p><p>An estimate of where the bytes go is a hypothesis. A per-type breakdown of a real packet takes an afternoon to build and usually changes the plan.</p></div>
+</div>
+<div lang="fr">
+<p>Cette ligne a clos un débat : 95 % du snapshot était la base fixe de chaque vaisseau, chaque bloc optionnel était déjà à zéro, et il n'y avait plus rien à gagner sur l'encodage. Le seul levier restant était la fréquence d'envoi de chaque vaisseau, qui est le sujet du chapitre <a href="freshness-budget.html">4.5</a>.</p>
+<div class="note rule"><p class="note-label">Règle</p><p>Avant d'optimiser un encodage, décomposer la vraie charge utile par ce qu'elle contient.</p><p>Une estimation de l'endroit où vont les octets est une hypothèse. Une décomposition par type d'un vrai paquet prend un après-midi à écrire et change en général le plan.</p></div>
+</div>
+</section>
+
+<section class="sec" id="takeaways">
+<div class="takeaways">
+<div lang="en"><h2>Key takeaways</h2><ul>
+<li>Varints make small numbers cheap; zig-zag keeps small negative numbers cheap too, at the cost of halving the range.</li>
+<li>Quantize floats to the precision the game needs, with scales defined once and shared by both ends.</li>
+<li>A varint format with size jumps has cliffs; keep frequent values below them by choosing scales and id ranges.</li>
+<li>Flag bytes let an idle object cost almost nothing.</li>
+<li>Measure the composition of real packets before choosing what to optimize.</li>
+</ul></div>
+<div lang="fr"><h2>À retenir</h2><ul>
+<li>Les varints rendent les petits nombres bon marché ; le zig-zag garde aussi les petits négatifs bon marché, au prix d'une plage divisée par deux.</li>
+<li>Quantifier les flottants à la précision dont le jeu a besoin, avec des échelles définies une fois et partagées par les deux bouts.</li>
+<li>Un format de varint à sauts de taille a des falaises ; garder les valeurs fréquentes en dessous en choisissant échelles et plages d'identifiants.</li>
+<li>Les octets de drapeaux permettent à un objet au repos de ne coûter presque rien.</li>
+<li>Mesurer la composition de vrais paquets avant de choisir quoi optimiser.</li>
+</ul></div>
+</div>
+</section>
+
+</div>
+<div data-chapter-foot></div>
+</article>
+</main>
+<aside class="rail" id="mq-rail"></aside>
+</div>
+<footer class="site-footer" id="mq-footer"></footer>
+<script src="assets/js/site-data.js" defer></script>
+<script src="assets/js/glossary-data.js" defer></script>
+<script src="assets/js/app.js" defer></script>
+<script src="assets/js/widgets.js" defer></script>
+</body>
+</html>

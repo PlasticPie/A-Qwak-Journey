@@ -1,0 +1,340 @@
+<!doctype html>
+<html lang="en" data-lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>A simulation beside the simulation · MoonQwak</title>
+<meta name="description" content="An hourly world tick in its own process: its own clock, a replayable seed, a pipeline of steps, and a ledger of facts.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Chakra+Petch:wght@500;600&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="assets/css/site.css">
+<script>(function(){var r=document.documentElement,l,t;try{l=localStorage.getItem("mq-lang");t=localStorage.getItem("mq-theme");}catch(e){}if(l!=="en"&&l!=="fr"){l=(navigator.language||"").toLowerCase().indexOf("fr")===0?"fr":"en";}r.setAttribute("data-lang",l);r.setAttribute("lang",l);if(t==="light"||t==="dark")r.setAttribute("data-theme",t);})();</script>
+</head>
+<body data-page="world-sim">
+<a class="skip-link" href="#main"><span lang="en">Skip to content</span><span lang="fr">Aller au contenu</span></a>
+<header class="site-header" id="mq-header"></header>
+<div class="layout">
+<aside class="sidebar" id="mq-sidebar"></aside>
+<main class="content" id="main">
+<article>
+<header class="chapter-head">
+  <div class="eyebrow" data-auto></div>
+  <h1><span lang="en">A simulation beside the simulation</span><span lang="fr">Une simulation à côté de la simulation</span></h1>
+  <p class="dek"><span lang="en">An hourly world tick in its own process: its own clock, a replayable seed, a pipeline of steps, and a ledger of facts.</span><span lang="fr">Un tick du monde à l'heure dans son propre processus : sa propre horloge, une graine rejouable, un pipeline d'étapes et un registre de faits.</span></p>
+  <div class="meta-row" data-auto></div>
+</header>
+
+<div class="prose">
+
+<section class="sec" id="why">
+<div lang="en">
+<h2>Two rhythms, two processes</h2>
+<p>Most of an MMO lives at the rhythm of the game loop: 25 ticks per second, 40 milliseconds per tick (chapter <a href="tick-loop.html">3.1</a>). Some of it lives at a completely different rhythm. In MoonQwak, the world has factions that hold regions, lose them, produce, build fleets and go to war, and all of that moves on the scale of hours and days. Players influence it through what they do, but nobody watches it change from one frame to the next.</p>
+<p>Running that inside the game loop would be absurd and dangerous at once: absurd, because nothing in it needs 25 updates per second; dangerous, because it aggregates data from the whole world, which means database queries, and a tick thread must never wait on a database (chapter <a href="no-db-in-tick.html">3.4</a>). So it lives in <strong>its own process</strong>, which ticks once an hour.</p>
+</div>
+<div lang="fr">
+<h2>Deux rythmes, deux processus</h2>
+<p>L'essentiel d'un MMO vit au rythme de la boucle de jeu : 25 ticks par seconde, 40 millisecondes par tick (chapitre <a href="tick-loop.html">3.1</a>). Une partie vit à un rythme complètement différent. Dans MoonQwak, le monde a des factions qui tiennent des régions, les perdent, produisent, construisent des flottes et se font la guerre, et tout cela bouge à l'échelle des heures et des jours. Les joueurs l'influencent par ce qu'ils font, mais personne ne le regarde changer d'une image à l'autre.</p>
+<p>Faire tourner cela dans la boucle de jeu serait à la fois absurde et dangereux : absurde, parce que rien là-dedans n'a besoin de 25 mises à jour par seconde ; dangereux, parce que cela agrège des données du monde entier, donc des requêtes en base, et qu'un thread de tick ne doit jamais attendre une base de données (chapitre <a href="no-db-in-tick.html">3.4</a>). Cela vit donc dans <strong>son propre processus</strong>, qui tique une fois par heure.</p>
+</div>
+<figure class="fig fig-scroll">
+<svg viewBox="0 0 760 250" role="img" aria-label="Game servers record facts into a ledger table; one simulation process reads the facts every hour, runs its steps and writes world state tables; game servers read the state back; the monitor receives reports and sends commands to the simulation process">
+  <defs><marker id="ws-arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="currentColor" opacity="0.7"/></marker></defs>
+  <rect x="20" y="30" width="170" height="44" rx="8" class="dg-box"/>
+  <rect x="26" y="36" width="170" height="44" rx="8" class="dg-box"/>
+  <rect x="32" y="42" width="170" height="44" rx="8" class="dg-box"/>
+  <text class="dg-text" x="117" y="62" text-anchor="middle" font-weight="700"><tspan lang="en">game servers ×N</tspan><tspan lang="fr">serveurs de jeu ×N</tspan></text>
+  <text class="dg-small" x="117" y="78" text-anchor="middle"><tspan lang="en">25 Hz, never write results</tspan><tspan lang="fr">25 Hz, n'écrivent aucun résultat</tspan></text>
+  <rect x="290" y="30" width="180" height="56" rx="8" class="dg-box-2"/>
+  <text class="dg-text dg-mono" x="380" y="54" text-anchor="middle" font-weight="700">FactionEvents</text>
+  <text class="dg-small" x="380" y="72" text-anchor="middle"><tspan lang="en">the ledger of facts</tspan><tspan lang="fr">le registre des faits</tspan></text>
+  <rect x="560" y="100" width="180" height="60" rx="8" class="dg-hot"/>
+  <text class="dg-text" x="650" y="124" text-anchor="middle" font-weight="700"><tspan lang="en">simulation process</tspan><tspan lang="fr">processus de simulation</tspan></text>
+  <text class="dg-small" x="650" y="142" text-anchor="middle"><tspan lang="en">1 tick per hour, the only writer</tspan><tspan lang="fr">1 tick par heure, seul écrivain</tspan></text>
+  <rect x="290" y="176" width="180" height="56" rx="8" class="dg-box-2"/>
+  <text class="dg-text" x="380" y="200" text-anchor="middle" font-weight="700"><tspan lang="en">world state</tspan><tspan lang="fr">état du monde</tspan></text>
+  <text class="dg-small" x="380" y="218" text-anchor="middle"><tspan lang="en">presences, map states, clock</tspan><tspan lang="fr">présences, états, horloge</tspan></text>
+  <rect x="560" y="10" width="180" height="44" rx="8" class="dg-box"/>
+  <text class="dg-text" x="650" y="31" text-anchor="middle" font-weight="700">Monitor</text>
+  <text class="dg-small" x="650" y="46" text-anchor="middle"><tspan lang="en">reports in, commands out</tspan><tspan lang="fr">rapports, commandes</tspan></text>
+  <line x1="202" y1="58" x2="286" y2="58" class="dg-line" marker-end="url(#ws-arr)"/>
+  <text class="dg-small" x="244" y="50" text-anchor="middle"><tspan lang="en">facts</tspan><tspan lang="fr">faits</tspan></text>
+  <line x1="470" y1="70" x2="570" y2="100" class="dg-line" marker-end="url(#ws-arr)"/>
+  <text class="dg-small" x="530" y="78" text-anchor="middle"><tspan lang="en">read</tspan><tspan lang="fr">lus</tspan></text>
+  <line x1="570" y1="160" x2="474" y2="190" class="dg-line" marker-end="url(#ws-arr)"/>
+  <text class="dg-small" x="536" y="190" text-anchor="middle"><tspan lang="en">written</tspan><tspan lang="fr">écrit</tspan></text>
+  <path d="M 290 204 Q 120 204 117 92" class="dg-line dg-dash" marker-end="url(#ws-arr)"/>
+  <text class="dg-small" x="160" y="170"><tspan lang="en">read back</tspan><tspan lang="fr">relu</tspan></text>
+  <line x1="650" y1="54" x2="650" y2="96" class="dg-line" marker-end="url(#ws-arr)"/>
+  <line x1="662" y1="96" x2="662" y2="58" class="dg-line" marker-end="url(#ws-arr)"/>
+</svg>
+<figcaption><span lang="en"><strong>One writer, many witnesses.</strong> Game servers only record what happened. One process turns facts into world state, once an hour, and the game servers read the result back.</span><span lang="fr"><strong>Un écrivain, beaucoup de témoins.</strong> Les serveurs de jeu ne font que noter ce qui s'est passé. Un seul processus transforme les faits en état du monde, une fois par heure, et les serveurs de jeu relisent le résultat.</span></figcaption>
+</figure>
+<div lang="en">
+<p>The split gives three properties for free. <strong>A single writer</strong>: ten game servers can run, one process writes the aggregate, so there is nothing to coordinate. <strong>Independent restarts</strong>: the simulation can be stopped, fixed and restarted without disconnecting anyone. And <strong>an engine without plumbing</strong>: the simulation itself is a library with no timer, no network and no console, one function that loads, applies the steps and writes. The process around it only adds the hourly timer, a port for the operator's monitor, and a keyboard.</p>
+</div>
+<div lang="fr">
+<p>La séparation offre trois propriétés gratuitement. <strong>Un seul écrivain</strong> : dix serveurs de jeu peuvent tourner, un seul processus écrit l'agrégat, il n'y a donc rien à coordonner. <strong>Des redémarrages indépendants</strong> : la simulation peut être arrêtée, corrigée et relancée sans déconnecter personne. Et <strong>un moteur sans plomberie</strong> : la simulation elle-même est une bibliothèque sans minuterie, sans réseau et sans console, une fonction qui charge, applique les étapes et écrit. Le processus autour n'ajoute que la minuterie horaire, un port pour le moniteur de l'opérateur, et un clavier.</p>
+</div>
+<div class="stats">
+<div class="stat"><div class="v">60<small>min</small></div><div class="k"><span lang="en">one world tick</span><span lang="fr">un tick du monde</span></div></div>
+<div class="stat"><div class="v">12</div><div class="k"><span lang="en">steps, in a fixed order</span><span lang="fr">étapes, dans un ordre fixe</span></div></div>
+<div class="stat"><div class="v">1</div><div class="k"><span lang="en">process writes the world state</span><span lang="fr">processus écrit l'état du monde</span></div></div>
+<div class="stat"><div class="v">24<small>h</small></div><div class="k"><span lang="en">of consumed facts kept</span><span lang="fr">de faits consommés conservés</span></div></div>
+</div>
+</section>
+
+<section class="sec" id="facts">
+<div lang="en">
+<h2>Record facts, not results</h2>
+<p>A game server never writes the result ("this faction now holds 43 % of this region"). It records <strong>facts</strong>: an NPC was destroyed, a player was destroyed, goods were sold, resources were delivered. Each fact is a row: where, what kind, who acted, against whom, which character, a weight, and when. The simulation turns facts into results at its next tick.</p>
+<div class="compare">
+<div><h4>Each server writes results</h4><p>Every kill updates a shared value in the database. Ten servers write the same rows concurrently, every update is a transaction on the hot path, and a bug in the rules corrupts the state with no way to recompute it.</p></div>
+<div class="pick"><h4>Servers record facts, one process aggregates</h4><p>A fact is appended, never updated, and written off the game loop. The rules run in one place, can cap abuse using each fact's own date, and a tick can be recomputed from the facts it consumed.</p></div>
+</div>
+<p>On the game server, recording a fact is only an entry in an in-memory queue, safe to call from the tick thread. A background task writes the queue to the database once a minute, at most 5,000 rows per pass and one pass at a time. A failed pass is logged, and its batch is dropped rather than retried: for facts that only nudge an hourly aggregate that is tolerable, but it deserves to be a decision rather than an accident.</p>
+<p>On the simulation side, consumption is exact. The tick loads the unconsumed facts, and at the end marks as consumed <em>exactly the ones it loaded</em>, in the same transaction as the results. Facts that arrive during the tick were not loaded, so they are not marked, and the next tick reads them. Consumed facts stay 24 hours (some rules look at the last day) and are then purged; unconsumed facts are never purged.</p>
+<p>Keeping facts also makes abuse limits simple. The rules count facts per player, per kind and per <em>hour of the fact's own timestamp</em>, and ignore those above a cap. Because the cap is computed from the facts rather than enforced at the moment they happen, it still holds when the simulation catches up after a stop.</p>
+<div class="note beginner"><p class="note-label">Beginner note</p><p>This is a small form of <strong>event sourcing</strong>: you store what happened, and derive the current state from it. You do not need a full event-sourcing framework to benefit from the idea; an append-only table and a "consumed" flag already give you auditability, replays and a single place where the rules live.</p></div>
+</div>
+<div lang="fr">
+<h2>Noter des faits, pas des résultats</h2>
+<p>Un serveur de jeu n'écrit jamais le résultat (« cette faction tient maintenant 43 % de cette région »). Il note des <strong>faits</strong> : un PNJ a été détruit, un joueur a été détruit, des marchandises ont été vendues, des ressources ont été livrées. Chaque fait est une ligne : où, de quel type, qui a agi, contre qui, quel personnage, un poids, et quand. La simulation transforme les faits en résultats à son prochain tick.</p>
+<div class="compare">
+<div><h4>Chaque serveur écrit des résultats</h4><p>Chaque destruction met à jour une valeur partagée en base. Dix serveurs écrivent les mêmes lignes en même temps, chaque mise à jour est une transaction sur le chemin chaud, et un bug dans les règles corrompt l'état sans aucun moyen de le recalculer.</p></div>
+<div class="pick"><h4>Les serveurs notent des faits, un processus agrège</h4><p>Un fait s'ajoute, ne se modifie jamais, et s'écrit hors de la boucle de jeu. Les règles tournent à un seul endroit, peuvent plafonner les abus à partir de la date de chaque fait, et un tick peut être recalculé à partir des faits qu'il a consommés.</p></div>
+</div>
+<p>Côté serveur de jeu, noter un fait n'est qu'une entrée dans une file en mémoire, sans danger depuis le thread de tick. Une tâche de fond écrit la file en base une fois par minute, au plus 5 000 lignes par passage et un passage à la fois. Un passage en échec est journalisé, et son lot est abandonné plutôt que réessayé : pour des faits qui ne font qu'infléchir un agrégat horaire, c'est tolérable, mais cela mérite d'être une décision plutôt qu'un accident.</p>
+<p>Côté simulation, la consommation est exacte. Le tick charge les faits non consommés et, à la fin, marque comme consommés <em>exactement ceux qu'il a chargés</em>, dans la même transaction que les résultats. Les faits arrivés pendant le tick n'ont pas été chargés : ils ne sont pas marqués, et le tick suivant les lit. Les faits consommés restent 24 heures (certaines règles regardent la dernière journée) puis sont purgés ; les faits non consommés ne sont jamais purgés.</p>
+<p>Garder les faits rend aussi les limites anti-abus simples. Les règles comptent les faits par joueur, par type et par <em>heure de l'horodatage du fait lui-même</em>, et ignorent ceux au-delà d'un plafond. Parce que le plafond se calcule à partir des faits plutôt que d'être imposé au moment où ils arrivent, il tient encore quand la simulation rattrape son retard après un arrêt.</p>
+<div class="note beginner"><p class="note-label">Pour débuter</p><p>C'est une petite forme d'<strong>event sourcing</strong> : on stocke ce qui s'est passé, et on en dérive l'état courant. Pas besoin d'un framework complet d'event sourcing pour profiter de l'idée ; une table en ajout seul et un drapeau « consommé » donnent déjà la traçabilité, le rejeu et un endroit unique où vivent les règles.</p></div>
+</div>
+</section>
+
+<section class="sec" id="pending">
+<div lang="en">
+<h2>Showing the result before it exists</h2>
+<p>An hourly truth has a cost: a player who destroys thirty enemy ships would see nothing change for up to an hour. So each game server keeps a local <strong>estimate</strong> of what the unconsumed facts will produce, using the same arithmetic as the simulation but without the abuse cap, and shows it as "pending" next to the real value. The estimate is reset as soon as the world clock moves, that is, as soon as a tick has consumed the facts and the real result is available.</p>
+<p>It is the same idea as client-side prediction (chapter <a href="prediction.html">5.3</a>), applied to a slow simulation: show a local guess immediately, replace it with the authoritative result when it arrives. And it follows the same rule: an optimistic estimate, never a promise. The display is also batched: a region where facts were just recorded broadcasts its updated state a few seconds later, once, rather than once per kill.</p>
+</div>
+<div lang="fr">
+<h2>Montrer le résultat avant qu'il existe</h2>
+<p>Une vérité horaire a un coût : un joueur qui détruit trente vaisseaux ennemis ne verrait rien bouger pendant parfois une heure. Chaque serveur de jeu tient donc une <strong>estimation</strong> locale de ce que produiront les faits non consommés, avec la même arithmétique que la simulation mais sans le plafond anti-abus, et l'affiche « en attente » à côté de la vraie valeur. L'estimation est remise à zéro dès que l'horloge du monde bouge, c'est-à-dire dès qu'un tick a consommé les faits et que le vrai résultat est disponible.</p>
+<p>C'est la même idée que la prédiction côté client (chapitre <a href="prediction.html">5.3</a>), appliquée à une simulation lente : montrer tout de suite une estimation locale, la remplacer par le résultat qui fait autorité quand il arrive. Et elle suit la même règle : une estimation optimiste, jamais une promesse. L'affichage est aussi groupé : une région où des faits viennent d'être notés diffuse son état mis à jour quelques secondes plus tard, une fois, plutôt qu'une fois par destruction.</p>
+</div>
+</section>
+
+<section class="sec" id="tick">
+<div lang="en">
+<h2>One tick: load, steps, write</h2>
+<p>A tick has three phases, and only two of them touch the database:</p>
+<ol>
+<li><strong>Load</strong> everything the rules need into an in-memory model, in one go: factions, regions, presences, states, the unconsumed facts and the last day's facts. No rule lives in the loader.</li>
+<li><strong>Apply the steps</strong>, in order. A step receives the in-memory world and a report, modifies the world, and writes lines in the report. Nothing else: steps never touch the database, which is what makes them readable, testable with a hand-built world, and reorderable without surprises.</li>
+<li><strong>Write</strong> what changed, in a single transaction. Each step marks what it modified (a region's influence, a region's state, a faction's plan…), and the writer only rewrites those rows.</li>
+</ol>
+</div>
+<div lang="fr">
+<h2>Un tick : charger, étapes, écrire</h2>
+<p>Un tick a trois phases, et deux seulement touchent la base :</p>
+<ol>
+<li><strong>Charger</strong> tout ce dont les règles ont besoin dans un modèle en mémoire, d'un coup : factions, régions, présences, états, faits non consommés et faits de la dernière journée. Aucune règle ne vit dans le chargeur.</li>
+<li><strong>Appliquer les étapes</strong>, dans l'ordre. Une étape reçoit le monde en mémoire et un rapport, modifie le monde, et écrit des lignes dans le rapport. Rien d'autre : les étapes ne touchent jamais la base, et c'est ce qui les rend lisibles, testables avec un monde construit à la main, et réordonnables sans surprise.</li>
+<li><strong>Écrire</strong> ce qui a changé, dans une seule transaction. Chaque étape marque ce qu'elle a modifié (l'influence d'une région, l'état d'une région, le plan d'une faction…), et l'écrivain ne réécrit que ces lignes.</li>
+</ol>
+</div>
+<div class="code"><div class="code-head"><span class="file">Qwak.Simulation/SimEngine.cs · the list is the program</span></div><pre><code data-lang="cs">public static readonly IReadOnlyList&lt;ISimStep&gt; Steps = new ISimStep[]
+{
+    new LeaderStep(),      //  1. each faction picks a goal and a plan
+    new DiplomacyStep(),   //  2. tributes, trust
+    new LedgerStep(),      //  3. facts become influence
+    new ExpansionStep(),   //  4. expanding factions gain a foothold
+    new WarStep(),         //  5. attacking factions push on their target
+    new ConsolidateStep(), //  6. defending factions reinforce
+    new NormalizeStep(),   //  7. floors, dust, every region sums to 1
+    new ControlStep(),     //  8. who controls what
+    new StateStep(),       //  9. the state of each region
+    new ProductionStep(),  // 10. controlled regions produce
+    new IndustryStep(),    // 11. stocks become fleets
+    new DayMarkStep(),     // 12. the 24-hour reference, last
+};
+
+public interface ISimStep
+{
+    string Name { get; }
+    void Apply(SimWorld world, SimReport report);   // modifies the world. Nothing else.
+}</code></pre></div>
+<div lang="en">
+<p>The list reads top to bottom, each step is one file with its rule written in its header, and the order is part of the design: additions happen before normalization brings each region back to a total of 1; control is decided before states are derived from it; the daily reference is taken last, so that the tick that sets it first derives everything against the previous one. Adding a rule is one file and one line; disabling one is removing a line. Most thresholds live in one shared rules file, so tuning the world means reading one place.</p>
+<p>And a tick is <strong>all or nothing</strong>. A step that throws cancels the whole tick: nothing is written, the facts stay unconsumed, the world clock does not move, and the next tick starts over from the same state. A simulation that fails loses nothing; it waits.</p>
+<div class="note rule"><p class="note-label">Rule</p><p>Separate loading, rules and writing, and let only the first and the last touch storage.</p><p>Rules that only see memory can be read, tested, reordered and replayed. Rules that query as they go can do none of those things.</p></div>
+</div>
+<div lang="fr">
+<p>La liste se lit de haut en bas, chaque étape est un fichier avec sa règle écrite en en-tête, et l'ordre fait partie de la conception : les ajouts ont lieu avant que la normalisation ne ramène chaque région à un total de 1 ; le contrôle est décidé avant que les états n'en soient dérivés ; la référence journalière est prise en dernier, pour que le tick qui la pose dérive d'abord tout contre la précédente. Ajouter une règle, c'est un fichier et une ligne ; en désactiver une, c'est retirer une ligne. La plupart des seuils vivent dans un seul fichier de règles partagé : régler le monde, c'est lire un seul endroit.</p>
+<p>Et un tick est <strong>tout ou rien</strong>. Une étape qui lève une exception annule le tick entier : rien n'est écrit, les faits restent non consommés, l'horloge du monde ne bouge pas, et le tick suivant repart du même état. Une simulation qui échoue ne perd rien ; elle attend.</p>
+<div class="note rule"><p class="note-label">Règle</p><p>Séparer le chargement, les règles et l'écriture, et ne laisser que le premier et le dernier toucher au stockage.</p><p>Des règles qui ne voient que la mémoire peuvent être lues, testées, réordonnées et rejouées. Des règles qui interrogent la base en chemin ne peuvent rien de tout cela.</p></div>
+</div>
+</section>
+
+<section class="sec" id="clock">
+<div lang="en">
+<h2>The world has its own clock</h2>
+<p>The simulation's time is not the wall clock. The database keeps the <strong>world clock</strong>, the time of the last tick, and the next tick happens at the later of two times: the real time, or the world clock plus one hour.</p>
+</div>
+<div lang="fr">
+<h2>Le monde a sa propre horloge</h2>
+<p>Le temps de la simulation n'est pas l'heure murale. La base garde l'<strong>horloge du monde</strong>, l'heure du dernier tick, et le tick suivant a lieu au plus tard de deux instants : l'heure réelle, ou l'horloge du monde plus une heure.</p>
+</div>
+<div class="code"><div class="code-head"><span class="file">Qwak.Simulation/SimEngine.cs · NextNow</span></div><pre><code data-lang="cs">public static DateTime NextNow(DateTime? clock, DateTime wallNow)
+{
+    if (clock is not { } last) return wallNow;        // the very first tick
+
+    // One hour of world time per tick, but never behind the real time.
+    var stepped = last.AddMinutes(FactionRules.TickMinutes);
+    return stepped &gt; wallNow ? stepped : wallNow;
+}</code></pre></div>
+<div lang="en">
+<p>The reason is the operator's tools. The monitor can force a tick, or a hundred in a row, to see where the world goes. Before this rule, a forced tick happened "now" in wall-clock time, so a hundred forced ticks in five minutes aged the world by five minutes. Everything measured in time (a decision that must be held a minimum duration, the daily reference, the minimum length of a war) never expired, and the simulation looked frozen when it had simply not aged. Now a forced tick is one hour of world time, like any other.</p>
+</div>
+<div lang="fr">
+<p>La raison, ce sont les outils de l'opérateur. Le moniteur peut forcer un tick, ou cent d'affilée, pour voir où va le monde. Avant cette règle, un tick forcé avait lieu « maintenant » à l'heure murale : cent ticks forcés en cinq minutes vieillissaient le monde de cinq minutes. Tout ce qui se mesure en temps (une décision qui doit être tenue une durée minimale, la référence journalière, la durée minimale d'une guerre) n'expirait jamais, et la simulation avait l'air figée alors qu'elle n'avait simplement pas vieilli. Désormais un tick forcé est une heure de temps du monde, comme les autres.</p>
+</div>
+<figure class="fig fig-scroll">
+<svg viewBox="0 0 760 310" role="img" aria-label="World clock against wall clock: ticks follow the diagonal, five forced ticks jump five hours ahead, the world stays five hours ahead, the clock waits during an eight-hour stop, then the first tick returns to real time">
+  <rect x="317.5" y="30" width="330" height="230" style="fill:var(--panel-2);opacity:0.8"/>
+  <line x1="70" y1="260" x2="730" y2="260" class="dg-line"/>
+  <line x1="70" y1="260" x2="70" y2="24" class="dg-line"/>
+  <g class="dg-small">
+    <text x="70" y="278" text-anchor="middle">0</text><text x="235" y="278" text-anchor="middle">4</text><text x="400" y="278" text-anchor="middle">8</text><text x="565" y="278" text-anchor="middle">12</text><text x="730" y="278" text-anchor="middle">16</text>
+    <text x="60" y="264" text-anchor="end">0</text><text x="60" y="206" text-anchor="end">4</text><text x="60" y="149" text-anchor="end">8</text><text x="60" y="91" text-anchor="end">12</text><text x="60" y="34" text-anchor="end">16</text>
+  </g>
+  <text class="dg-small" x="400" y="300" text-anchor="middle"><tspan lang="en">wall clock (hours)</tspan><tspan lang="fr">heure murale (heures)</tspan></text>
+  <text class="dg-small" x="22" y="150" text-anchor="middle" transform="rotate(-90 22 150)"><tspan lang="en">world clock (hours)</tspan><tspan lang="fr">horloge du monde (heures)</tspan></text>
+  <line x1="70" y1="260" x2="730" y2="30" class="dg-line dg-dash"/>
+  <text class="dg-small" x="426" y="160" transform="rotate(-19.2 426 160)"><tspan lang="en">world = wall</tspan><tspan lang="fr">monde = mur</tspan></text>
+  <text class="dg-small" x="482" y="244" text-anchor="middle"><tspan lang="en">simulation stopped for 8 hours</tspan><tspan lang="fr">simulation arrêtée 8 heures</tspan></text>
+  <path d="M111.25 245.6 H152.5 V231.25 H193.75 V216.9 H202 V145 H235 V130.6 H276.25 V116.25 H317.5 V101.9" style="fill:none;stroke:var(--accent);stroke-width:2"/>
+  <path d="M317.5 101.9 H647.5" style="fill:none;stroke:var(--accent);stroke-width:1.6;stroke-dasharray:4 4"/>
+  <path d="M647.5 101.9 V58.75 H688.75 V44.4 H730 V30" style="fill:none;stroke:var(--accent);stroke-width:2"/>
+  <g style="fill:var(--accent)">
+    <circle cx="111.25" cy="245.6" r="4"/><circle cx="152.5" cy="231.25" r="4"/><circle cx="193.75" cy="216.9" r="4"/>
+    <circle cx="202" cy="202.5" r="3.2"/><circle cx="202" cy="188.1" r="3.2"/><circle cx="202" cy="173.75" r="3.2"/><circle cx="202" cy="159.4" r="3.2"/><circle cx="202" cy="145" r="3.2"/>
+    <circle cx="235" cy="130.6" r="4"/><circle cx="276.25" cy="116.25" r="4"/><circle cx="317.5" cy="101.9" r="4"/>
+    <circle cx="647.5" cy="58.75" r="4"/><circle cx="688.75" cy="44.4" r="4"/><circle cx="730" cy="30" r="4"/>
+  </g>
+  <text class="dg-small" x="194" y="166" text-anchor="end"><tspan lang="en">5 forced ticks:</tspan><tspan lang="fr">5 ticks forcés :</tspan></text>
+  <text class="dg-small" x="194" y="180" text-anchor="end"><tspan lang="en">+5 h of world time</tspan><tspan lang="fr">+5 h de temps du monde</tspan></text>
+  <text class="dg-small" x="236" y="72"><tspan lang="en">then 5 h ahead,</tspan><tspan lang="fr">puis 5 h d'avance,</tspan></text>
+  <text class="dg-small" x="236" y="86"><tspan lang="en">and it stays ahead</tspan><tspan lang="fr">qui restent acquises</tspan></text>
+  <text class="dg-small" x="420" y="93" text-anchor="middle"><tspan lang="en">no tick: the world clock waits</tspan><tspan lang="fr">aucun tick : l'horloge du monde attend</tspan></text>
+  <text class="dg-small" x="560" y="18" text-anchor="end"><tspan lang="en">first tick after the stop: back to real time</tspan><tspan lang="fr">premier tick après l'arrêt : retour à l'heure réelle</tspan></text>
+  <line x1="566" y1="18" x2="641" y2="54" class="dg-line"/>
+</svg>
+<figcaption><span lang="en"><strong>max(real time, world clock + 1 h).</strong> The world clock never goes back and never runs slower than reality; it only waits for reality to catch up.</span><span lang="fr"><strong>max(heure réelle, horloge du monde + 1 h).</strong> L'horloge du monde ne recule jamais et ne va jamais moins vite que la réalité ; elle attend seulement que la réalité la rattrape.</span></figcaption>
+</figure>
+<div lang="en">
+<p>The same rule handles a stopped simulator. After a stop, the world clock is behind reality, and the first tick jumps straight to the real time. Every fact recorded meanwhile is consumed at that first tick, with the per-hour caps still applied to each fact's own hour, and every rule that measures durations sees the full gap.</p>
+<div class="note tradeoff"><p class="note-label">Trade-off</p><p>The simulation catches up on <em>facts</em>, not on <em>hours</em>. A week off is one tick of production, not 168: replaying every missed hour would mean running a week of simulation at startup, with rules that were never designed to be applied in bulk. For a world that players shape, losing the passive part of a week is acceptable; losing their actions would not be, and those are kept.</p></div>
+<p>Two clocks also mean every stored date belongs to one of them. Facts recorded by game servers carry real time; rules that measure durations use world time; after forced ticks, the two differ by hours. Several details of the code exist only because of that, such as the purge of old facts, which removes only <em>consumed</em> facts: a fact dated in real time while the world clock is ahead must survive until the tick that reads it.</p>
+<div class="note pitfall"><p class="note-label">Pitfall I hit</p><p>After a test world was recreated, some tables kept rows written under the previous world's clock, dated days in the "future" of the new one. Fifteen of those rows were agreements between factions, each preventing a war until its end date, which was far ahead. The world stayed peaceful for 900 ticks and nothing looked wrong: agreements are normal. Now rows dated after the world clock are treated as coming from another timeline: ignored when loading, then deleted or reset at the next write.</p></div>
+<div class="note rule"><p class="note-label">Rule</p><p>When a process keeps its own clock, every stored date must say which clock it belongs to, and a date in the future of that clock is a bug, not a plan.</p></div>
+</div>
+<div lang="fr">
+<p>La même règle traite un simulateur arrêté. Après un arrêt, l'horloge du monde est en retard sur la réalité, et le premier tick saute directement à l'heure réelle. Chaque fait noté entre-temps est consommé à ce premier tick, avec les plafonds par heure toujours appliqués à l'heure propre de chaque fait, et chaque règle qui mesure des durées voit tout l'écart.</p>
+<div class="note tradeoff"><p class="note-label">Compromis</p><p>La simulation rattrape les <em>faits</em>, pas les <em>heures</em>. Une semaine d'arrêt, c'est un tick de production, pas 168 : rejouer chaque heure manquée voudrait dire faire tourner une semaine de simulation au démarrage, avec des règles qui n'ont jamais été conçues pour s'appliquer en masse. Pour un monde que les joueurs façonnent, perdre la partie passive d'une semaine est acceptable ; perdre leurs actions ne le serait pas, et celles-là sont conservées.</p></div>
+<p>Deux horloges veulent aussi dire que chaque date stockée appartient à l'une d'elles. Les faits notés par les serveurs de jeu portent l'heure réelle ; les règles qui mesurent des durées utilisent l'heure du monde ; après des ticks forcés, les deux diffèrent de plusieurs heures. Plusieurs détails du code n'existent qu'à cause de cela, comme la purge des vieux faits, qui ne supprime que les faits <em>consommés</em> : un fait daté à l'heure réelle alors que l'horloge du monde est en avance doit survivre jusqu'au tick qui le lira.</p>
+<div class="note pitfall"><p class="note-label">Piège rencontré</p><p>Après la recréation d'un monde de test, certaines tables ont gardé des lignes écrites sous l'horloge du monde précédent, datées de plusieurs jours dans le « futur » du nouveau. Quinze de ces lignes étaient des accords entre factions, chacun empêchant une guerre jusqu'à sa date de fin, très loin devant. Le monde est resté en paix pendant 900 ticks sans que rien n'ait l'air faux : des accords, c'est normal. Désormais les lignes datées après l'horloge du monde sont traitées comme venant d'une autre chronologie : ignorées au chargement, puis supprimées ou remises à zéro à l'écriture suivante.</p></div>
+<div class="note rule"><p class="note-label">Règle</p><p>Quand un processus tient sa propre horloge, chaque date stockée doit dire à quelle horloge elle appartient, et une date dans le futur de cette horloge est un bug, pas un projet.</p></div>
+</div>
+</section>
+
+<section class="sec" id="reading-back">
+<div lang="en">
+<h2>Reading the result back</h2>
+<p>Game servers need the result: which faction controls a region decides which ships spawn, what the market offers, who is hostile. They keep an immutable copy of each loaded region's state, replaced as a whole when it is re-read, so the game loop always reads a coherent value without a lock (the same publication pattern as chapter <a href="threading.html">3.3</a>). When a region's state or controller changes, the players inside get an announcement.</p>
+<div class="note pitfall"><p class="note-label">Pitfall I hit</p><p>The re-read was guarded by a timer alone: five minutes of real time between refreshes, whatever happened. But the simulation does not advance in real time; the monitor can make it swallow fifty ticks in three seconds. The simulation wrote the truth to the database while every game server kept serving a cache up to five minutes old, and leaving and re-entering the region changed nothing, because a region stays loaded for a while after its last player leaves. The fix makes the world clock drive the refresh: each background beat reads one scalar, the world clock, off the game loop; if it moved, a tick happened, and everything is re-read at once. The five-minute timer stays as a floor for changes that arrive by other paths.</p></div>
+<div class="note rule"><p class="note-label">Rule</p><p>Invalidate a cache on the version of what it copies, not on the passing of time.</p><p>A timer only guesses when the source changed. A version number, or here a clock, says it.</p></div>
+</div>
+<div lang="fr">
+<h2>Relire le résultat</h2>
+<p>Les serveurs de jeu ont besoin du résultat : la faction qui contrôle une région décide quels vaisseaux apparaissent, ce que propose le marché, qui est hostile. Ils gardent une copie immuable de l'état de chaque région chargée, remplacée en bloc à chaque relecture : la boucle de jeu lit toujours une valeur cohérente, sans verrou (le même schéma de publication qu'au chapitre <a href="threading.html">3.3</a>). Quand l'état ou la faction qui contrôle une région change, les joueurs présents reçoivent une annonce.</p>
+<div class="note pitfall"><p class="note-label">Piège rencontré</p><p>La relecture n'était gardée que par une minuterie : cinq minutes de temps réel entre deux rafraîchissements, quoi qu'il arrive. Mais la simulation n'avance pas au temps réel ; le moniteur peut lui faire avaler cinquante ticks en trois secondes. La simulation écrivait la vérité en base pendant que chaque serveur de jeu continuait de servir un cache vieux de jusqu'à cinq minutes, et sortir puis rentrer dans la région ne changeait rien, parce qu'une région reste chargée un moment après le départ de son dernier joueur. La correction fait commander le rafraîchissement par l'horloge du monde : chaque battement de fond lit un seul scalaire, l'horloge du monde, hors de la boucle de jeu ; si elle a bougé, un tick a eu lieu, et tout est relu d'un coup. La minuterie de cinq minutes reste comme plancher pour les changements qui arrivent par d'autres chemins.</p></div>
+<div class="note rule"><p class="note-label">Règle</p><p>Invalider un cache sur la version de ce qu'il copie, pas sur le temps qui passe.</p><p>Une minuterie ne fait que deviner quand la source a changé. Un numéro de version, ou ici une horloge, le dit.</p></div>
+</div>
+</section>
+
+<section class="sec" id="replay">
+<div lang="en">
+<h2>A seed you can replay</h2>
+<p>The rules use a little randomness: a small noise on decisions and weighted choices between good options, enough for two worlds to diverge, not enough to make decisions erratic. All of it comes from one random generator per tick, <strong>seeded from the world time</strong>, and the seed is the first line of the tick's report. No step uses the process-wide random generator. Given the same stored state and the same seed, a tick produces the same result, which turns "why did this happen at 3 a.m.?" into a question you can answer by running the tick again.</p>
+<div class="note pitfall"><p class="note-label">Watch out</p><p>A seed only replays if the random numbers are drawn in the same order. That depends on iteration order as much as on the seed: if the loader reads a table without an explicit order and a step draws a number per row, the order the database returns rows in becomes part of the result. Some databases happen to return rows in primary-key order for a simple scan (MySQL's InnoDB engine does), but that is an implementation detail, not a promise; an explicit <code>ORDER BY</code> turns it into one.</p></div>
+</div>
+<div lang="fr">
+<h2>Une graine qu'on peut rejouer</h2>
+<p>Les règles utilisent un peu de hasard : un léger bruit sur les décisions et des choix pondérés entre de bonnes options, assez pour que deux mondes divergent, pas assez pour rendre les décisions erratiques. Tout vient d'un seul générateur aléatoire par tick, <strong>ensemencé à partir de l'heure du monde</strong>, et la graine est la première ligne du rapport du tick. Aucune étape n'utilise le générateur aléatoire global du processus. Avec le même état stocké et la même graine, un tick produit le même résultat, ce qui transforme « pourquoi est-ce arrivé à 3 h du matin ? » en une question à laquelle on répond en rejouant le tick.</p>
+<div class="note pitfall"><p class="note-label">Attention</p><p>Une graine ne rejoue que si les nombres aléatoires sont tirés dans le même ordre. Cela dépend de l'ordre d'itération autant que de la graine : si le chargeur lit une table sans ordre explicite et qu'une étape tire un nombre par ligne, l'ordre dans lequel la base renvoie les lignes devient une partie du résultat. Certaines bases renvoient les lignes dans l'ordre de la clé primaire pour un parcours simple (c'est le cas du moteur InnoDB de MySQL), mais c'est un détail d'implémentation, pas une promesse ; un <code>ORDER BY</code> explicite en fait une.</p></div>
+</div>
+</section>
+
+<section class="sec" id="operating">
+<div lang="en">
+<h2>Operating a simulation nobody watches</h2>
+<p>An hourly process that decides things while everyone sleeps must explain itself. Every tick produces a <strong>report</strong>: plain sentences written by the steps (what was consumed, what moved, who decided what, which step failed), printed in the console and pushed to the operator's monitor with the full state of the world. A monitor that connects between two ticks immediately receives the last known state instead of waiting for the hour.</p>
+<p>The monitor can also act, and the way it acts is designed like everything else:</p>
+<ul>
+<li><strong>Commands never touch the database.</strong> Changing a faction's parameters or imposing a goal is queued, then applied to the loaded world before the steps of the next tick. The report mentions it, the writer saves it with the rest: a command is a fact of the tick like any other, visible and replayable.</li>
+<li><strong>Ticks can be forced</strong>, one or up to 10,000 in a row, each one an hour of world time. Ticks never overlap: a forced tick while one is running is simply ignored.</li>
+<li><strong>Fake players can be injected.</strong> The monitor writes facts exactly as a game server would, dated at world time and spread over several fictitious characters (negative identifiers, never real ones) so that the per-player caps apply. "What do thirty kills by three players in this region at war actually do?" becomes a question you can test in a minute, without a single player.</li>
+</ul>
+<div class="note pitfall"><p class="note-label">Pitfall I hit</p><p>The game servers read the game data files from a configured data folder; the simulation process read the copy embedded in its own libraries at build time. Two processes, two versions of the same world, and no message to say so: an edited value changed in the game but not in the simulation. The simulation now loads the same catalogs as the game servers before reading anything, and prints at startup which source it uses (chapter <a href="data-and-catalogs.html#catalogs">6.3</a>). It also seeds the database under the same inter-process lock as the other servers, since they all start together (<a href="data-and-catalogs.html#seed">6.3</a>).</p></div>
+</div>
+<div lang="fr">
+<h2>Exploiter une simulation que personne ne regarde</h2>
+<p>Un processus horaire qui décide des choses pendant que tout le monde dort doit s'expliquer. Chaque tick produit un <strong>rapport</strong> : des phrases simples écrites par les étapes (ce qui a été consommé, ce qui a bougé, qui a décidé quoi, quelle étape a échoué), affichées dans la console et poussées au moniteur de l'opérateur avec l'état complet du monde. Un moniteur qui se connecte entre deux ticks reçoit immédiatement le dernier état connu au lieu d'attendre l'heure.</p>
+<p>Le moniteur peut aussi agir, et la façon dont il agit est conçue comme tout le reste :</p>
+<ul>
+<li><strong>Les commandes ne touchent jamais la base.</strong> Changer les paramètres d'une faction ou imposer un objectif est mis en file, puis appliqué au monde chargé avant les étapes du tick suivant. Le rapport le mentionne, l'écrivain l'enregistre avec le reste : une commande est un fait du tick comme un autre, visible et rejouable.</li>
+<li><strong>Les ticks peuvent être forcés</strong>, un seul ou jusqu'à 10 000 d'affilée, chacun valant une heure de temps du monde. Les ticks ne se chevauchent jamais : un tick forcé pendant qu'un autre tourne est simplement ignoré.</li>
+<li><strong>De faux joueurs peuvent être injectés.</strong> Le moniteur écrit des faits exactement comme le ferait un serveur de jeu, datés à l'heure du monde et répartis sur plusieurs personnages fictifs (identifiants négatifs, jamais des vrais) pour que les plafonds par joueur s'appliquent. « Que font vraiment trente destructions par trois joueurs dans cette région en guerre ? » devient une question qu'on teste en une minute, sans un seul joueur.</li>
+</ul>
+<div class="note pitfall"><p class="note-label">Piège rencontré</p><p>Les serveurs de jeu lisaient les fichiers de données du jeu depuis un dossier configuré ; le processus de simulation lisait la copie embarquée dans ses propres bibliothèques à la compilation. Deux processus, deux versions du même monde, et aucun message pour le dire : une valeur modifiée changeait dans le jeu mais pas dans la simulation. La simulation charge maintenant les mêmes catalogues que les serveurs de jeu avant toute lecture, et affiche au démarrage la source qu'elle utilise (chapitre <a href="data-and-catalogs.html#catalogs">6.3</a>). Elle amorce aussi la base sous le même verrou entre processus que les autres serveurs, puisqu'ils démarrent tous ensemble (<a href="data-and-catalogs.html#seed">6.3</a>).</p></div>
+</div>
+</section>
+
+<section class="sec" id="takeaways">
+<div class="takeaways">
+<div lang="en"><h2>Key takeaways</h2><ul>
+<li>Put slow, world-wide rules in their own process with a single writer, away from the game loop.</li>
+<li>Have game servers record facts off the hot path; consume exactly the facts you loaded, in the same transaction as the results.</li>
+<li>Show players a local estimate immediately and replace it with the authoritative result, as with prediction.</li>
+<li>Load, apply pure steps in a fixed order, write once: a failing step cancels the tick and loses nothing.</li>
+<li>Give the simulation its own clock that never goes back, and treat dates from its future as bugs.</li>
+<li>Seed the tick's randomness from world time and log the seed; keep iteration order deterministic too.</li>
+<li>Invalidate caches on the version of what they copy, and make operator commands facts of the tick.</li>
+</ul></div>
+<div lang="fr"><h2>À retenir</h2><ul>
+<li>Placer les règles lentes et globales dans leur propre processus, avec un seul écrivain, loin de la boucle de jeu.</li>
+<li>Faire noter des faits aux serveurs de jeu hors du chemin chaud ; consommer exactement les faits chargés, dans la même transaction que les résultats.</li>
+<li>Montrer aux joueurs une estimation locale immédiate et la remplacer par le résultat qui fait autorité, comme pour la prédiction.</li>
+<li>Charger, appliquer des étapes pures dans un ordre fixe, écrire une fois : une étape en échec annule le tick et ne perd rien.</li>
+<li>Donner à la simulation sa propre horloge, qui ne recule jamais, et traiter les dates venues de son futur comme des bugs.</li>
+<li>Ensemencer le hasard du tick à partir de l'heure du monde et journaliser la graine ; garder aussi un ordre d'itération déterministe.</li>
+<li>Invalider les caches sur la version de ce qu'ils copient, et faire des commandes de l'opérateur des faits du tick.</li>
+</ul></div>
+</div>
+</section>
+
+</div>
+<div data-chapter-foot></div>
+</article>
+</main>
+<aside class="rail" id="mq-rail"></aside>
+</div>
+<footer class="site-footer" id="mq-footer"></footer>
+<script src="assets/js/site-data.js" defer></script>
+<script src="assets/js/glossary-data.js" defer></script>
+<script src="assets/js/app.js" defer></script>
+<script src="assets/js/widgets.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="en" data-lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Moving between servers · MoonQwak</title>
+<meta name="description" content="Map transitions, reconnecting to another process, session takeover, and the ordering that keeps a group together.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Chakra+Petch:wght@500;600&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="assets/css/site.css">
+<script>(function(){var r=document.documentElement,l,t;try{l=localStorage.getItem("mq-lang");t=localStorage.getItem("mq-theme");}catch(e){}if(l!=="en"&&l!=="fr"){l=(navigator.language||"").toLowerCase().indexOf("fr")===0?"fr":"en";}r.setAttribute("data-lang",l);r.setAttribute("lang",l);if(t==="light"||t==="dark")r.setAttribute("data-theme",t);})();</script>
+</head>
+<body data-page="handover">
+<a class="skip-link" href="#main"><span lang="en">Skip to content</span><span lang="fr">Aller au contenu</span></a>
+<header class="site-header" id="mq-header"></header>
+<div class="layout">
+<aside class="sidebar" id="mq-sidebar"></aside>
+<main class="content" id="main">
+<article>
+<header class="chapter-head">
+  <div class="eyebrow" data-auto></div>
+  <h1><span lang="en">Moving between servers</span><span lang="fr">Passer d'un serveur à l'autre</span></h1>
+  <p class="dek"><span lang="en">Map transitions, reconnecting to another process, session takeover, and the ordering that keeps a group together.</span><span lang="fr">Transitions de carte, reconnexion vers un autre processus, reprise de session, et l'ordre qui garde un groupe uni.</span></p>
+  <div class="meta-row" data-auto></div>
+</header>
+
+<div class="prose">
+
+<section class="sec" id="options">
+<div lang="en">
+<h2>Three ways to cross a border</h2>
+<p>The world is a grid of hexagonal maps, and each map lives on exactly one game server. When a ship flies off the edge of its map, or jumps several maps away, its destination may be hosted by another process, possibly on another machine. There are three common ways to move a player across:</p>
+<div class="compare">
+<div><h4>A proxy in front</h4><p>The client keeps one connection to a front server that forwards traffic to whichever game server hosts the player. No reconnection, but every packet takes an extra hop, and the proxy becomes a bottleneck on the hottest path.</p></div>
+<div><h4>Server-to-server handoff</h4><p>The source server serializes the ship and sends it to the destination, which adopts it. Fast, but the two servers must trust each other and agree on a format, and a crash in the middle leaves the ship in neither place.</p></div>
+<div class="pick"><h4>Write, then reconnect</h4><p>The source server writes the ship to the database, and the client reconnects to the destination, which loads it. One extra loading screen, but every server stays independent and the database is the single record of where the ship is.</p></div>
+</div>
+<p>MoonQwak uses the third, with one optimization described below: when the destination map is on the same server, there is no reconnection at all.</p>
+</div>
+<div lang="fr">
+<h2>Trois façons de passer une frontière</h2>
+<p>Le monde est une grille de cartes hexagonales, et chaque carte vit sur exactement un serveur de jeu. Quand un vaisseau sort par le bord de sa carte, ou saute plusieurs cartes plus loin, sa destination peut être hébergée par un autre processus, peut-être sur une autre machine. Il y a trois façons courantes de faire passer un joueur :</p>
+<div class="compare">
+<div><h4>Un proxy devant</h4><p>Le client garde une connexion vers un serveur frontal qui transfère le trafic vers le serveur de jeu qui héberge le joueur. Pas de reconnexion, mais chaque paquet fait un saut de plus, et le proxy devient un goulet sur le chemin le plus chaud.</p></div>
+<div><h4>Passage de serveur à serveur</h4><p>Le serveur de départ sérialise le vaisseau et l'envoie à la destination, qui l'adopte. Rapide, mais les deux serveurs doivent se faire confiance et s'accorder sur un format, et un plantage au milieu laisse le vaisseau nulle part.</p></div>
+<div class="pick"><h4>Écrire, puis se reconnecter</h4><p>Le serveur de départ écrit le vaisseau en base, et le client se reconnecte à la destination, qui le charge. Un écran de chargement de plus, mais chaque serveur reste indépendant et la base est l'unique registre de l'endroit où se trouve le vaisseau.</p></div>
+</div>
+<p>MoonQwak utilise la troisième, avec une optimisation décrite plus bas : quand la carte de destination est sur le même serveur, il n'y a aucune reconnexion.</p>
+</div>
+</section>
+
+<section class="sec" id="two-halves">
+<div lang="en">
+<h2>A transition in two halves</h2>
+<p>The first version did everything at once, inside the tick: save the ship's parts, rewrite the ship's row, resolve (and sometimes create) the destination map row. Four database round trips inside the per-object update.</p>
+<div class="note measured"><p class="note-label">Measured</p><p>The Monitor showed a 178 ms tick for seven objects, garbage collector innocent: 25 ms per object, which is not computation but waiting. Every player on every map of that server froze because one player crossed a border. The same pattern in the jump code had produced a 121.7 ms worst tick for six objects: 19.9 ms per object.</p></div>
+<p>A transition is now split along the line the tick imposes (chapter <a href="no-db-in-tick.html">3.4</a>):</p>
+</div>
+<div lang="fr">
+<h2>Une transition en deux moitiés</h2>
+<p>La première version faisait tout d'un coup, dans le tick : sauvegarder les pièces du vaisseau, réécrire sa ligne, résoudre (et parfois créer) la ligne de la carte de destination. Quatre allers-retours en base au milieu de la mise à jour par objet.</p>
+<div class="note measured"><p class="note-label">Mesuré</p><p>Le Monitor a montré un tick de 178 ms pour sept objets, ramasse-miettes hors de cause : 25 ms par objet, ce qui n'est pas du calcul mais de l'attente. Tous les joueurs de toutes les cartes de ce serveur se figeaient parce qu'un joueur franchissait une frontière. Le même motif dans le code des sauts avait produit un pire tick de 121,7 ms pour six objets : 19,9 ms par objet.</p></div>
+<p>Une transition est maintenant coupée le long de la ligne qu'impose le tick (chapitre <a href="no-db-in-tick.html">3.4</a>) :</p>
+</div>
+<figure class="fig fig-scroll">
+<svg viewBox="0 0 780 250" role="img" aria-label="Transition timeline: the tick half reads RAM and detaches the ship; the background half writes the database; only after the write succeeds does the server either keep the player in place or hand over to the gateway and disconnect">
+  <defs><marker id="ho-arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="currentColor" opacity="0.6"/></marker></defs>
+  <text class="dg-label" x="20" y="22"><tspan lang="en">Tick thread</tspan><tspan lang="fr">Thread du tick</tspan></text>
+  <text class="dg-label" x="270" y="22"><tspan lang="en">Background worker</tspan><tspan lang="fr">Ouvrier de fond</tspan></text>
+  <text class="dg-label" x="540" y="22"><tspan lang="en">Only if the write succeeded</tspan><tspan lang="fr">Seulement si l'écriture a réussi</tspan></text>
+  <rect x="20" y="34" width="220" height="200" rx="8" class="dg-box"/>
+  <text class="dg-small" x="34" y="60"><tspan lang="en">1. capture the pilot's posture</tspan><tspan lang="fr">1. capturer la posture du pilote</tspan></text>
+  <text class="dg-small" x="34" y="82"><tspan lang="en">2. collect the crew on board</tspan><tspan lang="fr">2. relever l'équipage à bord</tspan></text>
+  <text class="dg-small" x="34" y="104"><tspan lang="en">3. take the ammunition debt (RAM)</tspan><tspan lang="fr">3. prendre la dette de munitions (RAM)</tspan></text>
+  <text class="dg-small" x="34" y="126"><tspan lang="en">4. remove the ship from the map</tspan><tspan lang="fr">4. retirer le vaisseau de la carte</tspan></text>
+  <text class="dg-small" x="34" y="148"><tspan lang="en">5. queue the background job</tspan><tspan lang="fr">5. mettre le travail de fond en file</tspan></text>
+  <text class="dg-small" x="34" y="200" style="fill:var(--good-ink)"><tspan lang="en">no database, no waiting</tspan><tspan lang="fr">aucune base, aucune attente</tspan></text>
+  <rect x="270" y="34" width="240" height="200" rx="8" class="dg-box-2"/>
+  <text class="dg-small" x="284" y="60"><tspan lang="en">resolve or create the destination map</tspan><tspan lang="fr">résoudre ou créer la carte d'arrivée</tspan></text>
+  <text class="dg-small" x="284" y="82"><tspan lang="en">save the hull's parts (damage too)</tspan><tspan lang="fr">sauver les pièces (dégâts compris)</tspan></text>
+  <text class="dg-small" x="284" y="104"><tspan lang="en">rewrite the ship row: map, position</tspan><tspan lang="fr">réécrire la ligne : carte, position</tspan></text>
+  <text class="dg-small" x="284" y="126"><tspan lang="en">write the ammunition debt</tspan><tspan lang="fr">écrire la dette de munitions</tspan></text>
+  <rect x="540" y="34" width="220" height="92" rx="8" class="dg-hot"/>
+  <text class="dg-text" x="554" y="58" font-weight="700"><tspan lang="en">Destination is local</tspan><tspan lang="fr">Destination locale</tspan></text>
+  <text class="dg-small" x="554" y="80"><tspan lang="en">tell the client "in place",</tspan><tspan lang="fr">dire au client « sur place »,</tspan></text>
+  <text class="dg-small" x="554" y="98"><tspan lang="en">run the arrival phase again</tspan><tspan lang="fr">rejouer la phase d'arrivée</tspan></text>
+  <text class="dg-small" x="554" y="116"><tspan lang="en">no reconnection</tspan><tspan lang="fr">aucune reconnexion</tspan></text>
+  <rect x="540" y="142" width="220" height="92" rx="8" class="dg-box"/>
+  <text class="dg-text" x="554" y="166" font-weight="700"><tspan lang="en">Destination elsewhere</tspan><tspan lang="fr">Destination ailleurs</tspan></text>
+  <text class="dg-small" x="554" y="188"><tspan lang="en">MapTransition to the gateway,</tspan><tspan lang="fr">MapTransition à la gateway,</tspan></text>
+  <text class="dg-small" x="554" y="206"><tspan lang="en">tell the client, disconnect</tspan><tspan lang="fr">prévenir le client, déconnecter</tspan></text>
+  <text class="dg-small" x="554" y="224"><tspan lang="en">after a 300 ms grace</tspan><tspan lang="fr">après une grâce de 300 ms</tspan></text>
+  <line x1="240" y1="148" x2="268" y2="148" class="dg-line" marker-end="url(#ho-arr)"/>
+  <line x1="510" y1="100" x2="538" y2="82" class="dg-line" marker-end="url(#ho-arr)"/>
+  <line x1="510" y1="140" x2="538" y2="186" class="dg-line" marker-end="url(#ho-arr)"/>
+</svg>
+<figcaption><span lang="en"><strong>The tick half only reads memory and detaches the ship.</strong> Everything slow moves to the background thread, and the client is released last, once everything is written.</span><span lang="fr"><strong>La moitié tick ne fait que lire la mémoire et détacher le vaisseau.</strong> Tout ce qui est lent part sur le thread de fond, et le client n'est lâché qu'en dernier, une fois tout écrit.</span></figcaption>
+</figure>
+<div lang="en">
+<p>The order of the background half is the contract. <strong>The disconnection is the last line.</strong> If the client were released before the parts were saved, it could reconnect on the other side and load a hull that had not been written yet: every transition would repair the ship for free, which is exactly what saving the parts exists to prevent. And if the background work throws, its continuation never runs, so the player stays connected where they are instead of arriving somewhere with half-written state.</p>
+</div>
+<div lang="fr">
+<p>L'ordre de la moitié de fond est le contrat. <strong>La déconnexion est la dernière ligne.</strong> Si le client était lâché avant la sauvegarde des pièces, il pourrait se reconnecter de l'autre côté et charger une coque pas encore écrite : chaque transition réparerait le vaisseau gratuitement, ce que la sauvegarde des pièces existe précisément pour empêcher. Et si le travail de fond lève une exception, sa suite ne s'exécute jamais : le joueur reste connecté là où il est plutôt que d'arriver quelque part avec un état à moitié écrit.</p>
+</div>
+<div lang="en">
+<div class="note pitfall"><p class="note-label">Pitfall I hit</p><p>Ammunition fired is counted in RAM and written down later. The end-of-session settlement looked for "the player's current ship", and the transition code had already set that to null before disconnecting. The debt was thrown away, the inventory kept its pre-flight quantities, and the player found full magazines on the other side. Empty your guns, cross a border, repeat. The debt is now taken in the tick half, while the ship still exists, and written in the background half.</p></div>
+</div>
+<div lang="fr">
+<div class="note pitfall"><p class="note-label">Piège rencontré</p><p>Les munitions tirées sont comptées en RAM et écrites plus tard. Le règlement de fin de session cherchait « le vaisseau courant du joueur », et le code de transition l'avait déjà mis à nul avant de déconnecter. La dette partait à la poubelle, l'inventaire gardait ses quantités d'avant le vol, et le joueur retrouvait des magasins pleins de l'autre côté. Vider ses armes, passer une frontière, recommencer. La dette est maintenant prise dans la moitié tick, tant que le vaisseau existe, et écrite dans la moitié de fond.</p></div>
+</div>
+</section>
+
+<section class="sec" id="in-place">
+<div lang="en">
+<h2>The common case: no reconnection</h2>
+<p>A server hosts dozens of maps, so most borders lead to a map on the same process. Going through the full reconnection path there costs a socket closed and reopened, a new key exchange, a round trip through the gateway, a new session created and the old one thrown away, and a 300 ms window during which the player is nowhere.</p>
+<div class="note measured"><p class="note-label">Measured</p><p>With 700 bots, each wave of border crossings divided the network pumps' throughput by a hundred, on both sides of the connection.</p></div>
+<p>So the server first checks whether it already hosts the destination. The check is safe to do alone: a map is in a server's table only because the gateway assigned it there, so answering "yes" cannot create a second copy of a map hosted elsewhere. And the gateway has nothing to learn: it records which <em>server</em> a session lives on, not which map, so the player's token stays valid and chat, groups and guild keep working without interruption. The server tells the client "this transition is in place" before sending the new map's description, so the client does not close its socket out of habit, and then the arrival phase from chapter <a href="login-flow.html#arrival">2.2</a> runs again.</p>
+</div>
+<div lang="fr">
+<h2>Le cas courant : aucune reconnexion</h2>
+<p>Un serveur héberge des dizaines de cartes : la plupart des frontières mènent à une carte du même processus. Y passer par le chemin complet de reconnexion coûte une socket fermée et rouverte, un nouvel échange de clés, un aller-retour par la gateway, une nouvelle session créée et l'ancienne jetée, et une fenêtre de 300 ms pendant laquelle le joueur n'est nulle part.</p>
+<div class="note measured"><p class="note-label">Mesuré</p><p>Avec 700 robots, chaque vague de franchissements divisait par cent le débit des pompes réseau, des deux côtés de la connexion.</p></div>
+<p>Le serveur vérifie donc d'abord s'il héberge déjà la destination. Il peut en décider seul sans risque : une carte n'est dans la table d'un serveur que parce que la gateway la lui a assignée, donc répondre « oui » ne peut pas créer une seconde copie d'une carte hébergée ailleurs. Et la gateway n'a rien à apprendre : elle retient sur quel <em>serveur</em> vit une session, pas sur quelle carte, donc le jeton du joueur reste valide et le chat, les groupes et la guilde continuent sans interruption. Le serveur dit au client « cette transition est sur place » avant d'envoyer la description de la nouvelle carte, pour que le client ne ferme pas sa socket par réflexe, puis la phase d'arrivée du chapitre <a href="login-flow.html#arrival">2.2</a> se rejoue.</p>
+</div>
+</section>
+
+<section class="sec" id="gateway-side">
+<div lang="en">
+<h2>On the gateway: the new session comes first</h2>
+<p>When the destination is elsewhere, the gateway receives the transition and does three things: create the next game session, make sure a server hosts the destination map (loading it on demand if needed), then send the client the new address and token through its gateway connection.</p>
+<div class="note pitfall"><p class="note-label">Pitfall I hit</p><p>The gateway used to create the new session only once the destination was hosted. For a map already loaded, that was immediate. For a map that first had to be assigned, like any instance room entered for the first time, it took as long as loading the room. Meanwhile the source server, which disconnects 300 ms after sending the transition, reported the old session closed. For a moment the character was "offline": they left their group, and the group dissolved. The leader walked into the dungeon with nobody left to wait for.</p></div>
+<p>The session is now created the moment the transition arrives. The presence index already points at the new session when the old one's "closed" message lands, and removal is guarded by identity: removing a session only removes it from the index if the index still points at that exact session. If the destination can never be hosted, the gateway removes the new session itself, and only then is the player really gone.</p>
+</div>
+<div lang="fr">
+<h2>Côté gateway : la nouvelle session d'abord</h2>
+<p>Quand la destination est ailleurs, la gateway reçoit la transition et fait trois choses : créer la session de jeu suivante, s'assurer qu'un serveur héberge la carte d'arrivée (en la chargeant à la demande si besoin), puis envoyer au client la nouvelle adresse et le nouveau jeton par sa connexion gateway.</p>
+<div class="note pitfall"><p class="note-label">Piège rencontré</p><p>La gateway ne créait autrefois la nouvelle session qu'une fois la destination hébergée. Pour une carte déjà chargée, c'était immédiat. Pour une carte qu'il fallait d'abord assigner, comme toute salle d'instance visitée pour la première fois, ça prenait le temps de charger la salle. Pendant ce temps, le serveur de départ, qui déconnecte 300 ms après avoir envoyé la transition, annonçait l'ancienne session fermée. Pendant un instant le personnage était « hors ligne » : il quittait son groupe, et le groupe se dissolvait. Le chef entrait dans le donjon sans plus personne à attendre.</p></div>
+<p>La session est maintenant créée à l'instant où la transition arrive. L'index de présence pointe déjà vers la nouvelle session quand le message « fermée » de l'ancienne tombe, et le retrait est gardé par identité : retirer une session ne l'enlève de l'index que si l'index pointe encore vers cette session précise. Si la destination ne peut jamais être hébergée, la gateway retire elle-même la nouvelle session, et alors seulement le joueur est vraiment parti.</p>
+</div>
+<div lang="en">
+<div class="note rule"><p class="note-label">Rule</p><p>When a replacement and a removal can arrive in either order, create the replacement first and make the removal conditional on identity.</p><p>"Remove whatever is there for this character" deletes the newcomer when the old goodbye arrives late. "Remove it if it is still the one I am closing" cannot.</p></div>
+</div>
+<div lang="fr">
+<div class="note rule"><p class="note-label">Règle</p><p>Quand un remplacement et un retrait peuvent arriver dans n'importe quel ordre, créer le remplacement d'abord et rendre le retrait conditionnel à l'identité.</p><p>« Retirer ce qu'il y a pour ce personnage » supprime le nouveau venu quand l'ancien au revoir arrive en retard. « Le retirer s'il est encore celui que je ferme » ne le peut pas.</p></div>
+</div>
+</section>
+
+<section class="sec" id="takeover">
+<div lang="en">
+<h2>Takeover: the most recent connection wins</h2>
+<p>The same identity guard makes takeover safe. When a character is selected while an older session is alive (a crashed client, a second machine), the gateway sends the server hosting the old session a kick. That server sends the old client a "replaced by a new login" notice first, then disconnects it after a short grace, so the notice has a chance to reach the wire and the player sees an explanation instead of a bare disconnect. The old session's closure is then cleaned up by the normal path, and the identity guard protects the new session, which usually lives on another server anyway.</p>
+</div>
+<div lang="fr">
+<h2>Reprise de session : la connexion la plus récente gagne</h2>
+<p>La même garde d'identité rend la reprise sûre. Quand un personnage est choisi alors qu'une session plus ancienne est vivante (un client planté, une seconde machine), la gateway envoie une éjection au serveur qui héberge l'ancienne session. Ce serveur envoie d'abord à l'ancien client un avis « remplacé par une nouvelle connexion », puis le déconnecte après une courte grâce, pour que l'avis ait une chance d'atteindre le câble et que le joueur voie une explication plutôt qu'une coupure sèche. La fermeture de l'ancienne session est ensuite nettoyée par le chemin normal, et la garde d'identité protège la nouvelle session, qui vit de toute façon souvent sur un autre serveur.</p>
+</div>
+<div lang="en">
+<div class="note tradeoff"><p class="note-label">Trade-off</p><p>"Send, then wait 300 ms, then disconnect" is an admission that the transport has no "flush, then close". It appears in several places (transitions, respawns, kicks). It works, but if a fourth case appears, the right move is to look for a proper flush-then-close in the library rather than a fifth delay.</p></div>
+</div>
+<div lang="fr">
+<div class="note tradeoff"><p class="note-label">Compromis</p><p>« Envoyer, attendre 300 ms, puis déconnecter » est l'aveu que le transport n'a pas de « vider puis fermer ». On le retrouve à plusieurs endroits (transitions, réapparitions, éjections). Ça marche, mais si un quatrième cas apparaît, le bon geste sera de chercher un vrai vider-puis-fermer dans la bibliothèque plutôt qu'un cinquième délai.</p></div>
+</div>
+</section>
+
+<section class="sec" id="context">
+<div lang="en">
+<h2>Carrying context through the gateway</h2>
+<p>A reconnection loses everything the source server knew about the player, except what the database and the session carry. Two pieces of context are carried explicitly:</p>
+<ul>
+<li><strong>Posture.</strong> A pilot standing on their own hull, or seated at one of its turrets, arrives in the same posture instead of being put back in the pilot's seat. The posture is captured in the tick half and travels with the transition.</li>
+<li><strong>Crew.</strong> Players standing on or manning a ship that jumps travel with it. Each one runs their own transition with their own session, marked "aboard ship N at hex (q, r)". The gateway copies that mark onto the new session and hands it to the destination server with the validation answer, which seats them on the right ship.</li>
+</ul>
+</div>
+<div lang="fr">
+<h2>Transporter du contexte par la gateway</h2>
+<p>Une reconnexion perd tout ce que le serveur de départ savait du joueur, sauf ce que portent la base et la session. Deux éléments de contexte voyagent explicitement :</p>
+<ul>
+<li><strong>La posture.</strong> Un pilote debout sur sa coque, ou assis à l'une de ses tourelles, arrive dans la même posture au lieu d'être renvoyé au siège du pilote. La posture est capturée dans la moitié tick et voyage avec la transition.</li>
+<li><strong>L'équipage.</strong> Les joueurs debout sur un vaisseau qui saute, ou à ses postes, voyagent avec lui. Chacun fait sa propre transition avec sa propre session, marquée « à bord du vaisseau N à l'hex (q, r) ». La gateway recopie cette marque sur la nouvelle session et la remet au serveur d'arrivée avec la réponse de validation, qui installe chacun sur le bon vaisseau.</li>
+</ul>
+</div>
+</section>
+
+<section class="sec" id="disconnects">
+<div lang="en">
+<h2>Leaving the game, and not escaping a fight</h2>
+<p>Disconnection is a transition to nowhere, and it follows the same discipline: the session state (ship position, pilot posture, health) is captured on the tick thread while the objects still exist, then written. The same capture runs for every player once a minute as a checkpoint, so a server crash loses at most a minute of progress instead of a whole session.</p>
+<p>It also has a game-design side that every PvP game meets: if a ship vanishes the instant its socket dies, pulling the network cable becomes the universal answer to losing a fight. MoonQwak keeps a hull that was hit in the last two minutes in the world for twenty more seconds, inert: its intentions are cleared, so it drifts on its momentum without firing or jumping. A calm disconnection leaves nothing behind. The removal happens in a sweep after all maps have ticked, on the tick thread, because removing an object from a map while that map is being simulated on another thread is exactly the race deferred destruction exists to prevent.</p>
+</div>
+<div lang="fr">
+<h2>Quitter le jeu, sans fuir un combat</h2>
+<p>Une déconnexion est une transition vers nulle part, et elle suit la même discipline : l'état de session (position du vaisseau, posture du pilote, points de vie) est capturé sur le thread du tick tant que les objets existent encore, puis écrit. La même capture tourne pour chaque joueur une fois par minute en guise de point de sauvegarde : un serveur qui tombe perd au plus une minute de progression au lieu d'une session entière.</p>
+<p>Elle a aussi un aspect de game design que rencontre tout jeu à JcJ : si un vaisseau disparaît à l'instant où sa socket meurt, débrancher le câble réseau devient la réponse universelle à un combat perdu. MoonQwak garde dans le monde, vingt secondes de plus, une coque touchée dans les deux dernières minutes, inerte : ses intentions sont vidées, elle dérive sur son élan sans tirer ni sauter. Une déconnexion au calme ne laisse rien derrière. Le retrait se fait dans un balayage après que toutes les cartes ont tické, sur le thread du tick, parce que retirer un objet d'une carte pendant que cette carte se simule sur un autre thread est exactement la course que la destruction différée existe pour éviter.</p>
+</div>
+</section>
+
+<section class="sec" id="takeaways">
+<div class="takeaways">
+<div lang="en"><h2>Key takeaways</h2><ul>
+<li>Moving a player between processes can go through a proxy, a direct handoff, or a write-then-reconnect; the last keeps servers independent at the cost of a loading screen.</li>
+<li>Split every transition into a tick half (memory only) and a background half (database), and release the client last.</li>
+<li>Skip the reconnection when the destination is already local: it is the common case and the expensive path.</li>
+<li>Create the replacement session before the old one can be removed, and remove by identity.</li>
+<li>Carry context (posture, crew) explicitly; everything else is lost on reconnection by design.</li>
+</ul></div>
+<div lang="fr"><h2>À retenir</h2><ul>
+<li>Déplacer un joueur entre processus peut passer par un proxy, un passage direct, ou une écriture suivie d'une reconnexion ; la dernière garde les serveurs indépendants au prix d'un écran de chargement.</li>
+<li>Couper chaque transition en une moitié tick (mémoire seule) et une moitié de fond (base), et lâcher le client en dernier.</li>
+<li>Sauter la reconnexion quand la destination est déjà locale : c'est le cas courant, et le chemin coûteux.</li>
+<li>Créer la session de remplacement avant que l'ancienne puisse être retirée, et retirer par identité.</li>
+<li>Transporter le contexte (posture, équipage) explicitement ; tout le reste est perdu à la reconnexion, par conception.</li>
+</ul></div>
+</div>
+</section>
+
+</div>
+<div data-chapter-foot></div>
+</article>
+</main>
+<aside class="rail" id="mq-rail"></aside>
+</div>
+<footer class="site-footer" id="mq-footer"></footer>
+<script src="assets/js/site-data.js" defer></script>
+<script src="assets/js/glossary-data.js" defer></script>
+<script src="assets/js/app.js" defer></script>
+<script src="assets/js/widgets.js" defer></script>
+</body>
+</html>

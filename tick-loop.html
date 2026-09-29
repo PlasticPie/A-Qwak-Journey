@@ -1,0 +1,273 @@
+<!doctype html>
+<html lang="en" data-lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>The heartbeat · MoonQwak</title>
+<meta name="description" content="A fixed-rate loop that neither drifts nor spirals, and three Windows timer traps that each quietly stole ticks.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Chakra+Petch:wght@500;600&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="assets/css/site.css">
+<script>(function(){var r=document.documentElement,l,t;try{l=localStorage.getItem("mq-lang");t=localStorage.getItem("mq-theme");}catch(e){}if(l!=="en"&&l!=="fr"){l=(navigator.language||"").toLowerCase().indexOf("fr")===0?"fr":"en";}r.setAttribute("data-lang",l);r.setAttribute("lang",l);if(t==="light"||t==="dark")r.setAttribute("data-theme",t);})();</script>
+</head>
+<body data-page="tick-loop">
+<a class="skip-link" href="#main"><span lang="en">Skip to content</span><span lang="fr">Aller au contenu</span></a>
+<header class="site-header" id="mq-header"></header>
+<div class="layout">
+<aside class="sidebar" id="mq-sidebar"></aside>
+<main class="content" id="main">
+<article>
+<header class="chapter-head">
+  <div class="eyebrow" data-auto></div>
+  <h1><span lang="en">The heartbeat</span><span lang="fr">Le battement de cœur</span></h1>
+  <p class="dek"><span lang="en">A fixed-rate loop that neither drifts nor spirals, and three Windows timer traps that each quietly stole ticks.</span><span lang="fr">Une boucle à cadence fixe qui ne dérive ni ne s'emballe, et trois pièges de minuterie Windows qui ont chacun volé des ticks en silence.</span></p>
+  <div class="meta-row" data-auto></div>
+</header>
+
+<div class="prose">
+
+<section class="sec" id="fixed-step">
+<div lang="en">
+<h2>Why a fixed step</h2>
+<p>An authoritative server does not simulate continuously. It advances the world in discrete steps called <em>ticks</em>: read the inputs that arrived, move everything by exactly one step, resolve what collided, tell the players. Then it waits for the next step.</p>
+<div class="note beginner"><p class="note-label">Beginner note</p><p>A physics engine gives stable, reproducible results only when every step has the same length. Feed it "however long the last frame took" and collisions, springs and damping start to behave differently at 20 and at 30 steps per second. A fixed step is what makes the simulation the same on a quiet server and on a busy one.</p></div>
+<p>MoonQwak ticks the world at 25 Hz, which gives each tick a budget of 40 ms. The physics step is set once from that rate (1/25 s), and the Unity client steps its own physics with the same value, so a bullet advances by the same distance on both sides. Snapshots also go out at 25 Hz.</p>
+</div>
+<div lang="fr">
+<h2>Pourquoi un pas fixe</h2>
+<p>Un serveur autoritaire ne simule pas en continu. Il fait avancer le monde par pas discrets appelés <em>ticks</em> : lire les entrées arrivées, déplacer tout d'exactement un pas, résoudre ce qui s'est heurté, prévenir les joueurs. Puis il attend le pas suivant.</p>
+<div class="note beginner"><p class="note-label">Pour débuter</p><p>Un moteur physique ne donne des résultats stables et reproductibles que si chaque pas a la même durée. Donnez-lui « le temps qu'a pris la dernière image » et les collisions, les ressorts et l'amortissement se comportent différemment à 20 et à 30 pas par seconde. Le pas fixe est ce qui rend la simulation identique sur un serveur calme et sur un serveur chargé.</p></div>
+<p>MoonQwak fait tourner le monde à 25 Hz, ce qui donne à chaque tick un budget de 40 ms. Le pas physique est fixé une fois pour toutes à partir de cette cadence (1/25 s), et le client Unity avance sa propre physique avec la même valeur, pour qu'une balle parcoure la même distance des deux côtés. Les snapshots partent aussi à 25 Hz.</p>
+</div>
+<div class="stats">
+<div class="stat"><div class="v">25<small>Hz</small></div><div class="k"><span lang="en">world tick rate</span><span lang="fr">cadence du monde</span></div></div>
+<div class="stat"><div class="v">40<small>ms</small></div><div class="k"><span lang="en">budget per tick, shared by every map of the process</span><span lang="fr">budget par tick, partagé par toutes les cartes du processus</span></div></div>
+<div class="stat"><div class="v">25<small>Hz</small></div><div class="k"><span lang="en">snapshot rate, never above the world rate</span><span lang="fr">cadence des snapshots, jamais au-dessus du monde</span></div></div>
+<div class="stat"><div class="v">250<small>ms</small></div><div class="k"><span lang="en">maximum catch-up before the schedule resets</span><span lang="fr">rattrapage maximal avant de repartir de zéro</span></div></div>
+</div>
+<div lang="en">
+<div class="note measured"><p class="note-label">Measured</p><p>Snapshots were once configured at 30 Hz against a 25 Hz world. A snapshot sent between two world ticks describes a state the simulation has not advanced: the same bytes, paid for twice. That was five duplicate snapshots per player per second. The configuration file now carries the rule next to the value: never above the world rate.</p></div>
+</div>
+<div lang="fr">
+<div class="note measured"><p class="note-label">Mesuré</p><p>Les snapshots ont un temps été configurés à 30 Hz pour un monde à 25 Hz. Un snapshot envoyé entre deux ticks décrit un état que la simulation n'a pas fait avancer : les mêmes octets, payés deux fois. Cela faisait cinq snapshots en double par joueur et par seconde. Le fichier de configuration porte maintenant la règle à côté de la valeur : jamais au-dessus de la cadence du monde.</p></div>
+</div>
+</section>
+
+<section class="sec" id="two-loops">
+<div lang="en">
+<h2>One thread per rate, and nothing else</h2>
+<p>The world tick and the snapshot send each run on a dedicated thread, as a plain sequential loop: wait until the next tick is due, call the handler, compute the next due time, repeat. Sequential by construction: the loop cannot reach its next iteration before the handler returns, so a slow tick can delay the next one but can never run concurrently with it.</p>
+<p>That property is the whole reason for writing the loop by hand. The obvious alternative, a <code>System.Timers.Timer</code> that re-fires automatically, is backed by the thread pool and will happily start a new callback while the previous one is still running if it overran its interval. Two world ticks mutating the same maps at once is not a slowdown, it is corruption.</p>
+<p>The two loops are independent clocks, and nothing makes them alternate in lockstep, even at the same rate. The code that hands a finished snapshot from one to the other has to assume that two world ticks can happen between two sends; chapter <a href="snapshots.html">4.2</a> shows what that guard looks like and what it prevents.</p>
+</div>
+<div lang="fr">
+<h2>Un thread par cadence, et rien d'autre</h2>
+<p>Le tick du monde et l'envoi des snapshots tournent chacun sur un thread dédié, sous forme de boucle séquentielle toute simple : attendre l'échéance du prochain tick, appeler le gestionnaire, calculer l'échéance suivante, recommencer. Séquentielle par construction : la boucle ne peut pas atteindre son itération suivante avant que le gestionnaire ait rendu la main, donc un tick lent peut retarder le suivant mais ne peut jamais tourner en même temps que lui.</p>
+<p>Cette propriété est toute la raison d'écrire la boucle à la main. L'alternative évidente, un <code>System.Timers.Timer</code> qui se relance tout seul, s'appuie sur le pool de threads et démarrera volontiers un nouveau rappel pendant que le précédent tourne encore, s'il a dépassé son intervalle. Deux ticks du monde qui modifient les mêmes cartes en même temps, ce n'est pas un ralentissement, c'est de la corruption.</p>
+<p>Les deux boucles sont des horloges indépendantes, et rien ne les fait alterner en cadence, même au même rythme. Le code qui passe un snapshot terminé de l'une à l'autre doit supposer que deux ticks du monde peuvent survenir entre deux envois ; le chapitre <a href="snapshots.html">4.2</a> montre la garde que ça demande et ce qu'elle empêche.</p>
+</div>
+</section>
+
+<section class="sec" id="anchored">
+<div lang="en">
+<h2>An anchored schedule with a bounded catch-up</h2>
+<p>How the next due time is computed decides whether the loop keeps its rate. The first version re-armed its timer once the handler returned, so every tick started "interval + work + rounding" after the previous one, and the error compounded: the effective rate sat well below the configured one. The fix is one line: the next due time is the <em>previous due time</em> plus the interval, not "now" plus the interval. An occasional slow tick then delays only itself; the ticks after it land back on the original grid.</p>
+<p>Anchoring has its own failure mode. After a long stall (a garbage collection, a debugger break, a machine that stopped scheduling the process), an anchored loop is far behind its grid and would fire all the missed ticks back to back to catch up. Each catch-up tick is itself work, the next one starts late again, and the server never recovers: the <em>spiral of death</em>. The loop therefore gives up catching up when it falls more than 250 ms behind, and restarts its grid from now. The lost time is gone; the world simply stepped fewer times during the stall.</p>
+</div>
+<div lang="fr">
+<h2>Une échéance ancrée et un rattrapage borné</h2>
+<p>La façon de calculer l'échéance suivante décide si la boucle tient sa cadence. La première version réarmait sa minuterie une fois le gestionnaire terminé : chaque tick démarrait « intervalle + travail + arrondi » après le précédent, et l'erreur se cumulait. La cadence réelle restait nettement sous la cadence configurée. La correction tient en une ligne : l'échéance suivante est l'<em>échéance précédente</em> plus l'intervalle, pas « maintenant » plus l'intervalle. Un tick lent de temps en temps ne retarde alors que lui-même ; les suivants retombent sur la grille d'origine.</p>
+<p>L'ancrage a son propre mode de panne. Après un long arrêt (un ramasse-miettes, un point d'arrêt du débogueur, une machine qui n'ordonnance plus le processus), une boucle ancrée est très en retard sur sa grille et tirerait tous les ticks manqués à la suite pour rattraper. Chaque tick de rattrapage est lui-même du travail, le suivant repart en retard, et le serveur ne s'en remet jamais : la <em>spirale de la mort</em>. La boucle renonce donc à rattraper dès qu'elle a plus de 250 ms de retard, et repart d'une grille neuve à partir de maintenant. Le temps perdu est perdu ; le monde a simplement fait moins de pas pendant l'arrêt.</p>
+</div>
+<figure class="fig fig-scroll">
+<svg viewBox="0 0 760 170" role="img" aria-label="One 40 millisecond interval: the tick's work, then waiting on a high-resolution timer in slices of at most 15 ms, then spinning for the last half millisecond; the next due time is the previous due time plus 40 ms">
+  <defs><marker id="tl-arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="currentColor" opacity="0.7"/></marker></defs>
+  <line x1="40" y1="40" x2="40" y2="118" class="dg-line"/>
+  <line x1="720" y1="40" x2="720" y2="118" class="dg-line"/>
+  <text class="dg-small dg-mono" x="40" y="30" text-anchor="middle"><tspan lang="en">due N</tspan><tspan lang="fr">échéance N</tspan></text>
+  <text class="dg-small dg-mono" x="720" y="30" text-anchor="middle"><tspan lang="en">due N+1</tspan><tspan lang="fr">échéance N+1</tspan></text>
+  <rect x="41" y="56" width="203" height="40" rx="6" class="dg-hot"/>
+  <text class="dg-text" x="142" y="81" text-anchor="middle"><tspan lang="en">tick(): the work</tspan><tspan lang="fr">tick() : le travail</tspan></text>
+  <rect x="246" y="56" width="253" height="40" rx="6" class="dg-box"/>
+  <text class="dg-small" x="372" y="81" text-anchor="middle"><tspan lang="en">wait on the timer (≤ 15 ms slice)</tspan><tspan lang="fr">attente minuterie (tranche ≤ 15 ms)</tspan></text>
+  <rect x="501" y="56" width="208" height="40" rx="6" class="dg-box"/>
+  <text class="dg-small" x="605" y="81" text-anchor="middle"><tspan lang="en">wait (last slice)</tspan><tspan lang="fr">attente (dernière tranche)</tspan></text>
+  <rect x="711" y="56" width="8" height="40" rx="2" class="dg-accent"/>
+  <line x1="715" y1="100" x2="690" y2="132" class="dg-line"/>
+  <text class="dg-small" x="686" y="146" text-anchor="end"><tspan lang="en">spin the last 0.5 ms</tspan><tspan lang="fr">spin des 0,5 dernières ms</tspan></text>
+  <line x1="44" y1="132" x2="400" y2="132" class="dg-line" marker-end="url(#tl-arr)"/>
+  <text class="dg-small" x="44" y="152"><tspan lang="en">next due = previous due + 40 ms, never now + 40 ms</tspan><tspan lang="fr">échéance suivante = échéance précédente + 40 ms, jamais maintenant + 40 ms</tspan></text>
+</svg>
+<figcaption><span lang="en"><strong>One interval, three stages of waiting.</strong> Wait coarsely while there is time, spin only for the last fraction, and anchor the next deadline to the grid rather than to the clock.</span><span lang="fr"><strong>Un intervalle, trois étages d'attente.</strong> Attendre grossièrement tant qu'il y a du temps, ne tourner à vide que pour la dernière fraction, et ancrer l'échéance suivante sur la grille plutôt que sur l'horloge.</span></figcaption>
+</figure>
+<div data-widget="drift"></div>
+<div lang="en">
+<p>In the lab, the first row is the re-armed timer: every tick lands late, and the rate drops as the work grows. The second row is anchored but still sleeps with the default 15.6 ms timer resolution, so each wake-up overshoots by up to a quantum. The third row is what the server does now. Turn on the slow tick to see the anchored rows absorb a single 120 ms stall and return to the grid.</p>
+</div>
+<div lang="fr">
+<p>Dans le labo, la première ligne est la minuterie réarmée : chaque tick arrive en retard, et la cadence chute quand le travail grossit. La deuxième est ancrée mais dort encore avec la résolution par défaut de 15,6 ms, donc chaque réveil déborde jusqu'à un quantum. La troisième est ce que fait le serveur aujourd'hui. Activez le tick lent pour voir les lignes ancrées absorber un arrêt de 120 ms et revenir sur la grille.</p>
+</div>
+</section>
+
+<section class="sec" id="timer-traps">
+<div lang="en">
+<h2>Three traps with the same symptom</h2>
+<p>Anchoring bounds the drift. It does not make any tick arrive <em>on time</em>: that depends on how precisely the thread wakes up, and wake-up precision broke three times in three different ways. Each time the symptom was the same: a loop configured for 25 Hz running at about 21, on an idle server, with no line of game code slower than before.</p>
+<ol class="timeline">
+<li><span class="tl-tag">Trap 1</span><div><h3>A timer re-armed after the work</h3><p>Compound drift, described above. Fixed by the anchored schedule.</p></div></li>
+<li><span class="tl-tag">Trap 2</span><div><h3>Sleep is quantized to 15.6 ms</h3><p>On Windows, <code>Thread.Sleep</code> rounds to the system timer resolution, 15.6 ms by default. Every sleep overshoots by up to a quantum, and the real rate settled around 21 Hz <em>whatever the configuration said</em>. Worse, the client's smoothing constants had been tuned by eye against that accidental rate, and had to be re-expressed in ticks once it was fixed. Fixed with <code>timeBeginPeriod(1)</code> (1 ms resolution, per process since Windows 10 2004) plus a short spin before the deadline.</p></div></li>
+<li><span class="tl-tag">Trap 3</span><div><h3>Windows 11 ignores that request in the background</h3><p>Since Windows 11, <code>timeBeginPeriod</code> is ignored for a process with no window in the foreground: power throttling, by design. A server console sitting behind the Unity editor fell back to the 15.6 ms quantum and to 21 Hz. And the final spin used <code>SpinWait.SpinOnce()</code>, which after a few iterations falls back to <code>Sleep(1)</code>: a full quantum of overshoot inside the stage meant to recover the last two milliseconds.</p></div></li>
+</ol>
+<p>The lesson of the three: <strong>do not depend on the system timer resolution at all.</strong> The loop now waits in three stages, from the most precise to the coarsest fallback:</p>
+<ul>
+<li>a <strong>high-resolution waitable timer</strong> (<code>CreateWaitableTimerExW</code> with the <code>HIGH_RESOLUTION</code> flag, Windows 10 1803 and later): about 0.5 ms of precision, independent of the process's timer resolution and of the state of its window. It is the tool Windows provides for exactly this need, one handle per loop thread;</li>
+<li>if it is unavailable, <code>Thread.Sleep</code> backed by <code>timeBeginPeriod(1)</code> <em>and</em> by an explicit opt-out of Windows 11 timer throttling (<code>SetProcessInformation</code>), so the request stays honoured in the background;</li>
+<li>for the last fraction, a spin with <code>SpinOnce(-1)</code>. The <code>-1</code> is what forbids the fallback to <code>Sleep(1)</code>.</li>
+</ul>
+</div>
+<div lang="fr">
+<h2>Trois pièges, un seul symptôme</h2>
+<p>L'ancrage borne la dérive. Il ne fait arriver aucun tick <em>à l'heure</em> : ça dépend de la précision du réveil du thread, et cette précision a été cassée trois fois de trois façons différentes. À chaque fois, le même symptôme : une boucle réglée à 25 Hz qui tourne vers 21, sur un serveur à vide, sans qu'aucune ligne du jeu soit devenue plus lente.</p>
+<ol class="timeline">
+<li><span class="tl-tag">Piège 1</span><div><h3>Une minuterie réarmée après le travail</h3><p>La dérive cumulée, décrite plus haut. Corrigée par l'échéance ancrée.</p></div></li>
+<li><span class="tl-tag">Piège 2</span><div><h3>Sleep est quantifié à 15,6 ms</h3><p>Sous Windows, <code>Thread.Sleep</code> s'arrondit à la résolution de la minuterie système, 15,6 ms par défaut. Chaque sommeil déborde jusqu'à un quantum, et la cadence réelle se stabilisait vers 21 Hz <em>quoi que dise la configuration</em>. Pire : les constantes de lissage du client avaient été réglées à l'œil sur cette cadence accidentelle, et ont dû être réexprimées en ticks une fois le bug corrigé. Corrigé par <code>timeBeginPeriod(1)</code> (résolution de 1 ms, par processus depuis Windows 10 2004) et un court spin avant l'échéance.</p></div></li>
+<li><span class="tl-tag">Piège 3</span><div><h3>Windows 11 ignore cette demande en arrière-plan</h3><p>Depuis Windows 11, <code>timeBeginPeriod</code> est ignoré pour un processus dont aucune fenêtre n'est au premier plan : c'est du bridage d'énergie, voulu. Une console serveur derrière l'éditeur Unity retombait au quantum de 15,6 ms et à 21 Hz. Et le spin final utilisait <code>SpinWait.SpinOnce()</code>, qui après quelques itérations se rabat sur <code>Sleep(1)</code> : un quantum entier de dépassement dans l'étage censé rattraper les deux dernières millisecondes.</p></div></li>
+</ol>
+<p>La leçon des trois : <strong>ne pas dépendre du tout de la résolution de la minuterie système.</strong> La boucle attend maintenant en trois étages, du plus précis au repli le plus grossier :</p>
+<ul>
+<li>une <strong>minuterie attendable haute résolution</strong> (<code>CreateWaitableTimerExW</code> avec le drapeau <code>HIGH_RESOLUTION</code>, Windows 10 1803 et après) : environ 0,5 ms de précision, indépendante de la résolution du processus et de l'état de sa fenêtre. C'est l'outil que Windows fournit exactement pour ce besoin, un handle par thread de boucle ;</li>
+<li>à défaut, <code>Thread.Sleep</code> adossé à <code>timeBeginPeriod(1)</code> <em>et</em> à un refus explicite du bridage de Windows 11 (<code>SetProcessInformation</code>), pour que la demande reste honorée en arrière-plan ;</li>
+<li>pour la dernière fraction, un spin avec <code>SpinOnce(-1)</code>. C'est le <code>-1</code> qui interdit le repli sur <code>Sleep(1)</code>.</li>
+</ul>
+</div>
+<div class="code"><div class="code-head"><span class="file">GameServer/Services/TickService.cs · RunLoop, simplified</span></div><pre><code data-lang="cs">void RunLoop(TimeSpan interval, Action tick, ThreadPriority priority)
+{
+    Thread.CurrentThread.Priority = priority;            // world: Highest, snapshots: AboveNormal
+    using var timer = HighResWaitableTimer.TryCreate();  // null: fall back to Sleep
+    var spinThreshold = timer != null ? TimeSpan.FromMilliseconds(0.5)
+                                      : TimeSpan.FromMilliseconds(2);
+    var sw = Stopwatch.StartNew();
+    var nextDue = sw.Elapsed + interval;
+
+    while (_running)
+    {
+        var remaining = nextDue - sw.Elapsed;
+        if (remaining > spinThreshold)
+        {
+            var wait = remaining - spinThreshold;
+            if (wait > SleepSlice) wait = SleepSlice;   // 15 ms slices keep Stop() responsive
+            if (timer == null || !timer.WaitFor(wait))  // a timer that fails to arm still waits
+                Thread.Sleep(wait);
+            continue;
+        }
+
+        var spinner = new SpinWait();
+        while (_running &amp;&amp; sw.Elapsed &lt; nextDue)
+            spinner.SpinOnce(-1);                       // -1: never degrades into Sleep(1)
+
+        tick();
+
+        nextDue += interval;                            // anchored to the grid, not to "now"
+        if (nextDue &lt; sw.Elapsed - MaxCatchUp)          // 250 ms behind: stop catching up
+            nextDue = sw.Elapsed + interval;
+    }
+}</code></pre></div>
+<div lang="en">
+<div class="note project"><p class="note-label">In MoonQwak</p><p>When the waitable timer fails to arm, the fallback still sleeps. Simply looping again would turn the loop into a 100 % spin on one core that looks like it works: the rate is perfect, and a core is gone. Fallbacks deserve the same scrutiny as the main path.</p></div>
+<div class="note rule"><p class="note-label">Rule</p><p>Anchor the schedule to the grid, bound the catch-up, and never let precision depend on a setting the operating system is free to ignore.</p><p>Every one of the three traps produced a server that looked fine and ran a sixth slower than configured, silently, until someone measured the actual rate.</p></div>
+</div>
+<div lang="fr">
+<div class="note project"><p class="note-label">Dans MoonQwak</p><p>Quand la minuterie attendable n'arrive pas à s'armer, le repli dort quand même. Se contenter de reboucler ferait de la boucle un spin à 100 % d'un cœur qui a l'air de marcher : la cadence est parfaite, et un cœur a disparu. Les replis méritent la même attention que le chemin principal.</p></div>
+<div class="note rule"><p class="note-label">Règle</p><p>Ancrer l'échéance sur la grille, borner le rattrapage, et ne jamais faire dépendre la précision d'un réglage que le système d'exploitation a le droit d'ignorer.</p><p>Chacun des trois pièges a produit un serveur qui avait l'air normal et tournait un sixième plus lentement que prévu, en silence, jusqu'à ce que quelqu'un mesure la cadence réelle.</p></div>
+</div>
+</section>
+
+<section class="sec" id="priority">
+<div lang="en">
+<h2>Priorities: who runs when a core frees up</h2>
+<p>A precise wake-up is useless if the thread then waits in the scheduler's queue. On the development machine, the Unity editor and the client saturate the cores; a thread of normal priority that becomes ready can wait a whole scheduling quantum before it runs, and the Monitor showed one tick in three arriving late with no slow code at all. The tick threads therefore run above everything else in the process:</p>
+<div class="table-wrap"><table>
+<thead><tr><th>Thread</th><th>Priority</th><th>Why</th></tr></thead>
+<tbody>
+<tr><td>World tick</td><td><code>Highest</code></td><td>The only thread that can make everyone late. It must preempt its own helpers rather than wait behind them.</td></tr>
+<tr><td>Snapshot send, tick workers</td><td><code>AboveNormal</code></td><td>Above the network and the thread pool, below the world thread.</td></tr>
+<tr><td>Network, thread pool, background writes</td><td><code>Normal</code></td><td>Important, not urgent. Database writes must never compete with the tick for a core.</td></tr>
+<tr><td>Console writer</td><td><code>BelowNormal</code></td><td>Logs can wait. See the console pitfall in chapter <a href="gateway.html">2.1</a>.</td></tr>
+</tbody></table></div>
+<p>Two high-priority threads that sleep 95 % of the time disturb nobody. The danger starts when there are more high-priority threads ready than cores, which is the subject of chapter <a href="threading.html">3.3</a>.</p>
+</div>
+<div lang="fr">
+<h2>Priorités : qui court quand un cœur se libère</h2>
+<p>Un réveil précis ne sert à rien si le thread attend ensuite dans la file de l'ordonnanceur. Sur la machine de développement, l'éditeur Unity et le client saturent les cœurs ; un thread de priorité normale qui devient prêt peut attendre un quantum entier avant de courir, et le Monitor a montré un tick sur trois en retard sans aucun code lent. Les threads du tick passent donc au-dessus de tout le reste du processus :</p>
+<div class="table-wrap"><table>
+<thead><tr><th>Thread</th><th>Priorité</th><th>Pourquoi</th></tr></thead>
+<tbody>
+<tr><td>Tick du monde</td><td><code>Highest</code></td><td>Le seul thread qui peut mettre tout le monde en retard. Il doit préempter ses propres aides plutôt qu'attendre derrière elles.</td></tr>
+<tr><td>Envoi des snapshots, ouvriers du tick</td><td><code>AboveNormal</code></td><td>Au-dessus du réseau et du pool de threads, sous le thread du monde.</td></tr>
+<tr><td>Réseau, pool de threads, écritures de fond</td><td><code>Normal</code></td><td>Important, pas urgent. Une écriture en base ne doit jamais disputer un cœur au tick.</td></tr>
+<tr><td>Écrivain de la console</td><td><code>BelowNormal</code></td><td>Les journaux peuvent attendre. Voir le piège de la console au chapitre <a href="gateway.html">2.1</a>.</td></tr>
+</tbody></table></div>
+<p>Deux threads prioritaires qui dorment 95 % du temps ne gênent personne. Le danger commence quand il y a plus de threads prioritaires prêts que de cœurs, ce qui est le sujet du chapitre <a href="threading.html">3.3</a>.</p>
+</div>
+</section>
+
+<section class="sec" id="interval-vs-work">
+<div lang="en">
+<h2>An interval is not an amount of work</h2>
+<p>Two numbers describe a tick, and confusing them cost me a full investigation. The <strong>interval</strong> is the time from the start of one tick to the start of the next. The <strong>work</strong> is the time the handler actually ran. On a healthy server the interval sits at 40 ms whatever the work is, because the loop waits for the grid. When the interval grows beyond 40 ms, the difference between interval and work tells you who is at fault:</p>
+<ul>
+<li><strong>work close to the interval</strong>: the tick really computed that long. Look at its phases (chapter <a href="tick-anatomy.html">3.2</a>);</li>
+<li><strong>small work, large interval</strong>: the thread woke up late. The machine, not the server: other processes, load-test bots on the same PC, a starved core.</li>
+</ul>
+</div>
+<div lang="fr">
+<h2>Un intervalle n'est pas une quantité de travail</h2>
+<p>Deux nombres décrivent un tick, et les confondre m'a coûté une enquête entière. L'<strong>intervalle</strong> est le temps entre le début d'un tick et le début du suivant. Le <strong>travail</strong> est le temps pendant lequel le gestionnaire a réellement tourné. Sur un serveur sain, l'intervalle reste à 40 ms quel que soit le travail, puisque la boucle attend la grille. Quand l'intervalle dépasse 40 ms, la différence entre intervalle et travail dit qui est en faute :</p>
+<ul>
+<li><strong>travail proche de l'intervalle</strong> : le tick a vraiment calculé aussi longtemps. Regarder ses phases (chapitre <a href="tick-anatomy.html">3.2</a>) ;</li>
+<li><strong>peu de travail, grand intervalle</strong> : le thread s'est réveillé en retard. La machine, pas le serveur : d'autres processus, des bots de test sur le même PC, un cœur affamé.</li>
+</ul>
+</div>
+<div lang="en">
+<div class="note measured"><p class="note-label">Measured</p><p>On a 400-bot bench, the worst tick of the session showed a 50.4 ms interval made of <strong>1.2 ms of work</strong> and a <strong>49.3 ms late wake-up</strong>: the bots, the gateway and Unity were sharing the machine. On another bench I spent time looking for "8 missing milliseconds" between a 41.7 ms tick and 34 ms of phases, before realising that the 41.7 was an interval: its minimum was 40.04 ms and would have been 40 with an empty tick.</p></div>
+<div class="note rule"><p class="note-label">Rule</p><p>Print a duration next to its budget, and check that two numbers measure the same thing before looking for the gap between them.</p><p>"22.5 ms" means nothing on its own; "22.5 ms of work out of a 40 ms budget (56 %)" cannot be misread. The server's periodic report now prints exactly that.</p></div>
+</div>
+<div lang="fr">
+<div class="note measured"><p class="note-label">Mesuré</p><p>Sur un banc à 400 bots, le pire tick de la session affichait un intervalle de 50,4 ms composé de <strong>1,2 ms de travail</strong> et d'un <strong>réveil en retard de 49,3 ms</strong> : les bots, la gateway et Unity partageaient la machine. Sur un autre banc, j'ai passé du temps à chercher « 8 millisecondes manquantes » entre un tick de 41,7 ms et 34 ms de phases, avant de comprendre que 41,7 était un intervalle : son minimum valait 40,04 ms, et il aurait valu 40 avec un tick vide.</p></div>
+<div class="note rule"><p class="note-label">Règle</p><p>Afficher une durée à côté de son budget, et vérifier que deux nombres mesurent la même chose avant de chercher l'écart entre eux.</p><p>« 22,5 ms » ne veut rien dire seul ; « 22,5 ms de travail sur 40 de budget (56 %) » ne peut pas être mal lu. Le rapport périodique du serveur affiche exactement ça.</p></div>
+</div>
+</section>
+
+<section class="sec" id="takeaways">
+<div class="takeaways">
+<div lang="en"><h2>Key takeaways</h2><ul>
+<li>Simulate in fixed steps and give physics a constant step length; send snapshots no faster than the world advances.</li>
+<li>Write the loop by hand on a dedicated thread so that two ticks can never overlap.</li>
+<li>Anchor each deadline to the previous one, and reset the grid after a long stall instead of spiralling.</li>
+<li>Get precision from a high-resolution timer plus a short spin, not from the operating system's default resolution.</li>
+<li>Give the tick threads priority over everything else, and read the interval and the work as two different numbers.</li>
+</ul></div>
+<div lang="fr"><h2>À retenir</h2><ul>
+<li>Simuler par pas fixes et donner à la physique un pas de durée constante ; ne pas envoyer de snapshots plus vite que le monde n'avance.</li>
+<li>Écrire la boucle à la main sur un thread dédié, pour que deux ticks ne puissent jamais se chevaucher.</li>
+<li>Ancrer chaque échéance sur la précédente, et repartir d'une grille neuve après un long arrêt au lieu de s'emballer.</li>
+<li>Tirer la précision d'une minuterie haute résolution et d'un court spin, pas de la résolution par défaut du système.</li>
+<li>Donner aux threads du tick la priorité sur tout le reste, et lire l'intervalle et le travail comme deux nombres différents.</li>
+</ul></div>
+</div>
+</section>
+
+</div>
+<div data-chapter-foot></div>
+</article>
+</main>
+<aside class="rail" id="mq-rail"></aside>
+</div>
+<footer class="site-footer" id="mq-footer"></footer>
+<script src="assets/js/site-data.js" defer></script>
+<script src="assets/js/glossary-data.js" defer></script>
+<script src="assets/js/app.js" defer></script>
+<script src="assets/js/widgets.js" defer></script>
+</body>
+</html>

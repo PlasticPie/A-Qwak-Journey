@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="en" data-lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Hosting maps on demand · MoonQwak</title>
+<meta name="description" content="Assigning a map to exactly one server, waiting for reinforcements, and living under a hard ceiling of physics worlds.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Chakra+Petch:wght@500;600&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="assets/css/site.css">
+<script>(function(){var r=document.documentElement,l,t;try{l=localStorage.getItem("mq-lang");t=localStorage.getItem("mq-theme");}catch(e){}if(l!=="en"&&l!=="fr"){l=(navigator.language||"").toLowerCase().indexOf("fr")===0?"fr":"en";}r.setAttribute("data-lang",l);r.setAttribute("lang",l);if(t==="light"||t==="dark")r.setAttribute("data-theme",t);})();</script>
+</head>
+<body data-page="map-hosting">
+<a class="skip-link" href="#main"><span lang="en">Skip to content</span><span lang="fr">Aller au contenu</span></a>
+<header class="site-header" id="mq-header"></header>
+<div class="layout">
+<aside class="sidebar" id="mq-sidebar"></aside>
+<main class="content" id="main">
+<article>
+<header class="chapter-head">
+  <div class="eyebrow" data-auto></div>
+  <h1><span lang="en">Hosting maps on demand</span><span lang="fr">Héberger les cartes à la demande</span></h1>
+  <p class="dek"><span lang="en">Assigning a map to exactly one server, waiting for reinforcements, and living under a hard ceiling of physics worlds.</span><span lang="fr">Confier une carte à exactement un serveur, attendre les renforts, et vivre sous un plafond dur de mondes physiques.</span></p>
+  <div class="meta-row" data-auto></div>
+</header>
+
+<div class="prose">
+
+<section class="sec" id="one-owner">
+<div lang="en">
+<h2>A map lives on exactly one server</h2>
+<p>The world has hundreds of maps (about 400 in the generated world, close to 2,000 in the designed atlas), far more than one process should simulate, and most of them are empty at any given moment. So maps are loaded <strong>on demand</strong>: when a player needs a map that nobody hosts, the gateway picks a game server and tells it to load that map; when a map has been empty for a while, its server unloads it and tells the gateway.</p>
+<p>One invariant rules everything that follows: <strong>a map is hosted by exactly one server</strong>. Imagine two players jumping to map 43 in the same millisecond, while nobody hosts it. Without a meeting point, each request picks "the least loaded server", and the two picks can land on different servers. Map 43 then exists twice, with two physics worlds, two populations, and two players who believe they are in the same place and never see each other. Nothing detects it afterwards.</p>
+<div class="note project"><p class="note-label">In MoonQwak</p><p>The invariant also gives a property for free: two members of a group who enter the same map always end up together. It will stop being free the day a map can exist in several copies to share load, and the code already carries the rule to write that day: <em>group membership wins over balancing</em>. If a teammate is on a copy of the requested map, you join that copy, full or not.</p></div>
+</div>
+<div lang="fr">
+<h2>Une carte vit sur exactement un serveur</h2>
+<p>Le monde compte des centaines de cartes (environ 400 dans le monde généré, près de 2 000 dans l'atlas conçu), bien plus qu'un processus ne devrait en simuler, et la plupart sont vides à un instant donné. Les cartes sont donc chargées <strong>à la demande</strong> : quand un joueur a besoin d'une carte que personne n'héberge, la gateway choisit un serveur de jeu et lui dit de la charger ; quand une carte est restée vide un moment, son serveur la décharge et prévient la gateway.</p>
+<p>Un invariant gouverne tout ce qui suit : <strong>une carte est hébergée par exactement un serveur</strong>. Imaginez deux joueurs qui sautent vers la carte 43 à la même milliseconde, alors que personne ne l'héberge. Sans point de rendez-vous, chaque demande choisit « le serveur le moins chargé », et les deux choix peuvent tomber sur des serveurs différents. La carte 43 existe alors en double, avec deux mondes physiques, deux populations, et deux joueurs qui se croient au même endroit sans jamais se voir. Rien ne le détecte ensuite.</p>
+<div class="note project"><p class="note-label">Dans MoonQwak</p><p>L'invariant donne aussi une propriété gratuite : deux membres d'un groupe qui entrent sur la même carte se retrouvent toujours ensemble. Elle cessera d'être gratuite le jour où une carte pourra exister en plusieurs exemplaires pour répartir la charge, et le code porte déjà la règle à écrire ce jour-là : <em>l'appartenance au groupe prime sur l'équilibrage</em>. Si un coéquipier est sur un exemplaire de la carte demandée, on rejoint cet exemplaire, plein ou non.</p></div>
+</div>
+</section>
+
+<section class="sec" id="rendezvous">
+<div lang="en">
+<h2>One request in flight per map</h2>
+<p>The meeting point is a <em>pending assignment</em> object per map. The first requester creates it and sends the "load this map" message; every later requester finds it and registers as a waiter; when the server answers, every waiter is called back with the result. Simple, except that two holes lived in exactly the same window, the one where the result arrives while a requester is registering.</p>
+</div>
+<div lang="fr">
+<h2>Une seule demande en vol par carte</h2>
+<p>Le point de rendez-vous est un objet d'<em>assignation en attente</em> par carte. Le premier demandeur le crée et envoie le message « charge cette carte » ; chaque demandeur suivant le trouve et s'inscrit comme attente ; quand le serveur répond, chaque attente est rappelée avec le résultat. Simple, sauf que deux trous vivaient exactement dans la même fenêtre, celle où le résultat arrive pendant qu'un demandeur s'inscrit.</p>
+</div>
+<figure class="fig fig-scroll">
+<svg viewBox="0 0 760 230" role="img" aria-label="Two requesters for map 43 meet on one pending assignment in the gateway; one MapAssign is sent to server S2; when S2 answers, the gateway first registers map 43 on S2, then resolves the pending object, removes it and calls every waiter">
+  <defs><marker id="mh-arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="currentColor" opacity="0.7"/></marker></defs>
+  <rect x="20" y="30" width="120" height="40" rx="7" class="dg-box"/>
+  <text class="dg-small" x="80" y="55" text-anchor="middle"><tspan lang="en">player A → map 43</tspan><tspan lang="fr">joueur A → carte 43</tspan></text>
+  <rect x="20" y="130" width="120" height="40" rx="7" class="dg-box"/>
+  <text class="dg-small" x="80" y="155" text-anchor="middle"><tspan lang="en">player B → map 43</tspan><tspan lang="fr">joueur B → carte 43</tspan></text>
+  <rect x="220" y="40" width="250" height="150" rx="8" class="dg-hot"/>
+  <text class="dg-text" x="345" y="64" text-anchor="middle" font-weight="700"><tspan lang="en">Gateway: pending[43]</tspan><tspan lang="fr">Gateway : en attente[43]</tspan></text>
+  <text class="dg-small dg-mono" x="236" y="90">AssignedTo = S2 (sticky)</text>
+  <text class="dg-small dg-mono" x="236" y="110">Waiters = [A, B]</text>
+  <text class="dg-small dg-mono" x="236" y="130">Resolved = false</text>
+  <text class="dg-small" x="236" y="156"><tspan lang="en">resend after 10 s of silence,</tspan><tspan lang="fr">renvoi après 10 s de silence,</tspan></text>
+  <text class="dg-small" x="236" y="174"><tspan lang="en">always to the same server</tspan><tspan lang="fr">toujours au même serveur</tspan></text>
+  <line x1="140" y1="50" x2="218" y2="80" class="dg-line" marker-end="url(#mh-arr)"/>
+  <line x1="140" y1="150" x2="218" y2="120" class="dg-line" marker-end="url(#mh-arr)"/>
+  <rect x="600" y="80" width="140" height="70" rx="8" class="dg-box-2"/>
+  <text class="dg-text" x="670" y="110" text-anchor="middle" font-weight="700"><tspan lang="en">Server S2</tspan><tspan lang="fr">Serveur S2</tspan></text>
+  <text class="dg-small" x="670" y="130" text-anchor="middle"><tspan lang="en">loads map 43</tspan><tspan lang="fr">charge la carte 43</tspan></text>
+  <line x1="472" y1="90" x2="596" y2="90" class="dg-line" marker-end="url(#mh-arr)"/>
+  <text class="dg-small" x="534" y="82" text-anchor="middle">1 × MapAssign</text>
+  <line x1="596" y1="140" x2="472" y2="140" class="dg-line" marker-end="url(#mh-arr)"/>
+  <text class="dg-small" x="534" y="160" text-anchor="middle"><tspan lang="en">result</tspan><tspan lang="fr">résultat</tspan></text>
+  <text class="dg-small" x="345" y="214" text-anchor="middle"><tspan lang="en">on result: register 43 on S2 → resolve → remove pending → call A and B</tspan><tspan lang="fr">au résultat : inscrire 43 sur S2 → trancher → retirer → rappeler A et B</tspan></text>
+</svg>
+<figcaption><span lang="en"><strong>A rendezvous per map.</strong> However many players ask at once, one load message goes to one server, and all of them are told the same answer.</span><span lang="fr"><strong>Un rendez-vous par carte.</strong> Quel que soit le nombre de joueurs qui demandent en même temps, un seul message de chargement part vers un seul serveur, et tous reçoivent la même réponse.</span></figcaption>
+</figure>
+<div lang="en">
+<ul>
+<li><strong>Hole 1: the answer arrived while you were entering.</strong> The waiter list had already been emptied; registering meant never being called back, and waiting for the map forever. The pending object now keeps a <em>resolved</em> flag and the result, and a late requester reads them instead of registering.</li>
+<li><strong>Hole 2: a brand-new pending object.</strong> A requester can create a new pending object right after the previous one was resolved and removed, having checked "is the map hosted?" just <em>before</em> that resolution. Without a second look, it would pick "the least loaded server" again, which is no longer the least loaded since it just received the map, and send map 43 to a <em>second</em> server. The check is now repeated under the lock, and it is guaranteed to see the map because of one ordering: when the result arrives, the gateway <strong>registers the map on its server before removing the pending object</strong>. That order is the whole fix.</li>
+</ul>
+<p>Two more details keep the rendezvous alive. The chosen server is <strong>sticky</strong>: a resend after ten seconds of silence goes to the same server, never to another, because choosing again risks a second instance. And stickiness needs an end: when a server disconnects, every pending assignment addressed to it is resolved negatively at once, otherwise the resend would politely knock on a dead server's door every ten seconds, forever. A request that never expires is a locked door.</p>
+</div>
+<div lang="fr">
+<ul>
+<li><strong>Trou n° 1 : la réponse est arrivée pendant qu'on entrait.</strong> La liste d'attente avait déjà été vidée ; s'y inscrire, c'était ne jamais être rappelé, et attendre la carte pour toujours. L'objet en attente garde maintenant un drapeau <em>tranché</em> et le résultat, et un demandeur retardataire les lit au lieu de s'inscrire.</li>
+<li><strong>Trou n° 2 : un objet en attente tout neuf.</strong> Un demandeur peut créer un nouvel objet en attente juste après que le précédent a été tranché et retiré, en ayant vérifié « la carte est-elle hébergée ? » juste <em>avant</em> ce dénouement. Sans second regard, il choisirait de nouveau « le serveur le moins chargé », qui ne l'est plus puisqu'il vient de recevoir la carte, et enverrait la carte 43 à un <em>second</em> serveur. La vérification est maintenant refaite sous le verrou, et elle voit forcément la carte grâce à un ordre : quand le résultat arrive, la gateway <strong>inscrit la carte sur son serveur avant de retirer l'objet en attente</strong>. Cet ordre est toute la correction.</li>
+</ul>
+<p>Deux autres détails gardent le rendez-vous en vie. Le serveur choisi est <strong>collant</strong> : un renvoi après dix secondes de silence part vers le même serveur, jamais vers un autre, parce que rechoisir, c'est risquer une seconde instance. Et le collant a besoin d'une fin : quand un serveur se déconnecte, toutes les assignations en attente qui lui étaient adressées sont tranchées négativement d'un coup, sinon le renvoi irait sagement frapper à la porte d'un mort toutes les dix secondes, pour toujours. Une demande qui n'expire jamais est une porte fermée à clé.</p>
+</div>
+<div lang="en">
+<div class="note rule"><p class="note-label">Rule</p><p>When a record moves from "pending" to "done", publish the "done" before removing the "pending".</p><p>Anyone arriving in between must find one or the other. Removing first opens a window where neither exists, and in that window a second, conflicting decision gets made.</p></div>
+</div>
+<div lang="fr">
+<div class="note rule"><p class="note-label">Règle</p><p>Quand un enregistrement passe de « en attente » à « fait », publier le « fait » avant de retirer le « en attente ».</p><p>Quiconque arrive entre les deux doit trouver l'un ou l'autre. Retirer d'abord ouvre une fenêtre où aucun des deux n'existe, et c'est dans cette fenêtre qu'une seconde décision, contradictoire, est prise.</p></div>
+</div>
+</section>
+
+<section class="sec" id="waiting">
+<div lang="en">
+<h2>No server available: wait for a reinforcement</h2>
+<p>For a long time, "no server can take this map" was answered immediately with a refusal. The comment justifying it was right at the time: the requesters would be waiting for an outcome nobody would ever produce. Then the fleet learned to start servers (chapter <a href="node-agents.html">7.3</a>), and the same line started throwing players away for a few seconds of waiting.</p>
+<div class="note measured"><p class="note-label">Measured</p><p>A game server caps at about 120 maps (see below). Seven hundred players spread across the world reach that in a few minutes: 144 players were held, and every other one had their map refused, while the multi-server routing already existed. What was missing was someone to start the second server.</p></div>
+<p>Now the requesters are kept, a reinforcement is requested, and refusal only comes after 45 seconds, a delay sized on a game server's startup (database, catalogs, listening, authenticating to the gateway) with margin. The gateway itself launches nothing: it only counts the waiting map as demand for one more server (chapter <a href="capacity.html">7.2</a>). When any server announces itself, whoever started it, the gateway replays every map that was waiting for a host through the normal assignment path, so that the rules exist in one place only.</p>
+<div class="note rule"><p class="note-label">Rule</p><p>Patience needs an end, and the end needs an explanation.</p><p>A player waiting indefinitely is worse than a refused one: they see nothing and their session eventually expires with no reason given. After the deadline, every waiter is refused, and the log line says where to look (the node agents), not just that it failed.</p></div>
+</div>
+<div lang="fr">
+<h2>Aucun serveur disponible : attendre un renfort</h2>
+<p>Longtemps, « aucun serveur ne peut prendre cette carte » recevait un refus immédiat. Le commentaire qui le justifiait avait raison à l'époque : les demandeurs attendraient un dénouement que personne ne provoquerait. Puis le parc a appris à démarrer des serveurs (chapitre <a href="node-agents.html">7.3</a>), et la même ligne s'est mise à jeter des joueurs pour quelques secondes d'attente.</p>
+<div class="note measured"><p class="note-label">Mesuré</p><p>Un serveur de jeu plafonne vers 120 cartes (voir plus bas). Sept cents joueurs dispersés dans le monde l'atteignent en quelques minutes : 144 joueurs tenaient, et tous les autres se voyaient refuser leur carte, alors que le routage multi-serveur existait déjà. Ce qui manquait, c'était quelqu'un pour lancer le deuxième serveur.</p></div>
+<p>Désormais, les demandeurs sont gardés, un renfort est demandé, et le refus n'arrive qu'au bout de 45 secondes, un délai dimensionné sur le démarrage d'un serveur de jeu (base, catalogues, écoute, authentification auprès de la gateway) avec de la marge. La gateway elle-même ne lance rien : elle compte seulement la carte en attente comme une demande d'un serveur de plus (chapitre <a href="capacity.html">7.2</a>). Quand un serveur s'annonce, qui qu'il l'ait lancé, la gateway rejoue chaque carte qui attendait un hôte par le chemin d'assignation normal, pour que les règles n'existent qu'à un seul endroit.</p>
+<div class="note rule"><p class="note-label">Règle</p><p>La patience a besoin d'une fin, et la fin a besoin d'une explication.</p><p>Un joueur qui attend indéfiniment est pire qu'un joueur refusé : il ne voit rien et sa session finit par expirer sans raison. Passé le délai, chaque attente est refusée, et la ligne de journal dit où chercher (les agents de machine), pas seulement que ça a échoué.</p></div>
+</div>
+</section>
+
+<section class="sec" id="placement">
+<div lang="en">
+<h2>Where a map is born</h2>
+<p>Choosing the server for a new map is the one decision in the whole fleet that decides where load goes, because a loaded map never migrates and its players never move with it. The first rule was simple: the server hosting the fewest maps.</p>
+<div class="note measured"><p class="note-label">Measured</p><p>A seventeen-minute bench ended with maps split 30 / 30 / 31 / 31 / 30, an almost perfect balance, and players split 78 / 125 / 128 / 155 / 158, a factor of two. A map count says nothing about the population it carries: three capitals weigh more than fifty corridors. Worse, the capacity controller started contradicting itself: it grows on the <em>busiest</em> server and shrinks on the <em>average</em>, and with an uneven distribution both were true at once. Two reinforcements were launched at 06:50, and one of them was condemned fifty seconds after its birth, in a cycle that repeated every ten minutes or so.</p></div>
+<p>The score now has two terms, each normalized to its own threshold so that maps and players can be added: <code>maps / MapsPerServer + players / PlayersPerServer</code>. A value of 1.0 means "at its threshold" on either side. Setting the player threshold to zero cancels the second term and restores the old behaviour exactly, which makes the change reversible without rewriting anything. Around the score, three rules:</p>
+<ul>
+<li><strong>A barrier, not a term.</strong> Above 110 maps a server is no longer a candidate, whatever its score. That limit protects a hard wall (next section), and a weighted sum always ends up accepting to cross a limit if the other term is favourable enough. You do not negotiate with a wall.</li>
+<li><strong>Ties broken at random.</strong> When a world starts, every server is at zero maps and zero players, so all scores are exactly equal. Without a coin toss, the first server in the enumeration would take everything, and the enumeration of a concurrent dictionary is stable long enough for that to show.</li>
+<li><strong>Condemned servers receive nothing.</strong> This is the only mechanism by which a server empties: no new map arrives, and its maps switch themselves off two minutes after their last player leaves. Nothing is moved and nothing is cut: the tap is closed and we wait.</li>
+</ul>
+<p>When no ideal candidate exists, the fallbacks are ordered and each is logged: a server at the map ceiling (it will evict an empty map to make room) is better than a condemned one, and a condemned one is better than refusing the player. The calculator in the next chapter lets you play with the real formulas.</p>
+</div>
+<div lang="fr">
+<h2>Où naît une carte</h2>
+<p>Choisir le serveur d'une nouvelle carte est la seule décision de tout le parc qui décide où va la charge, parce qu'une carte chargée ne migre jamais et que ses joueurs ne se déplacent jamais avec elle. La première règle était simple : le serveur qui héberge le moins de cartes.</p>
+<div class="note measured"><p class="note-label">Mesuré</p><p>Un banc de dix-sept minutes s'est terminé avec des cartes réparties 30 / 30 / 31 / 31 / 30, un équilibre presque parfait, et des joueurs répartis 78 / 125 / 128 / 155 / 158, un facteur deux. Un compte de cartes ne dit rien de la population qu'elles portent : trois capitales pèsent plus que cinquante couloirs. Pire, le contrôleur de capacité s'est mis à se contredire : il grandit sur le serveur <em>le plus chargé</em> et décroît sur la <em>moyenne</em>, et avec une répartition inégale les deux étaient vrais en même temps. Deux renforts ont été lancés à 06:50, et l'un d'eux a été condamné cinquante secondes après sa naissance, dans un cycle qui se répétait toutes les dix minutes environ.</p></div>
+<p>Le score a maintenant deux termes, chacun ramené à son propre seuil pour qu'on puisse additionner cartes et joueurs : <code>cartes / MapsPerServer + joueurs / PlayersPerServer</code>. Une valeur de 1,0 veut dire « à son seuil » des deux côtés. Mettre le seuil de joueurs à zéro annule le second terme et rend exactement l'ancien comportement, ce qui rend le changement réversible sans rien réécrire. Autour du score, trois règles :</p>
+<ul>
+<li><strong>Une barrière, pas un terme.</strong> Au-delà de 110 cartes, un serveur n'est plus candidat, quel que soit son score. Cette limite protège un mur dur (section suivante), et une somme pondérée finit toujours par accepter de franchir une limite si l'autre terme est assez favorable. On ne négocie pas avec un mur.</li>
+<li><strong>Égalités tranchées au hasard.</strong> Au démarrage d'un monde, tous les serveurs sont à zéro carte et zéro joueur : tous les scores sont exactement égaux. Sans tirage au sort, le premier serveur de l'énumération prendrait tout, et l'énumération d'un dictionnaire concurrent est stable assez longtemps pour que ça se voie.</li>
+<li><strong>Les serveurs condamnés ne reçoivent plus rien.</strong> C'est le seul mécanisme par lequel un serveur se vide : aucune carte neuve n'arrive, et les siennes s'éteignent d'elles-mêmes deux minutes après le départ de leur dernier joueur. On ne déplace rien et on ne coupe rien : on ferme le robinet et on attend.</li>
+</ul>
+<p>Quand aucun candidat idéal n'existe, les replis sont ordonnés et chacun est journalisé : un serveur au plafond de cartes (il expulsera une carte vide pour faire de la place) vaut mieux qu'un condamné, et un condamné vaut mieux que refuser le joueur. Le calculateur du chapitre suivant permet de jouer avec les vraies formules.</p>
+</div>
+<div lang="en">
+<div class="note tradeoff"><p class="note-label">Trade-off</p><p>No placement rule, however good, can relieve a server that is <em>already</em> overloaded: it only prevents the next one from becoming so. If the busy maps were loaded while a single server was running (any mass arrival), the imbalance was born before the score had a say, and it only resolves at the pace of unloads. The remedy at that moment is not in placement at all: it is capacity placed <em>before</em> the population, the world's minimum server count (chapter <a href="capacity.html#levers">7.2</a>).</p></div>
+</div>
+<div lang="fr">
+<div class="note tradeoff"><p class="note-label">Compromis</p><p>Aucune règle de placement, aussi bonne soit-elle, ne peut soulager un serveur <em>déjà</em> surchargé : elle empêche seulement le suivant de le devenir. Si les cartes chaudes ont été chargées pendant qu'un seul serveur tournait (toute arrivée en masse), le déséquilibre est né avant que le score ait son mot à dire, et il ne se résorbe qu'au rythme des déchargements. Le remède à ce moment-là n'est pas du tout dans le placement : c'est de la capacité posée <em>avant</em> la population, le nombre minimal de serveurs du monde (chapitre <a href="capacity.html#levers">7.2</a>).</p></div>
+</div>
+</section>
+
+<section class="sec" id="ceiling">
+<div lang="en">
+<h2>Living under a hard ceiling</h2>
+<p>Box2D keeps its worlds in a static table of 128 entries: past that, creating a world returns a null handle and the map is not created (chapter <a href="physics.html">3.5</a>). With a margin for other uses, a game server's hard wall is about 120 maps. Three numbers are placed below it on purpose:</p>
+<div class="table-wrap"><table>
+<thead><tr><th>Maps on a server</th><th>What happens</th><th>Why there</th></tr></thead>
+<tbody>
+<tr><td>90</td><td>The gateway asks for a reinforcement (the world's <code>MapsPerServer</code>).</td><td>The normal path when load rises, and the one we want to keep using.</td></tr>
+<tr><td>110</td><td>The server evicts its longest-empty map (empty for at least 60 s) to make room; placement stops choosing it.</td><td>A safety net under the reinforcement, for when the reinforcement did not come.</td></tr>
+<tr><td>~120</td><td>Hard wall: new maps fail.</td><td>The physics engine's table.</td></tr>
+</tbody></table></div>
+<p>Two unloading mechanisms coexist without getting in each other's way. Idle unloading removes a map two minutes after its last player left: an expiry date, which throws away what is old. Eviction removes the longest-empty map only when a new one is needed at the ceiling: a garage sale, which throws away when space runs out. Without pressure, nothing moves and empty maps stay warm, which makes them free to return to. Under pressure, the number of live worlds stops rising. The 60-second minimum protects against thrashing: two players crossing each other at the ceiling must not evict each other's map every second.</p>
+<div class="note rule"><p class="note-label">Rule</p><p>A safety net that triggers often is a symptom, not a feature.</p><p>Frequent evictions in the logs mean the fleet is not keeping up; the log line for the fallback says so, and names the setting to lower.</p></div>
+</div>
+<div lang="fr">
+<h2>Vivre sous un plafond dur</h2>
+<p>Box2D garde ses mondes dans une table statique de 128 entrées : au-delà, créer un monde rend un identifiant nul et la carte n'est pas créée (chapitre <a href="physics.html">3.5</a>). Avec une marge pour d'autres usages, le mur dur d'un serveur de jeu est vers 120 cartes. Trois nombres sont placés sous lui exprès :</p>
+<div class="table-wrap"><table>
+<thead><tr><th>Cartes sur un serveur</th><th>Ce qui se passe</th><th>Pourquoi là</th></tr></thead>
+<tbody>
+<tr><td>90</td><td>La gateway demande un renfort (le <code>MapsPerServer</code> du monde).</td><td>Le chemin normal quand la charge monte, et celui qu'on veut continuer d'emprunter.</td></tr>
+<tr><td>110</td><td>Le serveur expulse sa carte vide depuis le plus longtemps (vide depuis au moins 60 s) pour faire de la place ; le placement cesse de le choisir.</td><td>Un filet sous le renfort, pour le cas où le renfort n'est pas venu.</td></tr>
+<tr><td>~120</td><td>Mur dur : les nouvelles cartes échouent.</td><td>La table du moteur physique.</td></tr>
+</tbody></table></div>
+<p>Deux mécanismes de déchargement coexistent sans se gêner. Le déchargement à vide retire une carte deux minutes après le départ de son dernier joueur : une date de péremption, qui jette ce qui est vieux. L'expulsion ne retire la carte vide depuis le plus longtemps que quand il en faut une nouvelle au plafond : un vide-grenier, qui jette quand la place manque. Sans pression, rien ne bouge et les cartes vides restent chaudes, donc gratuites au retour. Sous pression, le nombre de mondes vivants cesse de monter. Le minimum de 60 secondes protège contre la bascule : deux joueurs qui se croisent au plafond ne doivent pas s'expulser mutuellement leur carte à chaque seconde.</p>
+<div class="note rule"><p class="note-label">Règle</p><p>Un filet de sécurité qui se déclenche souvent est un symptôme, pas une fonctionnalité.</p><p>Des expulsions fréquentes dans les journaux veulent dire que le parc ne suit pas ; la ligne de journal du repli le dit, et nomme le réglage à baisser.</p></div>
+</div>
+</section>
+
+<section class="sec" id="takeaways">
+<div class="takeaways">
+<div lang="en"><h2>Key takeaways</h2><ul>
+<li>Make "one map, one server" an invariant enforced by a single rendezvous per map, not a likely outcome.</li>
+<li>Publish the result before removing the pending record, re-check under the lock, keep the assignee sticky, and give every request an expiry.</li>
+<li>When no host exists, wait a bounded time for a reinforcement instead of refusing at once.</li>
+<li>Place new maps by a normalized score of maps and players, with hard limits as barriers rather than terms.</li>
+<li>Stay well under hard engine ceilings, with a reinforcement threshold first and an eviction net second.</li>
+</ul></div>
+<div lang="fr"><h2>À retenir</h2><ul>
+<li>Faire de « une carte, un serveur » un invariant imposé par un rendez-vous unique par carte, pas un résultat probable.</li>
+<li>Publier le résultat avant de retirer l'attente, revérifier sous le verrou, garder l'assigné collant, et donner une expiration à chaque demande.</li>
+<li>Quand aucun hôte n'existe, attendre un temps borné un renfort au lieu de refuser tout de suite.</li>
+<li>Placer les nouvelles cartes selon un score normalisé de cartes et de joueurs, avec les limites dures comme barrières plutôt que comme termes.</li>
+<li>Rester bien sous les plafonds durs du moteur, avec un seuil de renfort d'abord et un filet d'expulsion ensuite.</li>
+</ul></div>
+</div>
+</section>
+
+</div>
+<div data-chapter-foot></div>
+</article>
+</main>
+<aside class="rail" id="mq-rail"></aside>
+</div>
+<footer class="site-footer" id="mq-footer"></footer>
+<script src="assets/js/site-data.js" defer></script>
+<script src="assets/js/glossary-data.js" defer></script>
+<script src="assets/js/app.js" defer></script>
+<script src="assets/js/widgets.js" defer></script>
+</body>
+</html>

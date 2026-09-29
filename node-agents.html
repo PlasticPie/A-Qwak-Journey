@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="en" data-lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Node agents · MoonQwak</title>
+<meta name="description" content="One reconciler per machine: claiming work through the database, sizing to the hardware, and retiring empty servers.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Chakra+Petch:wght@500;600&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="assets/css/site.css">
+<script>(function(){var r=document.documentElement,l,t;try{l=localStorage.getItem("mq-lang");t=localStorage.getItem("mq-theme");}catch(e){}if(l!=="en"&&l!=="fr"){l=(navigator.language||"").toLowerCase().indexOf("fr")===0?"fr":"en";}r.setAttribute("data-lang",l);r.setAttribute("lang",l);if(t==="light"||t==="dark")r.setAttribute("data-theme",t);})();</script>
+</head>
+<body data-page="node-agents">
+<a class="skip-link" href="#main"><span lang="en">Skip to content</span><span lang="fr">Aller au contenu</span></a>
+<header class="site-header" id="mq-header"></header>
+<div class="layout">
+<aside class="sidebar" id="mq-sidebar"></aside>
+<main class="content" id="main">
+<article>
+<header class="chapter-head">
+  <div class="eyebrow" data-auto></div>
+  <h1><span lang="en">Node agents</span><span lang="fr">Les agents de machine</span></h1>
+  <p class="dek"><span lang="en">One reconciler per machine: claiming work through the database, sizing to the hardware, and retiring empty servers.</span><span lang="fr">Un réconciliateur par machine : prendre du travail via la base, se dimensionner sur le matériel, et retirer les serveurs vides.</span></p>
+  <div class="meta-row" data-auto></div>
+</header>
+
+<div class="prose">
+
+<section class="sec" id="reconciler">
+<div lang="en">
+<h2>A reconciler, not a queue of orders</h2>
+<p>Each machine that can host game servers runs one small process, the <strong>node agent</strong>. It receives no instructions. Every two seconds it compares what runs on its machine with what the worlds demand (the Desired numbers of chapter <a href="capacity.html">7.2</a>), and closes the gap if it has room. An order can be lost, arrive twice, or arrive at a machine that just died; a desired state re-read in a loop always ends up being reached. An agent restarted in the middle of a launch resumes without knowing anything about what came before.</p>
+<p>The data model changed along the way, and the change is worth copying. The first version read <em>slots</em> typed in advance, one row per possible server with its identity and ports, and kept N of them alive according to a hand-tuned number: it described the result instead of the resource. Now there is one row per <strong>machine</strong> (its capacity), one number per <strong>world</strong> (its demand, computed by the gateway), and instances are born on the first machine with room. Nothing about an instance is typed anywhere: its index, its ports (<code>base port + index</code>) and its identity (<code>MACHINE#index</code>) are derived.</p>
+</div>
+<div lang="fr">
+<h2>Un réconciliateur, pas une file d'ordres</h2>
+<p>Chaque machine capable d'héberger des serveurs de jeu fait tourner un petit processus, l'<strong>agent de machine</strong>. Il ne reçoit aucune instruction. Toutes les deux secondes, il compare ce qui tourne sur sa machine à ce que demandent les mondes (les nombres Desired du chapitre <a href="capacity.html">7.2</a>), et comble l'écart s'il a de la place. Un ordre peut se perdre, arriver deux fois, ou arriver à une machine qui vient de tomber ; un état désiré relu en boucle finit toujours par être atteint. Un agent redémarré au milieu d'un lancement reprend sans rien savoir de ce qui précède.</p>
+<p>Le modèle de données a changé en route, et le changement mérite d'être copié. La première version lisait des <em>emplacements</em> saisis d'avance, une ligne par serveur possible avec son identité et ses ports, et en tenait N vivants selon un nombre réglé à la main : elle décrivait le résultat au lieu de décrire la ressource. Il y a maintenant une ligne par <strong>machine</strong> (sa capacité), un nombre par <strong>monde</strong> (sa demande, calculée par la gateway), et les instances naissent sur la première machine qui a de la place. Rien d'une instance n'est saisi nulle part : son index, ses ports (<code>port de base + index</code>) et son identité (<code>MACHINE#index</code>) sont dérivés.</p>
+</div>
+</section>
+
+<section class="sec" id="claim">
+<div lang="en">
+<h2>Claiming work through the database</h2>
+<p>Two machines see "one server missing" at the same moment and both launch: now there is one too many, and nothing will ever stop it, since an instance that hosts maps is never killed. That is not an acceptable imprecision, it is a leak. The decision is serialized by the only arbiter two processes that never talk to each other share: the database.</p>
+</div>
+<div lang="fr">
+<h2>Prendre du travail via la base</h2>
+<p>Deux machines voient « il manque un serveur » au même moment et lancent toutes les deux : il y en a maintenant un de trop, et rien ne l'arrêtera jamais, puisqu'une instance qui héberge des cartes n'est jamais tuée. Ce n'est pas une imprécision acceptable, c'est une fuite. La décision est sérialisée par le seul arbitre que partagent deux processus qui ne se parlent jamais : la base.</p>
+</div>
+<div class="code"><div class="code-head"><span class="file">Qwak.NodeAgent/NodeLoop.cs · TryClaim, simplified</span></div><pre><code data-lang="cs">using var db = _db();
+using var tx = db.Database.BeginTransaction();
+
+// Lock the world's row until commit: other agents wanting this world wait HERE,
+// and will count again once we are done.
+var world = db.WorldCapacities
+              .FromSqlRaw("SELECT * FROM WorldCapacities WHERE WorldId = {0} FOR UPDATE", worldId)
+              .AsEnumerable().FirstOrDefault();
+
+var target  = Math.Clamp(world.Desired, world.Min, world.Max);
+var running = db.GameServerInstances.Count(i =&gt; i.WorldId == worldId &amp;&amp; i.LastSeenUtc &gt; staleBefore);
+if (running &gt;= target) return false;  // someone else already filled it
+if (!IsBestCandidate(db, host, worldId)) return false;  // a better machine will take it
+
+if (!PortGuard.CanBind(gamePort, debugPort, PortGuard.BusyUdpPorts(), out _)) return false;
+
+var row = NewInstanceRow(host, worldId, index);         // index, ports, identity: derived
+db.GameServerInstances.Add(row);                        // the ROW first, under the lock...
+db.SaveChanges();
+var pid = _launcher.Start(slot);                        // ...then the process
+if (pid &lt;= 0)                                           // failed or cooling down:
+{                                                       // give the index back at once
+    db.GameServerInstances.Remove(row); db.SaveChanges(); tx.Commit();
+    return false;
+}
+row.Pid = pid;
+db.SaveChanges();
+tx.Commit();</code></pre></div>
+<div lang="en">
+<p>The order <em>lock, count, insert, commit</em> is the whole point: counting before locking would decide on a stale photograph, which is exactly the race to close. And the instance row is written <strong>before</strong> the process starts, so a server that is still booting is already counted by every other agent. Stale rows cannot hold a place forever either: rows whose agent stopped writing a heartbeat for 120 seconds are ignored when counting, and any agent may delete them. That is the only release mechanism that survives the death of the supervisor itself, which is why it lives in the database.</p>
+</div>
+<div lang="fr">
+<p>L'ordre <em>verrouiller, compter, insérer, valider</em> est tout l'enjeu : compter avant de verrouiller reviendrait à décider sur une photo périmée, c'est-à-dire exactement la course à fermer. Et la ligne de l'instance est écrite <strong>avant</strong> que le processus démarre : un serveur encore en démarrage est déjà compté par tous les autres agents. Les lignes périmées ne peuvent pas non plus garder une place pour toujours : les lignes dont l'agent a cessé d'écrire un battement depuis 120 secondes sont ignorées au comptage, et n'importe quel agent peut les effacer. C'est le seul mécanisme de libération qui survive à la mort du superviseur lui-même, et c'est pourquoi il vit en base.</p>
+</div>
+</section>
+
+<section class="sec" id="best">
+<div lang="en">
+<h2>"Am I the best host?"</h2>
+<p>Without that question, the first agent to get the lock wins: an arbitrary order, which places a server on a machine already on its knees as readily as on an idle one. So each agent, holding the lock, looks at the same table as everyone else and asks whether it is the best machine for one more server. Nobody decides for the others, which keeps the system without a leader.</p>
+<ul>
+<li><strong>The score.</strong> Maps hosted on the machine relative to its capacity (weight 1.0, since maps are the resource with a hard wall), plus RAM usage (0.6) and CPU usage (0.4), the last two only if the machine's metrics are fresh (under two minutes old); otherwise nothing is invented and the score rests on maps alone.</li>
+<li><strong>Exclusions.</strong> A machine that is full, or outside its RAM limits, or whose agent has not written a heartbeat recently, is not a candidate. That last rule is the whole failover: if the best machine dies, its row goes stale and the next one becomes the best, without a single line of failover code.</li>
+<li><strong>Ties broken by name.</strong> Two identical machines at startup have exactly the same score. Without a stable tie-break, each would believe itself the best at the same instant and both would launch. The machine name is arbitrary, but identical for every observer, which is the only property needed.</li>
+</ul>
+</div>
+<div lang="fr">
+<h2>« Suis-je le meilleur hôte ? »</h2>
+<p>Sans cette question, le premier agent à obtenir le verrou gagne : un ordre arbitraire, qui place un serveur sur une machine déjà à genoux aussi volontiers que sur une machine inactive. Chaque agent, verrou en main, regarde donc la même table que tous les autres et se demande s'il est la meilleure machine pour un serveur de plus. Personne ne décide pour les autres, ce qui garde le système sans chef.</p>
+<ul>
+<li><strong>Le score.</strong> Les cartes hébergées sur la machine rapportées à sa capacité (poids 1,0, car les cartes sont la ressource au mur dur), plus l'usage de la RAM (0,6) et du CPU (0,4), ces deux derniers seulement si les mesures de la machine sont fraîches (moins de deux minutes) ; sinon on n'invente rien et le score ne repose que sur les cartes.</li>
+<li><strong>Les exclusions.</strong> Une machine pleine, hors de ses limites de RAM, ou dont l'agent n'a pas écrit de battement récemment, n'est pas candidate. Cette dernière règle est toute la bascule : si la meilleure machine meurt, sa ligne se périme et la suivante devient la meilleure, sans une seule ligne de code de bascule.</li>
+<li><strong>Égalités tranchées par le nom.</strong> Deux machines identiques au démarrage ont exactement le même score. Sans départage stable, chacune se croirait la meilleure au même instant et les deux lanceraient. Le nom de la machine est arbitraire, mais identique pour tous les observateurs, ce qui est la seule propriété demandée.</li>
+</ul>
+</div>
+</section>
+
+<section class="sec" id="sizing">
+<div lang="en">
+<h2>Sizing to the hardware</h2>
+<p>Three numbers used to be kept consistent by hand: the machine's maximum instance count, the world's maximum, and the tick-worker count in each server's configuration. Three coupled numbers maintained by hand are three chances to be wrong and none to notice. A configuration with one worker "fixed" ten instances per machine and switched off parallelism everywhere else. Now there is one knob, the number of tick workers wanted per instance, and the rest is computed by the agent, which runs on the hardware it is sizing:</p>
+</div>
+<div lang="fr">
+<h2>Se dimensionner sur le matériel</h2>
+<p>Trois nombres étaient autrefois tenus cohérents à la main : le nombre maximal d'instances de la machine, le maximum du monde, et le nombre d'ouvriers de tick dans la configuration de chaque serveur. Trois nombres couplés tenus à la main, ce sont trois occasions de se tromper et aucune de s'en apercevoir. Une configuration à un ouvrier « réglait » dix instances par machine et éteignait le parallélisme partout ailleurs. Il n'y a maintenant qu'un bouton, le nombre d'ouvriers de tick voulus par instance, et le reste est calculé par l'agent, qui tourne sur le matériel qu'il dimensionne :</p>
+</div>
+<div class="code"><div class="code-head"><span class="file">sizing, agent side</span></div><pre><code data-lang="txt">capacity = min( MaxInstances , processors / (workers wanted + 2) )
+           ↓ passed to each child as the number of instances on this machine
+server   : workers = processors / instances − 2</code></pre></div>
+<div lang="en">
+<p>The "+ 2" reserves each instance's world and snapshot threads (chapter <a href="threading.html#cores">3.3</a>). The typed maximum keeps its meaning as a <em>ceiling</em>: the agent may decide fewer, never more. RAM is deliberately left out of the formula: CPU can be counted exactly, while an instance's memory depends on how many maps it will end up carrying, which nobody knows at launch. Inventing "megabytes per instance" would give a false number that looks measured. Memory has its own guard, and a better one because it looks at the real state: the agent refuses to launch when free RAM falls below a configured minimum, at the moment it matters.</p>
+</div>
+<div lang="fr">
+<p>Le « + 2 » réserve les threads du monde et des snapshots de chaque instance (chapitre <a href="threading.html#cores">3.3</a>). Le maximum saisi garde son sens de <em>plafond</em> : l'agent peut décider moins, jamais plus. La RAM est délibérément absente de la formule : le CPU se compte exactement, alors que la mémoire d'une instance dépend du nombre de cartes qu'elle finira par porter, ce que personne ne sait au lancement. Inventer des « mégaoctets par instance » donnerait un chiffre faux qui a l'air mesuré. La mémoire a son propre garde-fou, et il est meilleur parce qu'il regarde l'état réel : l'agent refuse de lancer quand la RAM libre passe sous un minimum configuré, au moment où ça compte.</p>
+</div>
+</section>
+
+<section class="sec" id="cooldowns">
+<div lang="en">
+<h2>Two cooldowns for two situations</h2>
+<p>A game server takes several seconds to announce itself. Without a pause between launches, the reconciler would see "still zero servers" during that time and launch one per round: the classic reconciler bug of confusing <em>not ready yet</em> with <em>not there</em>. Hence a 20-second cooldown between launches, the same duration after which a booting instance stops counting as "starting". Two constants that must agree are one constant.</p>
+<p>That pause guards against uncertainty: when a threshold calls for a reinforcement, nobody knows yet whether one will be enough. <strong>Below the world's minimum</strong> there is no uncertainty: "eight are needed, two are running", and none of the six missing ones will make the others useless. Waiting 20 seconds between each protected nothing and cost two and a half minutes of cold start on a bench. The runaway it seemed to prevent is already closed by the write order (the row is counted before the process exists), so the cooldown below the floor is 3 seconds: just enough to spread the load of eight processes opening their catalogs and database connections at once. Filling a floor of eight went from about 160 seconds to about thirty.</p>
+<div class="note pitfall"><p class="note-label">Pitfall I hit</p><p>Each machine can also keep a <em>preloaded</em> reserve: servers started in advance, warm, for the next peak. The preload was bounded by the world's maximum, not by its desired count. So the gateway condemned a server, its agent killed it after a minute, and the next round launched a fresh one "to keep warm" in its place. Two correct mechanisms fought in a loop, each undoing the other's work, and the only trace was a fleet running at its maximum for no visible reason. A world that is shedding load no longer preloads: when the two disagree, retirement wins, because it speaks about a measured load and preloading about a supposed one.</p></div>
+</div>
+<div lang="fr">
+<h2>Deux temporisations pour deux situations</h2>
+<p>Un serveur de jeu met plusieurs secondes à s'annoncer. Sans pause entre deux lancements, le réconciliateur verrait « toujours zéro serveur » pendant ce temps et en lancerait un par tour : le bug classique du réconciliateur, confondre <em>pas encore prêt</em> et <em>pas là</em>. D'où une temporisation de 20 secondes entre deux lancements, la même durée au bout de laquelle une instance qui démarre cesse de compter comme « en démarrage ». Deux constantes qui doivent s'accorder sont une seule constante.</p>
+<p>Cette pause protège d'une incertitude : quand un seuil réclame un renfort, personne ne sait encore si un seul suffira. <strong>Sous le minimum du monde</strong>, il n'y a aucune incertitude : « il en faut huit, deux tournent », et aucun des six manquants ne rendra les autres inutiles. Attendre 20 secondes entre chacun ne protégeait de rien et coûtait deux minutes et demie de démarrage à froid au banc. L'emballement qu'elle semblait empêcher est déjà fermé par l'ordre d'écriture (la ligne est comptée avant que le processus n'existe) : sous le plancher, la temporisation est donc de 3 secondes, juste assez pour étaler la charge de huit processus qui ouvrent leurs catalogues et leurs connexions à la base en même temps. Remplir un plancher de huit est passé d'environ 160 secondes à une trentaine.</p>
+<div class="note pitfall"><p class="note-label">Piège rencontré</p><p>Chaque machine peut aussi garder une réserve <em>préchargée</em> : des serveurs démarrés d'avance, au chaud, pour la prochaine pointe. Le préchargement était borné par le maximum du monde, pas par son nombre désiré. La gateway condamnait donc un serveur, son agent le tuait au bout d'une minute, et le tour suivant en lançait un neuf « au chaud » à sa place. Deux mécanismes justes se battaient en boucle, chacun défaisant le travail de l'autre, et la seule trace était un parc qui tournait à son maximum sans raison visible. Un monde qui se déleste ne précharge plus : quand les deux se contredisent, le retrait l'emporte, parce qu'il parle d'une charge mesurée et le préchargement d'une charge supposée.</p></div>
+</div>
+</section>
+
+<section class="sec" id="retire">
+<div lang="en">
+<h2>Retiring empty servers: observe, never decide</h2>
+<p>The gateway condemns (chapter <a href="capacity.html#retire">7.2</a>); the agent only <em>observes</em> and executes. For a condemned server of its own machine, it checks three things: the gateway's report is fresh, the server carries zero maps, and it has done so for long enough. Three readings, no judgement. Because no agent chooses anything, no two agents can choose the same thing, and there is no lock to take.</p>
+<ul>
+<li><strong>Sixty seconds of emptiness</strong>, which is twelve consecutive reports from the gateway. The risk bought with that delay is precise: a map can be assigned to the server without being counted yet (the "load this map" message left, the answer has not come back), and killing it in that window would refuse the waiting player.</li>
+<li><strong>A fresh observation.</strong> The map and player counts are written by the gateway. If the gateway goes down, they freeze, and if they freeze at zero, an agent that only read their values would kill, a minute later, a server nobody can tell is empty. Silence from the observer must never be read as "nothing changed": beyond twenty seconds without a report, nothing is killed.</li>
+<li><strong>Phantom players.</strong> The first version required zero maps <em>and</em> zero players, and an hour-long bench showed a server "0 maps, 1 player, draining for 39 minutes", held hostage by one ghost. That state is impossible: a player is always on a map, and an occupied map never unloads. It is a session the gateway kept after its player left. The agent now waits five minutes in that case (enough for a momentarily wrong count to fix itself), then stops the server anyway, and says loudly that the real bug is upstream.</li>
+<li><strong>Kill, then delete the row, never the reverse.</strong> Deleting first and failing the kill would leave a live process with no row: its index becomes available, and the next server would be born on its ports. In the other order, a successful kill followed by an unreachable database leaves a row without a process, which the next round already knows how to clean.</li>
+</ul>
+<p>The "empty since" timer lives in memory, on purpose. An agent that restarts forgets it and waits one more minute before killing: it delays a retirement, which costs one process for sixty seconds. The symmetric failure, a persisted timer believed to be current after a restart, would kill on an observation nobody made. Forgetting is the right failure.</p>
+</div>
+<div lang="fr">
+<h2>Retirer les serveurs vides : constater, jamais décider</h2>
+<p>La gateway condamne (chapitre <a href="capacity.html#retire">7.2</a>) ; l'agent ne fait que <em>constater</em> et exécuter. Pour un serveur condamné de sa propre machine, il vérifie trois choses : le relevé de la gateway est frais, le serveur porte zéro carte, et il le fait depuis assez longtemps. Trois lectures, aucun jugement. Comme aucun agent ne choisit rien, deux agents ne peuvent pas choisir la même chose, et il n'y a aucun verrou à prendre.</p>
+<ul>
+<li><strong>Soixante secondes de vide</strong>, c'est-à-dire douze relevés consécutifs de la gateway. Le risque qu'achète ce délai est précis : une carte peut être assignée au serveur sans être encore comptée (le message « charge cette carte » est parti, la réponse n'est pas revenue), et le tuer dans cette fenêtre refuserait le joueur qui attendait.</li>
+<li><strong>Un relevé frais.</strong> Les comptes de cartes et de joueurs sont écrits par la gateway. Si elle tombe, ils se figent, et s'ils se figent à zéro, un agent qui ne regarderait que leur valeur tuerait, une minute plus tard, un serveur dont personne ne peut dire s'il est vide. Le silence de l'observateur ne doit jamais se lire comme « rien n'a changé » : au-delà de vingt secondes sans relevé, rien n'est tué.</li>
+<li><strong>Les joueurs fantômes.</strong> La première version exigeait zéro carte <em>et</em> zéro joueur, et un banc d'une heure a montré un serveur « 0 carte, 1 joueur, en retrait depuis 39 minutes », tenu en otage par un fantôme. Cet état est impossible : un joueur est toujours sur une carte, et une carte occupée ne se décharge jamais. C'est une session que la gateway a gardée après le départ de son joueur. L'agent attend maintenant cinq minutes dans ce cas (assez pour qu'un compte momentanément faux se corrige tout seul), puis arrête quand même le serveur, et dit fort que le vrai bug est en amont.</li>
+<li><strong>Tuer, puis effacer la ligne, jamais l'inverse.</strong> Effacer d'abord et rater l'arrêt laisserait un processus vivant sans ligne : son index redeviendrait disponible, et le serveur suivant naîtrait sur ses ports. Dans l'autre ordre, un arrêt réussi suivi d'une base injoignable laisse une ligne sans processus, que le tour suivant sait déjà nettoyer.</li>
+</ul>
+<p>Le chronomètre « vide depuis » vit en mémoire, exprès. Un agent qui redémarre l'oublie et attend une minute de plus avant de tuer : il retarde un retrait, ce qui coûte un processus pendant soixante secondes. La panne symétrique, un chronomètre persistant qu'on croit à jour après un redémarrage, tuerait sur une observation que personne n'a faite. Oublier est la bonne panne.</p>
+</div>
+<div lang="en">
+<div class="note rule"><p class="note-label">Rule</p><p>The one who observes is the one who writes; the one who acts only reads.</p><p>The gateway observes the surplus and writes the condemnation; the agent observes two zeros and kills. Each fact has one writer, so N agents coexist without coordinating.</p></div>
+</div>
+<div lang="fr">
+<div class="note rule"><p class="note-label">Règle</p><p>Celui qui constate est celui qui écrit ; celui qui agit ne fait que lire.</p><p>La gateway constate le surplus et écrit la condamnation ; l'agent constate deux zéros et tue. Chaque fait n'a qu'un écrivain : N agents coexistent sans se coordonner.</p></div>
+</div>
+</section>
+
+<section class="sec" id="supervisor">
+<div lang="en">
+<h2>Being a good supervisor</h2>
+<p>Without an operating-system service manager, the agent <em>is</em> the supervisor of its game servers, and a supervisor that dies leaving its children behind is worse than none: when it restarts, the old servers still hold the ports and identities it is about to hand out again. Windows has the right tool, better than an exit hook: a <strong>job object</strong> with "kill on job close". Processes placed in it die with the job's handle, hence with the agent, however it stops: Ctrl+C, an unhandled exception, "End task", a native crash. The kernel cleans up; a hook would assume a process still able to run it.</p>
+<p>The job used to belong to the gateway, which launched servers before the agents existed. Restarting the gateway then killed every game server of the fleet: excellent against orphans, catastrophic for a routine operation. Stopping the agent, on the other hand, <em>is</em> the gesture that should stop its servers. The agent also listens on no port at all: there is literally no network from which a piece of data could come, and the code says so for the day someone wants to "just add a small API".</p>
+<div class="note measured"><p class="note-label">Measured</p><p>Ports are derived: game port = start + index. With a start at 9051, instance 1 asked for 9052, the port on which the gateway listens for its game servers. The server started, authenticated, received and loaded maps (all of that goes through its <em>outgoing</em> connection to the gateway, which worked perfectly) but its <em>incoming</em> listener for players never existed. A server that looked healthy, with eighty maps, on which no player ever arrived: three bench sessions to understand, because nothing distinguished "it listens" from "it cannot listen". The agent now checks the machine's UDP listeners before launching and refuses a busy port, loudly. It is a snapshot (someone can take the port in between, or a firewall rule can refuse it), so it catches the ordinary case, not every case.</p></div>
+<div class="note rule"><p class="note-label">Rule</p><p>A silent bind failure is the worst kind of outage.</p><p>The process lives, half its functions work, and the symptom appears three components away. Check what you can before starting, and make the process itself fail loudly when it cannot listen.</p></div>
+</div>
+<div lang="fr">
+<h2>Être un bon superviseur</h2>
+<p>Sans gestionnaire de services du système, l'agent <em>est</em> le superviseur de ses serveurs de jeu, et un superviseur qui meurt en laissant ses enfants derrière lui est pire que pas de superviseur : à son redémarrage, les anciens serveurs tiennent encore les ports et les identités qu'il s'apprête à redistribuer. Windows a le bon outil, meilleur qu'un crochet de sortie : un <strong>objet job</strong> avec « tuer à la fermeture du job ». Les processus qu'on y place meurent avec le handle du job, donc avec l'agent, quelle que soit la façon dont il s'arrête : Ctrl+C, exception non rattrapée, « Fin de tâche », plantage natif. Le noyau nettoie ; un crochet supposerait un processus encore capable de l'exécuter.</p>
+<p>Le job appartenait autrefois à la gateway, qui lançait les serveurs avant que les agents n'existent. Redémarrer la gateway tuait alors tous les serveurs de jeu du parc : excellent contre les orphelins, catastrophique pour une opération de routine. Arrêter l'agent, lui, <em>est</em> le geste qui doit arrêter ses serveurs. L'agent n'écoute d'ailleurs sur aucun port : il n'y a littéralement aucun réseau d'où une donnée pourrait venir, et le code le dit pour le jour où quelqu'un voudra « juste ajouter une petite API ».</p>
+<div class="note measured"><p class="note-label">Mesuré</p><p>Les ports sont dérivés : port de jeu = départ + index. Avec un départ à 9051, l'instance 1 demandait 9052, le port sur lequel la gateway écoute ses serveurs de jeu. Le serveur démarrait, s'authentifiait, recevait et chargeait des cartes (tout cela passe par sa connexion <em>sortante</em> vers la gateway, qui marchait parfaitement), mais son écoute <em>entrante</em> pour les joueurs n'a jamais existé. Un serveur en apparence sain, avec quatre-vingts cartes, sur lequel aucun joueur n'arrivait jamais : trois sessions de banc pour comprendre, parce que rien ne distinguait « il écoute » de « il ne peut pas écouter ». L'agent vérifie maintenant les écoutes UDP de la machine avant de lancer et refuse un port occupé, bruyamment. C'est une photo (quelqu'un peut prendre le port entre-temps, ou une règle de pare-feu le refuser) : elle attrape le cas ordinaire, pas tous les cas.</p></div>
+<div class="note rule"><p class="note-label">Règle</p><p>Un échec de liaison silencieux est la pire des pannes.</p><p>Le processus vit, la moitié de ses fonctions marche, et le symptôme apparaît trois composants plus loin. Vérifier ce qu'on peut avant de démarrer, et faire échouer bruyamment le processus lui-même quand il ne peut pas écouter.</p></div>
+</div>
+</section>
+
+<section class="sec" id="takeaways">
+<div class="takeaways">
+<div lang="en"><h2>Key takeaways</h2><ul>
+<li>Run a reconciler per machine that compares desired and actual state in a loop; describe resources, derive instances.</li>
+<li>Serialize claims with a database row lock, count after locking, and write the row before starting the process.</li>
+<li>Let each agent ask whether it is the best host from shared data, with a stable tie-break; failover then needs no code.</li>
+<li>Size instances from the hardware with one knob; use different cooldowns for certain and uncertain needs.</li>
+<li>Retire only on fresh, repeated observations, kill before deleting, and supervise children with a kernel job object.</li>
+</ul></div>
+<div lang="fr"><h2>À retenir</h2><ul>
+<li>Faire tourner un réconciliateur par machine qui compare en boucle l'état désiré et l'état réel ; décrire les ressources, dériver les instances.</li>
+<li>Sérialiser les prises de travail par un verrou de ligne en base, compter après avoir verrouillé, et écrire la ligne avant de démarrer le processus.</li>
+<li>Laisser chaque agent se demander s'il est le meilleur hôte à partir de données partagées, avec un départage stable ; la bascule n'a alors besoin d'aucun code.</li>
+<li>Dimensionner les instances sur le matériel avec un seul bouton ; utiliser des temporisations différentes pour les besoins certains et incertains.</li>
+<li>Ne retirer que sur des observations fraîches et répétées, tuer avant d'effacer, et superviser les enfants avec un objet job du noyau.</li>
+</ul></div>
+</div>
+</section>
+
+</div>
+<div data-chapter-foot></div>
+</article>
+</main>
+<aside class="rail" id="mq-rail"></aside>
+</div>
+<footer class="site-footer" id="mq-footer"></footer>
+<script src="assets/js/site-data.js" defer></script>
+<script src="assets/js/glossary-data.js" defer></script>
+<script src="assets/js/app.js" defer></script>
+<script src="assets/js/widgets.js" defer></script>
+</body>
+</html>

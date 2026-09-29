@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="en" data-lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Deltas that survive loss · MoonQwak</title>
+<meta name="description" content="Dirty bits, baselines, and why a global delta broke the moment each viewer started receiving a different stream.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Chakra+Petch:wght@500;600&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="assets/css/site.css">
+<script>(function(){var r=document.documentElement,l,t;try{l=localStorage.getItem("mq-lang");t=localStorage.getItem("mq-theme");}catch(e){}if(l!=="en"&&l!=="fr"){l=(navigator.language||"").toLowerCase().indexOf("fr")===0?"fr":"en";}r.setAttribute("data-lang",l);r.setAttribute("lang",l);if(t==="light"||t==="dark")r.setAttribute("data-theme",t);})();</script>
+</head>
+<body data-page="deltas">
+<a class="skip-link" href="#main"><span lang="en">Skip to content</span><span lang="fr">Aller au contenu</span></a>
+<header class="site-header" id="mq-header"></header>
+<div class="layout">
+<aside class="sidebar" id="mq-sidebar"></aside>
+<main class="content" id="main">
+<article>
+<header class="chapter-head">
+  <div class="eyebrow" data-auto></div>
+  <h1><span lang="en">Deltas that survive loss</span><span lang="fr">Des deltas qui survivent aux pertes</span></h1>
+  <p class="dek"><span lang="en">Dirty bits, baselines, and why a global delta broke the moment each viewer started receiving a different stream.</span><span lang="fr">Bits sales, références, et pourquoi un delta global a cassé dès que chaque spectateur a reçu un flux différent.</span></p>
+  <div class="meta-row" data-auto></div>
+</header>
+
+<div class="prose">
+
+<section class="sec" id="two-tools">
+<div lang="en">
+<h2>Two ways not to repeat yourself</h2>
+<p>Most of a world does not change most of the time. A parked ship, an intact hull, a turret nobody is using: sending them unchanged 25 times a second is pure waste. There are two classic tools against it, and they fail in different ways:</p>
+<ul>
+<li><strong>Dirty bits</strong>: skip a block entirely when it has nothing to say, and set a bit to say which blocks are present. Cheap and safe, as long as "absent" has a precise meaning.</li>
+<li><strong>Deltas</strong>: send only what changed since a <em>baseline</em>, the last state the receiver is known to have. Much smaller for large states that change a little, and dangerous, because a delta is only correct relative to what <em>this</em> receiver actually has.</li>
+</ul>
+<div class="note beginner"><p class="note-label">Beginner note</p><p>The baseline is the whole difficulty. If the server computes "what changed since I last sent this ship" but some receivers did not get that last send, those receivers apply a difference to a state they do not have, and drift away from the truth without any error being raised. Everything in this chapter is about keeping the baseline honest.</p></div>
+</div>
+<div lang="fr">
+<h2>Deux façons de ne pas se répéter</h2>
+<p>La majeure partie d'un monde ne change pas la plupart du temps. Un vaisseau à l'arrêt, une coque intacte, une tourelle que personne n'utilise : les envoyer inchangés 25 fois par seconde est du pur gaspillage. Il existe deux outils classiques contre ça, et ils échouent de façons différentes :</p>
+<ul>
+<li><strong>Les bits sales</strong> : sauter entièrement un bloc quand il n'a rien à dire, et poser un bit pour dire quels blocs sont présents. Bon marché et sûr, tant que « absent » a un sens précis.</li>
+<li><strong>Les deltas</strong> : n'envoyer que ce qui a changé depuis une <em>référence</em>, le dernier état que le destinataire est censé avoir. Bien plus petit pour de gros états qui changent un peu, et dangereux, parce qu'un delta n'est juste que par rapport à ce que <em>ce</em> destinataire a réellement.</li>
+</ul>
+<div class="note beginner"><p class="note-label">Pour débuter</p><p>La référence est toute la difficulté. Si le serveur calcule « ce qui a changé depuis mon dernier envoi de ce vaisseau » mais que certains destinataires n'ont pas reçu ce dernier envoi, ceux-là appliquent une différence à un état qu'ils n'ont pas, et s'éloignent de la vérité sans qu'aucune erreur ne soit levée. Tout ce chapitre consiste à garder la référence honnête.</p></div>
+</div>
+</section>
+
+<section class="sec" id="flags">
+<div lang="en">
+<h2>One flag byte, one bit per block</h2>
+<p>Every other player's ship starts with a single flag byte, and each bit announces whether a block follows. Hover the bits:</p>
+</div>
+<div lang="fr">
+<h2>Un octet de drapeaux, un bit par bloc</h2>
+<p>Chaque vaisseau d'un autre joueur commence par un unique octet de drapeaux, et chaque bit annonce si un bloc suit. Survolez les bits :</p>
+</div>
+<div data-bytes>
+<div class="bytes">
+  <div class="byte-field" data-en="0x01 Movement: position, rotation and velocities follow. Off when the ship is at rest (see below)." data-fr="0x01 Mouvement : position, rotation et vitesses suivent. Éteint quand le vaisseau est au repos (voir plus bas)."><b>Move</b><span>0x01</span></div>
+  <div class="byte-field" data-en="0x02 Rebuild: the hull layout changed in build mode. No block: the client asks for the full description again." data-fr="0x02 Reconstruction : la disposition de la coque a changé en mode construction. Pas de bloc : le client redemande la description complète."><b>Rebuild</b><span>0x02</span></div>
+  <div class="byte-field" data-en="0x04 Part states: the complete list of damaged hexes follows, to apply as is (possibly empty: a repaired hull). Off: unchanged since what you have." data-fr="0x04 États des pièces : la liste complète des hex abîmés suit, à appliquer telle quelle (éventuellement vide : une coque réparée). Éteint : inchangé depuis ce que vous avez."><b>Parts</b><span>0x04</span></div>
+  <div class="byte-field" data-en="0x08 Rotating turrets: the orientation of the hull's rotating turrets." data-fr="0x08 Tourelles orientables : l'orientation des tourelles orientables de la coque."><b>Turrets</b><span>0x08</span></div>
+  <div class="byte-field" data-en="0x10 Beams: active continuous lasers (part index, length, hit flag). Absent means no beam: the client switches them off." data-fr="0x10 Faisceaux : lasers continus actifs (index de pièce, longueur, drapeau d'impact). Absent veut dire aucun faisceau : le client les éteint."><b>Beams</b><span>0x10</span></div>
+  <div class="byte-field" data-en="0x20 Effects: active buffs on the hull." data-fr="0x20 Effets : les effets actifs sur la coque."><b>Effects</b><span>0x20</span></div>
+  <div class="byte-field" data-en="0x40 Manned stations: which turrets have a gunner. Absent means nobody: the client frees them." data-fr="0x40 Postes occupés : quelles tourelles ont un artilleur. Absent veut dire personne : le client les libère."><b>Manned</b><span>0x40</span></div>
+  <div class="byte-field" data-en="0x80 Burning: hexes on fire. Absent means nothing burns: the client puts the fires out." data-fr="0x80 En feu : les hex qui brûlent. Absent veut dire que rien ne brûle : le client éteint les feux."><b>Burning</b><span>0x80</span></div>
+</div>
+<p class="byte-legend"><span lang="en">A quiet, intact, parked ship costs its id, its type and this one byte.</span><span lang="fr">Un vaisseau tranquille, intact et à l'arrêt coûte son identifiant, son type et cet unique octet.</span></p>
+</div>
+<div lang="en">
+<p>The five last bits replaced five <em>count</em> bytes that were written unconditionally. The format used to bill every ship, every tick, one byte per game feature, whether the ship used that feature or not: five then, six with the next system. That cost grew with the list of features rather than with what happens in the game, which is the wrong denominator. The flag byte had five spare bits and there were five blocks.</p>
+<div class="note pitfall"><p class="note-label">Pitfall I hit</p><p>For those blocks, <strong>absent means empty, not unchanged</strong>. Three of them are clearing on the client: a beam no longer listed switches off, a gunner no longer listed frees the turret, a hex no longer listed stops burning. So the client must always run its reset pass and only make the <em>reading</em> conditional. Skipping the reset when the bit is off would leave a ship burning forever, the kind of bug you only see in play, long after.</p></div>
+</div>
+<div lang="fr">
+<p>Les cinq derniers bits ont remplacé cinq octets de <em>compte</em> écrits sans condition. Le format facturait à chaque vaisseau, à chaque tick, un octet par fonctionnalité du jeu, qu'il s'en serve ou non : cinq alors, six au prochain système. Ce coût grandissait avec la liste des fonctionnalités et non avec ce qui se passe dans la partie, ce qui est le mauvais dénominateur. L'octet de drapeaux avait cinq bits libres et il y avait cinq blocs.</p>
+<div class="note pitfall"><p class="note-label">Piège rencontré</p><p>Pour ces blocs, <strong>absent veut dire vide, pas inchangé</strong>. Trois d'entre eux effacent côté client : un faisceau qui n'est plus listé s'éteint, un artilleur qui n'est plus listé libère la tourelle, un hex qui n'est plus listé cesse de brûler. Le client doit donc toujours faire sa passe de remise à zéro, et ne rendre conditionnelle que la <em>lecture</em>. Sauter la remise à zéro quand le bit est éteint laisserait un vaisseau brûler pour toujours, le genre de bug qu'on ne voit qu'en jeu, longtemps après.</p></div>
+</div>
+</section>
+
+<section class="sec" id="movement">
+<div lang="en">
+<h2>Movement: quiet at rest, one last word when stopping</h2>
+<p>A ship at rest does not send its movement block. "At rest" is not an arbitrary epsilon: it means that its velocities would round to zero at the wire's own quantization scale, so "moving" is defined as "would change what the client receives". On the exact tick a ship settles, one more full movement block goes out, so every viewer snaps to the precise final position with zero velocity instead of coasting on a stale extrapolation. Then it goes quiet until the ship moves again.</p>
+<p>That decision is memoized per tick, and the reason is a lesson about deltas in general. When the serializer was called once per viewer, the first viewer processed in a tick would see the moving-to-resting transition, update the "already told" state, and every other viewer would then read "nothing to say", although they had never received the final update themselves. The memo answers the question once per tick and gives every viewer the same answer.</p>
+<div class="note pitfall"><p class="note-label">Pitfall I hit</p><p>The memo reads the tick number from the packet being written. During preparation the scratch packet must therefore be a snapshot set to the current tick. Given any other packet, the memo sees the same sentinel tick on every call and returns forever the answer it cached the first time: a frozen delta, meaning hulls that silently stop reporting their damage.</p></div>
+</div>
+<div lang="fr">
+<h2>Le mouvement : muet au repos, un dernier mot à l'arrêt</h2>
+<p>Un vaisseau au repos n'envoie pas son bloc de mouvement. « Au repos » n'est pas un epsilon arbitraire : cela veut dire que ses vitesses s'arrondiraient à zéro à l'échelle de quantification du fil lui-même, donc « bouger » est défini comme « changerait ce que reçoit le client ». Au tick précis où un vaisseau s'immobilise, un dernier bloc de mouvement complet part, pour que chaque spectateur se cale sur la position finale exacte avec une vitesse nulle, au lieu de glisser sur une extrapolation périmée. Ensuite il se tait jusqu'à ce que le vaisseau bouge de nouveau.</p>
+<p>Cette décision est mémorisée par tick, et la raison est une leçon sur les deltas en général. Quand le sérialiseur était appelé une fois par spectateur, le premier spectateur traité dans un tick voyait la transition du mouvement au repos, mettait à jour l'état « déjà dit », et tous les autres lisaient ensuite « rien à dire », alors qu'ils n'avaient jamais reçu la mise à jour finale. Le mémo répond à la question une fois par tick et donne à tous les spectateurs la même réponse.</p>
+<div class="note pitfall"><p class="note-label">Piège rencontré</p><p>Le mémo lit le numéro de tick dans le paquet qu'on écrit. Pendant la préparation, le paquet de travail doit donc être un snapshot réglé sur le tick courant. Avec tout autre paquet, le mémo voit le même tick sentinelle à chaque appel et rend pour toujours la réponse mise en cache la première fois : un delta figé, c'est-à-dire des coques qui cessent en silence de rapporter leurs dégâts.</p></div>
+</div>
+</section>
+
+<section class="sec" id="baseline">
+<div lang="en">
+<h2>The global delta that broke</h2>
+<p>The per-hex damage state of other players' ships went through three designs. Each one was correct under the assumptions of its time, and the next chapter (the freshness budget) is what broke the first.</p>
+<div class="compare">
+<div><h4>1. A delta against one baseline per ship</h4><p>Send only the hexes that changed since the last send. Correct while every viewer received every send. The freshness budget ended that: each viewer now receives a different subset of the ticks. The baseline advanced for everyone as soon as the <em>first</em> viewer was served, and the others lost about 98 % of the changes. Damage bars on screen were wrong.</p></div>
+<div><h4>2. Absolute on every send</h4><p>Send the complete list of damaged hexes every time. Correct for any viewer, whatever they missed. But expensive: a station with thirty damaged hexes cost 140 bytes every tick to each of 200 players, 8 % of the outgoing bandwidth for an object that does not move.</p></div>
+<div class="pick"><h4>3. Absolute, versioned, per viewer</h4><p>The list stays absolute, but carries a version number that advances whenever it changes. The server remembers, <em>per viewer</em>, the last version that viewer received, and only re-sends the list to those who do not have it. The baseline is one integer per viewer, not a copy of the state.</p></div>
+</div>
+<p>The third design had to coexist with serialize-once (chapter <a href="serialize-once.html">4.3</a>), where one block is shared by all the viewers of a hull. The answer is not one block per viewer: it is <strong>two views per hull and one bit per viewer</strong>. The prepared block exists as a <em>full</em> view (with the damage list) and a <em>light</em> view (the same bytes without it, bit off). A viewer who already has the current version receives the light view; the others receive the full one, and their version is recorded. The light view is not serialized a second time: while writing the full view, the serializer marks where the damage block starts and ends, and the light view is cut out of the full one with two small memory copies.</p>
+</div>
+<div lang="fr">
+<h2>Le delta global qui a cassé</h2>
+<p>L'état des dégâts par hex des vaisseaux des autres joueurs a connu trois conceptions. Chacune était juste sous les hypothèses de son époque, et c'est le chapitre suivant (le budget de fraîcheur) qui a cassé la première.</p>
+<div class="compare">
+<div><h4>1. Un delta contre une référence par vaisseau</h4><p>N'envoyer que les hex qui ont changé depuis le dernier envoi. Juste tant que chaque spectateur recevait chaque envoi. Le budget de fraîcheur y a mis fin : chaque spectateur reçoit désormais un sous-ensemble différent des ticks. La référence avançait pour tout le monde dès que le <em>premier</em> spectateur était servi, et les autres perdaient environ 98 % des changements. Les barres de dégâts à l'écran étaient fausses.</p></div>
+<div><h4>2. Absolu à chaque envoi</h4><p>Envoyer la liste complète des hex abîmés à chaque fois. Juste pour n'importe quel spectateur, quoi qu'il ait manqué. Mais cher : une station à trente hex abîmés coûtait 140 octets à chaque tick à chacun des 200 joueurs, 8 % de la bande passante sortante pour un objet qui ne bouge pas.</p></div>
+<div class="pick"><h4>3. Absolu, versionné, par spectateur</h4><p>La liste reste absolue, mais porte un numéro de version qui avance à chaque changement. Le serveur retient, <em>par spectateur</em>, la dernière version que ce spectateur a reçue, et ne renvoie la liste qu'à ceux qui ne l'ont pas. La référence est un entier par spectateur, pas une copie de l'état.</p></div>
+</div>
+<p>La troisième conception devait cohabiter avec la sérialisation-une-fois (chapitre <a href="serialize-once.html">4.3</a>), où un bloc est partagé par tous les spectateurs d'une coque. La réponse n'est pas un bloc par spectateur : c'est <strong>deux vues par coque et un bit par spectateur</strong>. Le bloc préparé existe en vue <em>pleine</em> (avec la liste des dégâts) et en vue <em>légère</em> (les mêmes octets sans elle, bit éteint). Un spectateur qui a déjà la version courante reçoit la vue légère ; les autres reçoivent la pleine, et leur version est notée. La vue légère n'est pas sérialisée une seconde fois : pendant l'écriture de la pleine, le sérialiseur marque où commence et finit le bloc de dégâts, et la légère est découpée dans la pleine par deux petites copies mémoire.</p>
+</div>
+<div class="code"><div class="code-head"><span class="file">GameServer/Players/Player.cs · EmitHull, simplified</span></div><pre><code data-lang="cs">private void EmitHull(ISnapshotObject obj, long nowMs)
+{
+    if (obj is Ship ship)
+    {
+        var version = ship.PartStateVersion;
+        var upToDate = _hullSent.TryGetValue(obj.Id, out var prev) &amp;&amp; prev.PartVersion == version;
+        _hullSent[obj.Id] = new HullSend(nowMs, version);  // one entry per viewer and hull
+        if (upToDate)
+        {
+            _filteredOthers.Add(LightViewOf(ship));  // same id and type, light bytes
+            return;
+        }
+    }
+    _filteredOthers.Add(obj);                        // full view: the list goes out
+}</code></pre></div>
+<div lang="en">
+<div class="note pitfall"><p class="note-label">Pitfall I hit</p><p>The first version of the light view pointed at the full one when there was "nothing to omit", for intact hulls. But the full view carried the bit with a count of zero, so every intact hull went out in its full form every tick, one byte more than before the change: measured, ships went from 19 to 20 bytes, with the damage bit set on 63 hulls out of 63. The light view is now always cut, even when the cut is empty: "bit off, no block" is the contract the client applies.</p></div>
+<div class="note rule"><p class="note-label">Rule</p><p>A delta's baseline must belong to the receiver. If receivers can see different streams, keep one baseline per receiver, or send absolute state.</p><p>The owner's own ship still uses a classic single-baseline delta for its exact per-hex values, and that is correct: it goes to exactly one receiver, every tick, outside any budget.</p></div>
+</div>
+<div lang="fr">
+<div class="note pitfall"><p class="note-label">Piège rencontré</p><p>La première version de la vue légère pointait sur la pleine quand il n'y avait « rien à omettre », pour les coques intactes. Mais la vue pleine portait le bit avec un compte à zéro : chaque coque intacte partait donc sous sa forme pleine à chaque tick, un octet de plus qu'avant le changement. Mesuré : les vaisseaux sont passés de 19 à 20 octets, bit de dégâts allumé sur 63 coques sur 63. La vue légère est maintenant toujours découpée, même quand la découpe est vide : « bit éteint, pas de bloc » est le contrat que le client applique.</p></div>
+<div class="note rule"><p class="note-label">Règle</p><p>La référence d'un delta doit appartenir au destinataire. Si les destinataires peuvent voir des flux différents, garder une référence par destinataire, ou envoyer un état absolu.</p><p>La coque du propriétaire utilise toujours un delta classique à référence unique pour ses valeurs exactes par hex, et c'est juste : elle part vers exactement un destinataire, à chaque tick, hors de tout budget.</p></div>
+</div>
+</section>
+
+<section class="sec" id="events">
+<div lang="en">
+<h2>Events with a short form</h2>
+<p>The same thinking applies to the few real events. A bullet is sent in full when a viewer first sees it (position, velocity, weapon spec, shooter). When it hits, a viewer who already knows it does not need any of that again, only where it stopped: it receives a short form made of the flags and the final position. Both forms reuse the per-viewer bookkeeping that already exists ("which bullet ids has this viewer been sent"), and the swap between them is done with the same trick as the light hull view: a tiny per-player mirror object with the same id and type, whose serializer writes the short form. The packet format and the shared snapshot code do not need to know.</p>
+</div>
+<div lang="fr">
+<h2>Des événements avec une forme courte</h2>
+<p>Le même raisonnement s'applique aux quelques vrais événements. Une balle est envoyée en entier quand un spectateur la voit pour la première fois (position, vitesse, spécification d'arme, tireur). Quand elle touche, un spectateur qui la connaît déjà n'a plus besoin de tout ça, seulement de l'endroit où elle s'est arrêtée : il reçoit une forme courte faite des drapeaux et de la position finale. Les deux formes réutilisent la comptabilité par spectateur qui existe déjà (« quels identifiants de balles ce spectateur a-t-il reçus »), et la bascule entre elles se fait avec la même astuce que la vue légère des coques : un petit objet miroir par joueur, de même identifiant et de même type, dont le sérialiseur écrit la forme courte. Ni le format du paquet ni le code partagé des snapshots n'ont besoin de le savoir.</p>
+</div>
+<div lang="en">
+<div class="note tradeoff"><p class="note-label">Trade-off</p><p>Everything in this chapter trades server memory and bookkeeping (a version per viewer and hull, a set of bullet ids per viewer) for bandwidth and correctness. The bookkeeping must be pruned, or it grows for the whole session: entries for bullets out of view are dropped every tick, and entries for hulls are forgotten by age, 4 seconds after they leave the view, which is shorter than the client's 5-second grace so that the server never believes the client knows something the client has already destroyed.</p></div>
+</div>
+<div lang="fr">
+<div class="note tradeoff"><p class="note-label">Compromis</p><p>Tout ce chapitre échange de la mémoire et de la comptabilité serveur (une version par spectateur et par coque, un ensemble d'identifiants de balles par spectateur) contre de la bande passante et de la justesse. Cette comptabilité doit être élaguée, sinon elle grandit pendant toute la session : les entrées des balles hors de vue sont retirées à chaque tick, et celles des coques sont oubliées par l'âge, 4 secondes après leur sortie de la vue, ce qui est plus court que la grâce de 5 secondes du client, pour que le serveur ne croie jamais que le client sait quelque chose qu'il a déjà détruit.</p></div>
+</div>
+</section>
+
+<section class="sec" id="takeaways">
+<div class="takeaways">
+<div lang="en"><h2>Key takeaways</h2><ul>
+<li>Use flag bits so that quiet blocks cost nothing, and define "absent" precisely: empty, not unchanged.</li>
+<li>Skip movement at rest, measured at the wire's own precision, and send one last update when an object stops.</li>
+<li>Memoize per-tick delta decisions so every viewer of the same tick gets the same answer.</li>
+<li>Never share a delta baseline between receivers who can see different streams; version absolute state per viewer instead.</li>
+<li>Combine serialize-once and per-viewer deltas with two prepared views per object and a bit per viewer.</li>
+</ul></div>
+<div lang="fr"><h2>À retenir</h2><ul>
+<li>Utiliser des bits de drapeaux pour que les blocs muets ne coûtent rien, et définir « absent » précisément : vide, pas inchangé.</li>
+<li>Taire le mouvement au repos, mesuré à la précision du fil lui-même, et envoyer une dernière mise à jour quand un objet s'arrête.</li>
+<li>Mémoriser par tick les décisions de delta pour que tous les spectateurs d'un même tick reçoivent la même réponse.</li>
+<li>Ne jamais partager une référence de delta entre destinataires qui peuvent voir des flux différents ; versionner plutôt un état absolu par spectateur.</li>
+<li>Combiner sérialisation-une-fois et deltas par spectateur avec deux vues préparées par objet et un bit par spectateur.</li>
+</ul></div>
+</div>
+</section>
+
+</div>
+<div data-chapter-foot></div>
+</article>
+</main>
+<aside class="rail" id="mq-rail"></aside>
+</div>
+<footer class="site-footer" id="mq-footer"></footer>
+<script src="assets/js/site-data.js" defer></script>
+<script src="assets/js/glossary-data.js" defer></script>
+<script src="assets/js/app.js" defer></script>
+<script src="assets/js/widgets.js" defer></script>
+</body>
+</html>

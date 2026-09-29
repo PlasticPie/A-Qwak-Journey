@@ -1,0 +1,282 @@
+<!doctype html>
+<html lang="en" data-lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Receiving safely · MoonQwak</title>
+<meta name="description" content="Parsing, dispatching, exception boundaries, rate limits and peer caps: the edge where untrusted bytes come in.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Chakra+Petch:wght@500;600&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="assets/css/site.css">
+<script>(function(){var r=document.documentElement,l,t;try{l=localStorage.getItem("mq-lang");t=localStorage.getItem("mq-theme");}catch(e){}if(l!=="en"&&l!=="fr"){l=(navigator.language||"").toLowerCase().indexOf("fr")===0?"fr":"en";}r.setAttribute("data-lang",l);r.setAttribute("lang",l);if(t==="light"||t==="dark")r.setAttribute("data-theme",t);})();</script>
+</head>
+<body data-page="receiving">
+<a class="skip-link" href="#main"><span lang="en">Skip to content</span><span lang="fr">Aller au contenu</span></a>
+<header class="site-header" id="mq-header"></header>
+<div class="layout">
+<aside class="sidebar" id="mq-sidebar"></aside>
+<main class="content" id="main">
+<article>
+<header class="chapter-head">
+  <div class="eyebrow" data-auto></div>
+  <h1><span lang="en">Receiving safely</span><span lang="fr">Recevoir sans tomber</span></h1>
+  <p class="dek"><span lang="en">Parsing, dispatching, exception boundaries, rate limits and peer caps: the edge where untrusted bytes come in.</span><span lang="fr">Parser, distribuer, frontières d'exceptions, limites de débit et plafonds de pairs : la lisière où entrent des octets non fiables.</span></p>
+  <div class="meta-row" data-auto></div>
+</header>
+
+<div class="prose">
+
+<section class="sec" id="pipeline">
+<div lang="en">
+<h2>From datagram to handler</h2>
+<p>Everything a client sends passes through the same short pipeline before any game code sees it. Each stage can refuse the packet, and each refusal has a defined outcome.</p>
+</div>
+<div lang="fr">
+<h2>Du datagramme au gestionnaire</h2>
+<p>Tout ce qu'envoie un client passe par le même court pipeline avant que le moindre code de jeu ne le voie. Chaque étape peut refuser le paquet, et chaque refus a une issue définie.</p>
+</div>
+<figure class="fig fig-scroll">
+<svg viewBox="0 0 780 190" role="img" aria-label="Receive pipeline: decrypt and verify, parse the header, create and parse the packet, admission gate, dispatch to handlers; each stage can drop the packet">
+  <defs><marker id="rc-arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="currentColor" opacity="0.6"/></marker></defs>
+  <g>
+    <rect x="10" y="40" width="126" height="56" rx="8" class="dg-box"/>
+    <text class="dg-text" x="73" y="64" text-anchor="middle" font-weight="700"><tspan lang="en">Decrypt</tspan><tspan lang="fr">Déchiffrer</tspan></text>
+    <text class="dg-small" x="73" y="82" text-anchor="middle"><tspan lang="en">tag must match</tspan><tspan lang="fr">l'étiquette doit coller</tspan></text>
+    <rect x="166" y="40" width="126" height="56" rx="8" class="dg-box"/>
+    <text class="dg-text" x="229" y="64" text-anchor="middle" font-weight="700"><tspan lang="en">Header</tspan><tspan lang="fr">En-tête</tspan></text>
+    <text class="dg-small" x="229" y="82" text-anchor="middle"><tspan lang="en">version, type, length</tspan><tspan lang="fr">version, type, longueur</tspan></text>
+    <rect x="322" y="40" width="126" height="56" rx="8" class="dg-box"/>
+    <text class="dg-text" x="385" y="64" text-anchor="middle" font-weight="700"><tspan lang="en">Parse</tspan><tspan lang="fr">Parser</tspan></text>
+    <text class="dg-small" x="385" y="82" text-anchor="middle"><tspan lang="en">known type, fields</tspan><tspan lang="fr">type connu, champs</tspan></text>
+    <rect x="478" y="40" width="126" height="56" rx="8" class="dg-hot"/>
+    <text class="dg-text" x="541" y="64" text-anchor="middle" font-weight="700"><tspan lang="en">Gate</tspan><tspan lang="fr">Portillon</tspan></text>
+    <text class="dg-small" x="541" y="82" text-anchor="middle"><tspan lang="en">rate limit by cost</tspan><tspan lang="fr">débit selon le coût</tspan></text>
+    <rect x="634" y="40" width="136" height="56" rx="8" class="dg-box-2"/>
+    <text class="dg-text" x="702" y="64" text-anchor="middle" font-weight="700"><tspan lang="en">Handlers</tspan><tspan lang="fr">Gestionnaires</tspan></text>
+    <text class="dg-small" x="702" y="82" text-anchor="middle"><tspan lang="en">inside a try/catch</tspan><tspan lang="fr">dans un try/catch</tspan></text>
+  </g>
+  <g class="dg-line"><line x1="136" y1="68" x2="164" y2="68" marker-end="url(#rc-arr)"/><line x1="292" y1="68" x2="320" y2="68" marker-end="url(#rc-arr)"/><line x1="448" y1="68" x2="476" y2="68" marker-end="url(#rc-arr)"/><line x1="604" y1="68" x2="632" y2="68" marker-end="url(#rc-arr)"/></g>
+  <g class="dg-line dg-dash"><line x1="73" y1="96" x2="73" y2="126"/><line x1="229" y1="96" x2="229" y2="126"/><line x1="385" y1="96" x2="385" y2="126"/><line x1="541" y1="96" x2="541" y2="126"/><line x1="702" y1="96" x2="702" y2="126"/></g>
+  <text class="dg-small" x="73" y="142" text-anchor="middle" style="fill:var(--crit-ink)"><tspan lang="en">dropped</tspan><tspan lang="fr">jeté</tspan></text>
+  <text class="dg-small" x="229" y="142" text-anchor="middle" style="fill:var(--crit-ink)"><tspan lang="en">dropped</tspan><tspan lang="fr">jeté</tspan></text>
+  <text class="dg-small" x="385" y="142" text-anchor="middle" style="fill:var(--crit-ink)"><tspan lang="en">dropped, logged</tspan><tspan lang="fr">jeté, journalisé</tspan></text>
+  <text class="dg-small" x="541" y="142" text-anchor="middle" style="fill:var(--crit-ink)"><tspan lang="en">dropped, not a failure</tspan><tspan lang="fr">jeté, pas un échec</tspan></text>
+  <text class="dg-small" x="702" y="142" text-anchor="middle" style="fill:var(--crit-ink)"><tspan lang="en">failure +1</tspan><tspan lang="fr">échec +1</tspan></text>
+  <text class="dg-small" x="702" y="160" text-anchor="middle"><tspan lang="en">5 failures: disconnect</tspan><tspan lang="fr">5 échecs : déconnexion</tspan></text>
+  <text class="dg-label" x="10" y="24"><tspan lang="en">network thread</tspan><tspan lang="fr">thread réseau</tspan></text>
+</svg>
+<figcaption><span lang="en"><strong>The receive pipeline.</strong> Refusals before the gate are silent drops; a packet refused by the gate is not held against the player; a handler that fails or throws counts toward a disconnect.</span><span lang="fr"><strong>Le pipeline de réception.</strong> Les refus avant le portillon sont des rejets silencieux ; un paquet refusé par le portillon n'est pas reproché au joueur ; un gestionnaire qui échoue ou lève une exception compte vers une déconnexion.</span></figcaption>
+</figure>
+</section>
+
+<section class="sec" id="exception-boundary">
+<div lang="en">
+<h2>The exception boundary</h2>
+<p>This code runs on the network library's thread, not on a request thread with a framework around it. In .NET, an exception that nobody catches on a background thread terminates the whole process. Not the handler, not the connection: the process, with every player on it.</p>
+<div class="note measured"><p class="note-label">Measured</p><p>During a one-hour load test with 1,200 players, one <code>NullReferenceException</code> in the input handler killed a game server and the 136 players it hosted, on a fleet otherwise running at a steady 25 ticks per second. The cause was a ship that became null between a check and the next line, during a map transition. The fix was three characters. The bill was a tenth of the population.</p></div>
+<p>The bug itself was ordinary; there will always be a null somewhere. What was not acceptable was the proportion between the bug and its cost. The dispatcher, the point where packets from the network enter the game's domain, now catches exceptions from every handler:</p>
+</div>
+<div lang="fr">
+<h2>La frontière des exceptions</h2>
+<p>Ce code tourne sur le thread de la bibliothèque réseau, pas sur un thread de requête entouré d'un framework. En .NET, une exception que personne n'attrape sur un thread de fond termine tout le processus. Pas le gestionnaire, pas la connexion : le processus, avec tous les joueurs dessus.</p>
+<div class="note measured"><p class="note-label">Mesuré</p><p>Pendant un banc de charge d'une heure avec 1 200 joueurs, une seule <code>NullReferenceException</code> dans le gestionnaire d'entrées a tué un serveur de jeu et les 136 joueurs qu'il hébergeait, sur un parc qui tournait par ailleurs à 25 ticks par seconde. La cause : un vaisseau devenu nul entre une vérification et la ligne suivante, pendant une transition de carte. La correction faisait trois caractères. La facture : un dixième de la population.</p></div>
+<p>Le bug lui-même était banal ; il y aura toujours un nul quelque part. Ce qui n'était pas acceptable, c'était la disproportion entre le bug et son coût. Le dispatcher, le point où les paquets venus du réseau entrent dans le domaine du jeu, attrape désormais les exceptions de chaque gestionnaire :</p>
+</div>
+<div class="code"><div class="code-head"><span class="file">Network/Dispatcher.cs</span></div><pre><code data-lang="cs">public bool Dispatch(int peerId, IPacket packet, object source)
+{
+    if (!map.ContainsKey(packet.Type)) return false;
+
+    bool allSuccess = true;
+    foreach (var handler in map[packet.Type])
+    {
+        try
+        {
+            if (!handler(peerId, packet, source)) allSuccess = false;
+        }
+        catch (Exception e)
+        {
+            // A BUG TO FIX, not a handled case: log everything, keep the process alive.
+            allSuccess = false;
+            Console.WriteLine($"[Dispatcher] EXCEPTION in a handler of packet 0x{packet.Type:X4} " +
+                              $"(peer {peerId}), packet dropped, process continues:{Environment.NewLine}{e}");
+        }
+    }
+    return allSuccess;  // false counts toward this peer's failure limit
+}</code></pre></div>
+<div lang="en">
+<p>Three choices make this a boundary rather than a rug to sweep bugs under. The full stack trace is logged with the packet type and the peer, so a crash is replaced by a precise report instead of by silence. The other handlers still run, because one failing has nothing to do with its neighbours. And the call reports failure, which advances the peer's failure counter: a client whose packets keep throwing ends up disconnected, which is the right outcome whether it is malicious or simply stuck in an impossible state.</p>
+<p>The client applies the same idea more broadly. Its whole receive callback (decryption, parsing and dispatch) sits in one <code>try</code>, because an exception escaping from there would end the receive loop: the game would look connected and never receive anything again.</p>
+</div>
+<div lang="fr">
+<p>Trois choix en font une frontière plutôt qu'un tapis sous lequel balayer les bugs. La trace complète est journalisée avec le type de paquet et le pair : un plantage est remplacé par un rapport précis plutôt que par du silence. Les autres gestionnaires s'exécutent quand même, parce que l'échec de l'un n'a rien à voir avec ses voisins. Et l'appel rend un échec, ce qui fait avancer le compteur d'échecs du pair : un client dont les paquets lèvent sans cesse finit déconnecté, ce qui est la bonne issue, qu'il soit malveillant ou simplement coincé dans un état impossible.</p>
+<p>Le client applique la même idée plus largement. Tout son rappel de réception (déchiffrement, parsing et distribution) est dans un seul <code>try</code>, parce qu'une exception qui s'en échapperait terminerait la boucle de réception : le jeu aurait l'air connecté et ne recevrait plus jamais rien.</p>
+</div>
+<div lang="en">
+<div class="note rule"><p class="note-label">Rule</p><p>The exception boundary starts at the first byte from the network: handshake, decryption, parsing and dispatch all belong inside it.</p><p>Anything that reads untrusted input on a background thread must be unable to take the process down. A crash traded for a log line with a stack trace is a good trade; a crash traded for silence is not.</p></div>
+</div>
+<div lang="fr">
+<div class="note rule"><p class="note-label">Règle</p><p>La frontière des exceptions commence au premier octet venu du réseau : poignée de main, déchiffrement, parsing et distribution sont tous à l'intérieur.</p><p>Tout ce qui lit une entrée non fiable sur un thread de fond doit être incapable de faire tomber le processus. Échanger un plantage contre une ligne de journal avec sa pile est un bon échange ; l'échanger contre du silence ne l'est pas.</p></div>
+</div>
+</section>
+
+<section class="sec" id="rate-limits">
+<div lang="en">
+<h2>Rate limits: protecting availability</h2>
+<p>Every check in a game server protects <strong>correctness</strong>: you cannot steal an item, sell the same goods twice, or buy your own order. None of them protects <strong>availability</strong>. A modified client could send chat messages as fast as the link allows (each one fans out to every server, then every player), or loop on market requests, each of which opens a database transaction. Nothing would be stolen, and the server would fall over anyway.</p>
+<p>MoonQwak's answer is a single admission gate, consulted by the network layer before any handler runs. It keeps one <a class="term" data-term="token-bucket">token bucket</a> per player and per category, in RAM. The categories describe what the packet <em>costs</em> behind the handler, not what it looks like:</p>
+<div class="table-wrap"><table>
+<thead><tr><th>Category</th><th>What it costs</th><th class="num">Burst</th><th class="num">Sustained</th></tr></thead>
+<tbody>
+<tr><td>Transaction</td><td>Opens a database transaction and takes a per-character lock (post an order, send mail, transfer items)</td><td class="num">6</td><td class="num">1.5 / s</td></tr>
+<tr><td>Broadcast</td><td>Goes to other players, so its cost is multiplied by the audience (chat, invitations)</td><td class="num">5</td><td class="num">1 / s</td></tr>
+<tr><td>Query</td><td>Reads and replies with a full state (open a screen, refresh a list)</td><td class="num">20</td><td class="num">8 / s</td></tr>
+</tbody></table></div>
+<p>A token bucket allows short bursts (opening a screen sends several packets at once, and that is legitimate) while bounding the average. A fixed window counter would either refuse the burst or let twice the limit through at the window boundary.</p>
+</div>
+<div lang="fr">
+<h2>Les limites de débit : protéger la disponibilité</h2>
+<p>Chaque vérification d'un serveur de jeu protège la <strong>correction</strong> : on ne peut pas voler un objet, vendre deux fois la même marchandise, ni acheter son propre ordre. Aucune ne protège la <strong>disponibilité</strong>. Un client modifié pourrait envoyer des messages de chat aussi vite que le lien le permet (chacun se diffuse vers tous les serveurs, puis tous les joueurs), ou boucler sur des requêtes de marché qui ouvrent chacune une transaction en base. Rien ne serait volé, et le serveur tomberait quand même.</p>
+<p>La réponse de MoonQwak est un portillon d'admission unique, consulté par la couche réseau avant tout gestionnaire. Il tient un <a class="term" data-term="token-bucket">seau à jetons</a> par joueur et par catégorie, en RAM. Les catégories décrivent ce que le paquet <em>coûte</em> derrière le gestionnaire, pas à quoi il ressemble :</p>
+<div class="table-wrap"><table>
+<thead><tr><th>Catégorie</th><th>Ce qu'elle coûte</th><th class="num">Rafale</th><th class="num">Soutenu</th></tr></thead>
+<tbody>
+<tr><td>Transaction</td><td>Ouvre une transaction en base et prend un verrou de personnage (poster un ordre, envoyer un colis, transférer des objets)</td><td class="num">6</td><td class="num">1,5 / s</td></tr>
+<tr><td>Diffusion</td><td>Part vers d'autres joueurs, donc son coût est multiplié par l'audience (chat, invitations)</td><td class="num">5</td><td class="num">1 / s</td></tr>
+<tr><td>Requête</td><td>Lit et répond par un état complet (ouvrir un écran, rafraîchir une liste)</td><td class="num">20</td><td class="num">8 / s</td></tr>
+</tbody></table></div>
+<p>Un seau à jetons autorise de courtes rafales (ouvrir un écran envoie plusieurs paquets d'un coup, et c'est légitime) tout en bornant la moyenne. Un compteur par fenêtre fixe refuserait la rafale, ou laisserait passer le double de la limite à la frontière entre deux fenêtres.</p>
+</div>
+<div class="code"><div class="code-head"><span class="file">GameServer/Services/RateLimiter.cs</span></div><pre><code data-lang="cs">public bool Allow(int peerId, Category category)
+{
+    var rule = _rules[(int)category];
+    // Fail-open on the unknown: a peer without a bucket gets a full one.
+    var bucket = _buckets.GetOrAdd((peerId, category),
+        _ => new Bucket { Tokens = rule.Capacity, LastTicks = Stopwatch.GetTimestamp() });
+
+    lock (bucket)  // two packets from the same peer can race on two threads
+    {
+        var now = Stopwatch.GetTimestamp();  // monotonic, never the wall clock
+        var elapsed = (now - bucket.LastTicks) / (double)Stopwatch.Frequency;
+        bucket.LastTicks = now;
+        bucket.Tokens = Math.Min(rule.Capacity, bucket.Tokens + elapsed * rule.PerSecond);
+        if (bucket.Tokens &lt; 1.0) return false;
+        bucket.Tokens -= 1.0;
+        return true;
+    }
+}</code></pre></div>
+<div lang="en">
+<p>Four decisions keep the gate from becoming a new source of bugs:</p>
+<ul>
+<li><strong>An unclassified packet is free.</strong> Forgetting to classify a new packet makes it unlimited, never blocked. A limit that breaks a feature when someone forgets it would turn hardening into a source of regressions.</li>
+<li><strong>Movement inputs are never limited.</strong> They arrive at the client's tick rate by design, and only the latest one per tick is kept. Limiting them would be limiting the game itself.</li>
+<li><strong>A refused packet is not a failure.</strong> It does not advance the counter that eventually disconnects the player. Someone clicking fast is noisy, not hostile.</li>
+<li><strong>The classification describes the player's initiative.</strong> <code>Discover</code> (the client asking for details of objects it has not seen yet) was first classified as a query. That was wrong: its rate is decided by the world, not by the player. Arriving on a crowded map produces dozens at once, and each one dropped was an object that never appeared on screen.</li>
+</ul>
+</div>
+<div lang="fr">
+<p>Quatre décisions empêchent le portillon de devenir une nouvelle source de bugs :</p>
+<ul>
+<li><strong>Un paquet non classé est libre.</strong> Oublier de classer un nouveau paquet le rend illimité, jamais bloqué. Une limite qui casserait une fonctionnalité quand quelqu'un l'oublie transformerait le durcissement en source de régressions.</li>
+<li><strong>Les entrées de mouvement ne sont jamais limitées.</strong> Elles arrivent à la cadence du client par conception, et seule la dernière de chaque tick est gardée. Les limiter, ce serait limiter le jeu lui-même.</li>
+<li><strong>Un paquet refusé n'est pas un échec.</strong> Il ne fait pas avancer le compteur qui finit par déconnecter le joueur. Quelqu'un qui clique vite est bruyant, pas hostile.</li>
+<li><strong>Le classement décrit l'initiative du joueur.</strong> <code>Discover</code> (le client qui demande les détails d'objets qu'il n'a pas encore vus) a d'abord été classé en requête. C'était un contresens : son débit est décidé par le monde, pas par le joueur. Arriver sur une carte peuplée en produit des dizaines d'un coup, et chacun de ceux qui étaient jetés était un objet qui n'apparaissait jamais à l'écran.</li>
+</ul>
+</div>
+<div lang="en">
+<div class="note rule"><p class="note-label">Rule</p><p>Put a limit in one place in front of every handler, and classify packets by what they cost behind the handler.</p><p>Twenty limits written in twenty handlers are nineteen future omissions. One gate covers new packets the moment they are classified, and forgetting to classify fails open.</p></div>
+</div>
+<div lang="fr">
+<div class="note rule"><p class="note-label">Règle</p><p>Mettre la limite à un seul endroit devant tous les gestionnaires, et classer les paquets par ce qu'ils coûtent derrière le gestionnaire.</p><p>Vingt limites écrites dans vingt gestionnaires, ce sont dix-neuf oublis à venir. Un seul portillon couvre les nouveaux paquets dès qu'ils sont classés, et oublier de classer laisse passer au lieu de bloquer.</p></div>
+</div>
+</section>
+
+<section class="sec" id="never-trust">
+<div lang="en">
+<h2>Never trust the client, concretely</h2>
+<p>"The server is authoritative" is easy to say. In practice it shows up as a set of small habits in the handlers:</p>
+<ul>
+<li><strong>The server re-derives where the player is.</strong> The admin command that places content in the world does not carry world coordinates: the server places the object where it knows the player's ship is. A packet with coordinates would be a way to write anywhere from the network.</li>
+<li><strong>Privileges are read from the account, never from the packet.</strong> The admin flag lives in the database row of the account; nothing the client says can raise it.</li>
+<li><strong>The client validates for comfort, the server for correctness.</strong> The ship editor highlights where a part can go, using the same shared rule the server uses, but the server re-validates the whole layout when it is applied.</li>
+<li><strong>Opening a menu requires being there.</strong> The build menu opens only if the player's character stands within range of a working console, re-checked on every action. A <code>BuildMenu</code> packet arriving on its own is refused. Closing, on the other hand, is always accepted: a player must never be stuck in a menu.</li>
+</ul>
+</div>
+<div lang="fr">
+<h2>Ne jamais faire confiance au client, concrètement</h2>
+<p>« Le serveur fait autorité », c'est facile à dire. En pratique, ça se traduit par une série de petites habitudes dans les gestionnaires :</p>
+<ul>
+<li><strong>Le serveur redétermine où est le joueur.</strong> La commande d'admin qui pose du contenu dans le monde ne porte pas de coordonnées : le serveur pose l'objet là où il sait que se trouve le vaisseau du joueur. Un paquet avec des coordonnées serait un moyen d'écrire n'importe où depuis le réseau.</li>
+<li><strong>Les privilèges se lisent sur le compte, jamais dans le paquet.</strong> Le drapeau d'admin vit dans la ligne du compte en base ; rien de ce que dit le client ne peut l'élever.</li>
+<li><strong>Le client valide pour le confort, le serveur pour la justesse.</strong> L'éditeur de vaisseau surligne où une pièce peut aller, avec la même règle partagée que le serveur, mais le serveur revalide toute la disposition quand elle est appliquée.</li>
+<li><strong>Ouvrir un menu demande d'être sur place.</strong> Le menu de construction ne s'ouvre que si le personnage se tient à portée d'une console en état de marche, revérifiée à chaque action. Un paquet <code>BuildMenu</code> qui arrive seul est refusé. Fermer, en revanche, est toujours accepté : un joueur ne doit jamais rester coincé dans un menu.</li>
+</ul>
+</div>
+</section>
+
+<section class="sec" id="threads">
+<div lang="en">
+<h2>Handlers do not touch the world directly</h2>
+<p>Handlers run on the network thread. The world, including its Box2D physics, belongs to the tick thread, and the physics engine is only safe to modify between two simulation steps. So a handler never moves a ship. It records an intention that the next tick consumes:</p>
+<ul>
+<li>for inputs, it overwrites a "pending" field on the player's ship (the latest input wins, so no queue can grow);</li>
+<li>for anything that must create or destroy physics bodies (docking, spawning an admin object), it enqueues an action that the map runs at the start of its next tick.</li>
+</ul>
+<p>Chapter <a href="threading.html">3.3</a> explains why this separation is what allows maps to run in parallel at all.</p>
+</div>
+<div lang="fr">
+<h2>Les gestionnaires ne touchent pas le monde directement</h2>
+<p>Les gestionnaires tournent sur le thread réseau. Le monde, y compris sa physique Box2D, appartient au thread du tick, et le moteur physique ne peut être modifié sans danger qu'entre deux pas de simulation. Un gestionnaire ne déplace donc jamais un vaisseau. Il enregistre une intention que le prochain tick consommera :</p>
+<ul>
+<li>pour les entrées, il écrase un champ « en attente » sur le vaisseau du joueur (la dernière entrée gagne, donc aucune file ne peut grossir) ;</li>
+<li>pour tout ce qui doit créer ou détruire des corps physiques (s'amarrer, poser un objet d'admin), il met en file une action que la carte exécute au début de son tick suivant.</li>
+</ul>
+<p>Le chapitre <a href="threading.html">3.3</a> explique pourquoi cette séparation est ce qui permet aux cartes de tourner en parallèle.</p>
+</div>
+</section>
+
+<section class="sec" id="reasons">
+<div lang="en">
+<h2>Say why a connection ended</h2>
+<p>The network layer logs a reason for every disconnection: <code>Timeout</code> (nobody answered: look at who ran out of CPU, not at the code), <code>RemoteConnectionClose</code> (the other side chose to leave, so its own log explains why), <code>ConnectionRejected</code> (a peer cap), or a socket error code from the operating system.</p>
+<div class="note pitfall"><p class="note-label">Pitfall I hit</p><p>The client had learned this lesson first: it took "twenty fake clients and half an hour" to tell a rejection, a timeout and a takeover kick apart, because all three printed the same line. The fix went into the client. The server kept printing a line without the reason, and at 750 bots it showed four hundred identical disconnections with nothing to tell them apart. A correction that does not migrate to its twin is not finished.</p></div>
+</div>
+<div lang="fr">
+<h2>Dire pourquoi une connexion s'est terminée</h2>
+<p>La couche réseau journalise une raison pour chaque déconnexion : <code>Timeout</code> (personne n'a répondu : regarder qui a manqué de CPU, pas le code), <code>RemoteConnectionClose</code> (l'autre côté a choisi de partir, c'est donc son journal qui explique pourquoi), <code>ConnectionRejected</code> (un plafond de pairs), ou un code d'erreur socket du système.</p>
+<div class="note pitfall"><p class="note-label">Piège rencontré</p><p>Le client avait appris cette leçon en premier : il avait fallu « vingt faux clients et une demi-heure » pour distinguer un refus, un délai dépassé et une éjection pour reprise de session, parce que les trois écrivaient la même ligne. La correction est allée dans le client. Le serveur a continué d'écrire une ligne sans la raison, et à 750 robots il a montré quatre cents déconnexions identiques, sans rien pour les distinguer. Une correction qui ne migre pas vers son jumeau n'est pas terminée.</p></div>
+</div>
+</section>
+
+<section class="sec" id="takeaways">
+<div class="takeaways">
+<div lang="en"><h2>Key takeaways</h2><ul>
+<li>Every stage of the receive pipeline can refuse a packet, and each refusal has a defined, cheap outcome.</li>
+<li>On a background thread, an uncaught exception ends the process; put the whole receive path inside a boundary that logs and continues.</li>
+<li>Protect availability as well as correctness: one rate-limit gate, classified by cost, failing open when a packet is unclassified.</li>
+<li>Handlers record intentions; only the tick changes the world.</li>
+<li>Log the reason for every disconnection and every refusal.</li>
+</ul></div>
+<div lang="fr"><h2>À retenir</h2><ul>
+<li>Chaque étape du pipeline de réception peut refuser un paquet, et chaque refus a une issue définie et bon marché.</li>
+<li>Sur un thread de fond, une exception non attrapée termine le processus ; mettre tout le chemin de réception dans une frontière qui journalise et continue.</li>
+<li>Protéger la disponibilité autant que la correction : un seul portillon de débit, classé par coût, qui laisse passer quand un paquet n'est pas classé.</li>
+<li>Les gestionnaires enregistrent des intentions ; seul le tick change le monde.</li>
+<li>Journaliser la raison de chaque déconnexion et de chaque refus.</li>
+</ul></div>
+</div>
+</section>
+
+</div>
+<div data-chapter-foot></div>
+</article>
+</main>
+<aside class="rail" id="mq-rail"></aside>
+</div>
+<footer class="site-footer" id="mq-footer"></footer>
+<script src="assets/js/site-data.js" defer></script>
+<script src="assets/js/glossary-data.js" defer></script>
+<script src="assets/js/app.js" defer></script>
+<script src="assets/js/widgets.js" defer></script>
+</body>
+</html>
