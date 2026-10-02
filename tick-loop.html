@@ -7,12 +7,12 @@
 <meta name="description" content="A fixed-rate loop that neither drifts nor spirals, and three Windows timer traps that each quietly stole ticks.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Chakra+Petch:wght@500;600&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Chakra+Petch:wght@500;600&family=JetBrains+Mono:wght@400;500;600&family=Noto+Sans+TC:wght@400;700&display=swap">
 <link rel="stylesheet" href="assets/css/site.css">
-<script>(function(){var r=document.documentElement,l,t;try{l=localStorage.getItem("mq-lang");t=localStorage.getItem("mq-theme");}catch(e){}if(l!=="en"&&l!=="fr"){l=(navigator.language||"").toLowerCase().indexOf("fr")===0?"fr":"en";}r.setAttribute("data-lang",l);r.setAttribute("lang",l);if(t==="light"||t==="dark")r.setAttribute("data-theme",t);})();</script>
+<script>(function(){var r=document.documentElement,l,t,n;try{l=localStorage.getItem("mq-lang");t=localStorage.getItem("mq-theme");}catch(e){}if(l!=="en"&&l!=="fr"&&l!=="zh"){n=(navigator.language||"").toLowerCase();l=n.indexOf("fr")===0?"fr":n.indexOf("zh")===0?"zh":"en";}r.setAttribute("data-lang",l);r.setAttribute("lang",l==="zh"?"zh-TW":l);if(t==="light"||t==="dark")r.setAttribute("data-theme",t);})();</script>
 </head>
 <body data-page="tick-loop">
-<a class="skip-link" href="#main"><span lang="en">Skip to content</span><span lang="fr">Aller au contenu</span></a>
+<a class="skip-link" href="#main"><span lang="en">Skip to content</span><span lang="fr">Aller au contenu</span><span lang="zh-TW">跳到主要內容</span></a>
 <header class="site-header" id="mq-header"></header>
 <div class="layout">
 <aside class="sidebar" id="mq-sidebar"></aside>
@@ -20,8 +20,8 @@
 <article>
 <header class="chapter-head">
   <div class="eyebrow" data-auto></div>
-  <h1><span lang="en">The heartbeat</span><span lang="fr">Le battement de cœur</span></h1>
-  <p class="dek"><span lang="en">A fixed-rate loop that neither drifts nor spirals, and three Windows timer traps that each quietly stole ticks.</span><span lang="fr">Une boucle à cadence fixe qui ne dérive ni ne s'emballe, et trois pièges de minuterie Windows qui ont chacun volé des ticks en silence.</span></p>
+  <h1><span lang="en">The heartbeat</span><span lang="fr">Le battement de cœur</span><span lang="zh-TW">心跳</span></h1>
+  <p class="dek"><span lang="en">A fixed-rate loop that neither drifts nor spirals, and three Windows timer traps that each quietly stole ticks.</span><span lang="fr">Une boucle à cadence fixe qui ne dérive ni ne s'emballe, et trois pièges de minuterie Windows qui ont chacun volé des ticks en silence.</span><span lang="zh-TW">一個既不漂移也不失控的固定頻率迴圈，以及三個各自默默偷走 tick 的 Windows 計時器陷阱。</span></p>
   <div class="meta-row" data-auto></div>
 </header>
 
@@ -40,11 +40,16 @@
 <div class="note beginner"><p class="note-label">Pour débuter</p><p>Un moteur physique ne donne des résultats stables et reproductibles que si chaque pas a la même durée. Donnez-lui « le temps qu'a pris la dernière image » et les collisions, les ressorts et l'amortissement se comportent différemment à 20 et à 30 pas par seconde. Le pas fixe est ce qui rend la simulation identique sur un serveur calme et sur un serveur chargé.</p></div>
 <p>MoonQwak fait tourner le monde à 25 Hz, ce qui donne à chaque tick un budget de 40 ms. Le pas physique est fixé une fois pour toutes à partir de cette cadence (1/25 s), et le client Unity avance sa propre physique avec la même valeur, pour qu'une balle parcoure la même distance des deux côtés. Les snapshots partent aussi à 25 Hz.</p>
 </div>
+<div lang="zh-TW">
+<h2>為什麼要固定步長</h2>
+<p>權威伺服器不是連續地模擬。它以稱為 <em>tick</em> 的離散步驟推進世界：讀取已到達的輸入、把所有東西剛好移動一步、解決碰撞、通知玩家。然後等待下一步。</p>
+<div class="note beginner"><p class="note-label">新手須知</p><p>只有每一步的長度都相同時，物理引擎才能給出穩定、可重現的結果。如果餵給它「上一個影格花了多久」，碰撞、彈簧與阻尼在每秒 20 步與每秒 30 步時的表現就會開始不同。固定步長，才能讓模擬在安靜的伺服器與忙碌的伺服器上表現一致。</p></div>
+<p>MoonQwak 以 25 Hz 推進世界 tick，所以每個 tick 有 40 ms 的預算。物理步長由這個頻率一次設定（1/25 秒），而 Unity 用戶端也以相同的值推進自己的物理，所以一顆子彈在兩端前進的距離相同。快照同樣以 25 Hz 送出。</p></div>
 <div class="stats">
-<div class="stat"><div class="v">25<small>Hz</small></div><div class="k"><span lang="en">world tick rate</span><span lang="fr">cadence du monde</span></div></div>
-<div class="stat"><div class="v">40<small>ms</small></div><div class="k"><span lang="en">budget per tick, shared by every map of the process</span><span lang="fr">budget par tick, partagé par toutes les cartes du processus</span></div></div>
-<div class="stat"><div class="v">25<small>Hz</small></div><div class="k"><span lang="en">snapshot rate, never above the world rate</span><span lang="fr">cadence des snapshots, jamais au-dessus du monde</span></div></div>
-<div class="stat"><div class="v">250<small>ms</small></div><div class="k"><span lang="en">maximum catch-up before the schedule resets</span><span lang="fr">rattrapage maximal avant de repartir de zéro</span></div></div>
+<div class="stat"><div class="v">25<small>Hz</small></div><div class="k"><span lang="en">world tick rate</span><span lang="fr">cadence du monde</span><span lang="zh-TW">世界 tick 頻率</span></div></div>
+<div class="stat"><div class="v">40<small>ms</small></div><div class="k"><span lang="en">budget per tick, shared by every map of the process</span><span lang="fr">budget par tick, partagé par toutes les cartes du processus</span><span lang="zh-TW">每個 tick 的預算，由程序中所有地圖共享</span></div></div>
+<div class="stat"><div class="v">25<small>Hz</small></div><div class="k"><span lang="en">snapshot rate, never above the world rate</span><span lang="fr">cadence des snapshots, jamais au-dessus du monde</span><span lang="zh-TW">快照頻率，絕不高於世界頻率</span></div></div>
+<div class="stat"><div class="v">250<small>ms</small></div><div class="k"><span lang="en">maximum catch-up before the schedule resets</span><span lang="fr">rattrapage maximal avant de repartir de zéro</span><span lang="zh-TW">重設排程前的最大追趕量</span></div></div>
 </div>
 <div lang="en">
 <div class="note measured"><p class="note-label">Measured</p><p>Snapshots were once configured at 30 Hz against a 25 Hz world. A snapshot sent between two world ticks describes a state the simulation has not advanced: the same bytes, paid for twice. That was five duplicate snapshots per player per second. The configuration file now carries the rule next to the value: never above the world rate.</p></div>
@@ -52,6 +57,8 @@
 <div lang="fr">
 <div class="note measured"><p class="note-label">Mesuré</p><p>Les snapshots ont un temps été configurés à 30 Hz pour un monde à 25 Hz. Un snapshot envoyé entre deux ticks décrit un état que la simulation n'a pas fait avancer : les mêmes octets, payés deux fois. Cela faisait cinq snapshots en double par joueur et par seconde. Le fichier de configuration porte maintenant la règle à côté de la valeur : jamais au-dessus de la cadence du monde.</p></div>
 </div>
+<div lang="zh-TW">
+<div class="note measured"><p class="note-label">實測</p><p>快照曾經被設定為 30 Hz，而世界是 25 Hz。在兩個世界 tick 之間送出的快照，描述的是模擬還沒推進的狀態：同樣的位元組，付了兩次錢。這等於每位玩家每秒五份重複的快照。現在設定檔在數值旁邊寫上了規則：絕不高於世界頻率。</p></div></div>
 </section>
 
 <section class="sec" id="two-loops">
@@ -67,6 +74,11 @@
 <p>Cette propriété est toute la raison d'écrire la boucle à la main. L'alternative évidente, un <code>System.Timers.Timer</code> qui se relance tout seul, s'appuie sur le pool de threads et démarrera volontiers un nouveau rappel pendant que le précédent tourne encore, s'il a dépassé son intervalle. Deux ticks du monde qui modifient les mêmes cartes en même temps, ce n'est pas un ralentissement, c'est de la corruption.</p>
 <p>Les deux boucles sont des horloges indépendantes, et rien ne les fait alterner en cadence, même au même rythme. Le code qui passe un snapshot terminé de l'une à l'autre doit supposer que deux ticks du monde peuvent survenir entre deux envois ; le chapitre <a href="snapshots.html">4.2</a> montre la garde que ça demande et ce qu'elle empêche.</p>
 </div>
+<div lang="zh-TW">
+<h2>每種頻率一條執行緒，別無其他</h2>
+<p>世界 tick 與快照傳送各自在一條專屬執行緒上執行，是一個單純的循序迴圈：等到下一個 tick 到期、呼叫處理常式、計算下一個到期時間、重複。它在結構上就是循序的：處理常式返回之前，迴圈不可能進入下一次迭代，所以一個慢的 tick 可以延遲下一個，卻永遠不會與它同時執行。</p>
+<p>這個特性就是手寫迴圈的全部理由。顯而易見的替代方案——一個會自動重新觸發的 <code>System.Timers.Timer</code>——背後是執行緒集區，如果前一個回呼超過了間隔，它會很樂意在前一個還在執行時就啟動新的回呼。兩個世界 tick 同時修改同樣的地圖，那不是變慢，而是資料損毀。</p>
+<p>這兩個迴圈是彼此獨立的時鐘，即使頻率相同，也沒有任何東西讓它們步調一致地交替。把完成的快照從一個交給另一個的程式碼，必須假設在兩次傳送之間可能發生兩個世界 tick；第 <a href="snapshots.html">4.2</a> 章會展示那道防護長什麼樣子，以及它防止了什麼。</p></div>
 </section>
 
 <section class="sec" id="anchored">
@@ -80,26 +92,30 @@
 <p>La façon de calculer l'échéance suivante décide si la boucle tient sa cadence. La première version réarmait sa minuterie une fois le gestionnaire terminé : chaque tick démarrait « intervalle + travail + arrondi » après le précédent, et l'erreur se cumulait. La cadence réelle restait nettement sous la cadence configurée. La correction tient en une ligne : l'échéance suivante est l'<em>échéance précédente</em> plus l'intervalle, pas « maintenant » plus l'intervalle. Un tick lent de temps en temps ne retarde alors que lui-même ; les suivants retombent sur la grille d'origine.</p>
 <p>L'ancrage a son propre mode de panne. Après un long arrêt (un ramasse-miettes, un point d'arrêt du débogueur, une machine qui n'ordonnance plus le processus), une boucle ancrée est très en retard sur sa grille et tirerait tous les ticks manqués à la suite pour rattraper. Chaque tick de rattrapage est lui-même du travail, le suivant repart en retard, et le serveur ne s'en remet jamais : la <em>spirale de la mort</em>. La boucle renonce donc à rattraper dès qu'elle a plus de 250 ms de retard, et repart d'une grille neuve à partir de maintenant. Le temps perdu est perdu ; le monde a simplement fait moins de pas pendant l'arrêt.</p>
 </div>
+<div lang="zh-TW">
+<h2>有上限追趕的錨定排程</h2>
+<p>下一個到期時間怎麼算，決定了迴圈能否維持頻率。第一版在處理常式返回後才重新設定計時器，所以每個 tick 都在前一個的「間隔 + 工作 + 進位誤差」之後才開始，而誤差會不斷累積：實際頻率遠低於設定值。修正只要一行：下一個到期時間是<em>上一個到期時間</em>加上間隔，而不是「現在」加上間隔。偶爾一個慢的 tick 只會延遲它自己；之後的 tick 會回到原本的時間格線上。</p>
+<p>錨定也有自己的失敗模式。在一次長時間停頓之後（一次垃圾回收、一次除錯中斷、一台停止排程該程序的機器），錨定的迴圈遠遠落後於它的格線，會把所有錯過的 tick 一個接一個地觸發來追趕。每一個追趕的 tick 本身也是工作，下一個又遲到了，伺服器永遠恢復不了：這就是<em>死亡螺旋</em>。因此，當迴圈落後超過 250 ms 時就放棄追趕，從現在重新開始它的格線。失去的時間就失去了；世界只是在停頓期間少推進了幾步。</p></div>
 <figure class="fig fig-scroll">
 <svg viewBox="0 0 760 170" role="img" aria-label="One 40 millisecond interval: the tick's work, then waiting on a high-resolution timer in slices of at most 15 ms, then spinning for the last half millisecond; the next due time is the previous due time plus 40 ms">
   <defs><marker id="tl-arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="currentColor" opacity="0.7"/></marker></defs>
   <line x1="40" y1="40" x2="40" y2="118" class="dg-line"/>
   <line x1="720" y1="40" x2="720" y2="118" class="dg-line"/>
-  <text class="dg-small dg-mono" x="40" y="30" text-anchor="middle"><tspan lang="en">due N</tspan><tspan lang="fr">échéance N</tspan></text>
-  <text class="dg-small dg-mono" x="720" y="30" text-anchor="middle"><tspan lang="en">due N+1</tspan><tspan lang="fr">échéance N+1</tspan></text>
+  <text class="dg-small dg-mono" x="40" y="30" text-anchor="middle"><tspan lang="en">due N</tspan><tspan lang="fr">échéance N</tspan><tspan lang="zh-TW">到期 N</tspan></text>
+  <text class="dg-small dg-mono" x="720" y="30" text-anchor="middle"><tspan lang="en">due N+1</tspan><tspan lang="fr">échéance N+1</tspan><tspan lang="zh-TW">到期 N+1</tspan></text>
   <rect x="41" y="56" width="203" height="40" rx="6" class="dg-hot"/>
-  <text class="dg-text" x="142" y="81" text-anchor="middle"><tspan lang="en">tick(): the work</tspan><tspan lang="fr">tick() : le travail</tspan></text>
+  <text class="dg-text" x="142" y="81" text-anchor="middle"><tspan lang="en">tick(): the work</tspan><tspan lang="fr">tick() : le travail</tspan><tspan lang="zh-TW">tick()：工作</tspan></text>
   <rect x="246" y="56" width="253" height="40" rx="6" class="dg-box"/>
-  <text class="dg-small" x="372" y="81" text-anchor="middle"><tspan lang="en">wait on the timer (≤ 15 ms slice)</tspan><tspan lang="fr">attente minuterie (tranche ≤ 15 ms)</tspan></text>
+  <text class="dg-small" x="372" y="81" text-anchor="middle"><tspan lang="en">wait on the timer (≤ 15 ms slice)</tspan><tspan lang="fr">attente minuterie (tranche ≤ 15 ms)</tspan><tspan lang="zh-TW">等待計時器（每段 ≤ 15 ms）</tspan></text>
   <rect x="501" y="56" width="208" height="40" rx="6" class="dg-box"/>
-  <text class="dg-small" x="605" y="81" text-anchor="middle"><tspan lang="en">wait (last slice)</tspan><tspan lang="fr">attente (dernière tranche)</tspan></text>
+  <text class="dg-small" x="605" y="81" text-anchor="middle"><tspan lang="en">wait (last slice)</tspan><tspan lang="fr">attente (dernière tranche)</tspan><tspan lang="zh-TW">等待（最後一段）</tspan></text>
   <rect x="711" y="56" width="8" height="40" rx="2" class="dg-accent"/>
   <line x1="715" y1="100" x2="690" y2="132" class="dg-line"/>
-  <text class="dg-small" x="686" y="146" text-anchor="end"><tspan lang="en">spin the last 0.5 ms</tspan><tspan lang="fr">spin des 0,5 dernières ms</tspan></text>
+  <text class="dg-small" x="686" y="146" text-anchor="end"><tspan lang="en">spin the last 0.5 ms</tspan><tspan lang="fr">spin des 0,5 dernières ms</tspan><tspan lang="zh-TW">自旋最後 0.5 ms</tspan></text>
   <line x1="44" y1="132" x2="400" y2="132" class="dg-line" marker-end="url(#tl-arr)"/>
-  <text class="dg-small" x="44" y="152"><tspan lang="en">next due = previous due + 40 ms, never now + 40 ms</tspan><tspan lang="fr">échéance suivante = échéance précédente + 40 ms, jamais maintenant + 40 ms</tspan></text>
+  <text class="dg-small" x="44" y="152"><tspan lang="en">next due = previous due + 40 ms, never now + 40 ms</tspan><tspan lang="fr">échéance suivante = échéance précédente + 40 ms, jamais maintenant + 40 ms</tspan><tspan lang="zh-TW">下次到期 = 上次到期 + 40 ms，絕不是現在 + 40 ms</tspan></text>
 </svg>
-<figcaption><span lang="en"><strong>One interval, three stages of waiting.</strong> Wait coarsely while there is time, spin only for the last fraction, and anchor the next deadline to the grid rather than to the clock.</span><span lang="fr"><strong>Un intervalle, trois étages d'attente.</strong> Attendre grossièrement tant qu'il y a du temps, ne tourner à vide que pour la dernière fraction, et ancrer l'échéance suivante sur la grille plutôt que sur l'horloge.</span></figcaption>
+<figcaption><span lang="en"><strong>One interval, three stages of waiting.</strong> Wait coarsely while there is time, spin only for the last fraction, and anchor the next deadline to the grid rather than to the clock.</span><span lang="fr"><strong>Un intervalle, trois étages d'attente.</strong> Attendre grossièrement tant qu'il y a du temps, ne tourner à vide que pour la dernière fraction, et ancrer l'échéance suivante sur la grille plutôt que sur l'horloge.</span><span lang="zh-TW"><strong>一個間隔，三段等待。</strong>還有時間時粗略地等，只在最後一小段自旋，並把下一個截止時間錨定在格線上，而不是時鐘上。</span></figcaption>
 </figure>
 <div data-widget="drift"></div>
 <div lang="en">
@@ -108,6 +124,8 @@
 <div lang="fr">
 <p>Dans le labo, la première ligne est la minuterie réarmée : chaque tick arrive en retard, et la cadence chute quand le travail grossit. La deuxième est ancrée mais dort encore avec la résolution par défaut de 15,6 ms, donc chaque réveil déborde jusqu'à un quantum. La troisième est ce que fait le serveur aujourd'hui. Activez le tick lent pour voir les lignes ancrées absorber un arrêt de 120 ms et revenir sur la grille.</p>
 </div>
+<div lang="zh-TW">
+<p>在實驗室中，第一列是重新設定的計時器：每個 tick 都遲到，而頻率隨著工作量增加而下降。第二列是錨定的，但仍然以預設的 15.6 ms 計時器精度睡眠，所以每次醒來都可能多睡最多一個時間片。第三列是伺服器現在的做法。打開「一個慢 tick」，看看錨定的那兩列如何吸收一次 120 ms 的停頓，再回到格線上。</p></div>
 </section>
 
 <section class="sec" id="timer-traps">
@@ -141,6 +159,20 @@
 <li>pour la dernière fraction, un spin avec <code>SpinOnce(-1)</code>. C'est le <code>-1</code> qui interdit le repli sur <code>Sleep(1)</code>.</li>
 </ul>
 </div>
+<div lang="zh-TW">
+<h2>症狀相同的三個陷阱</h2>
+<p>錨定限制了漂移。它並不會讓任何 tick <em>準時</em>到達：那取決於執行緒醒來的精確度，而醒來的精確度以三種不同的方式壞了三次。每一次的症狀都一樣：一個設定為 25 Hz 的迴圈，在閒置的伺服器上以大約 21 Hz 執行，而且沒有任何一行遊戲程式碼比以前慢。</p>
+<ol class="timeline">
+<li><span class="tl-tag">陷阱 1</span><div><h3>工作完成後才重新設定的計時器</h3><p>累積的漂移，如上所述。以錨定排程修正。</p></div></li>
+<li><span class="tl-tag">陷阱 2</span><div><h3>Sleep 被量化成 15.6 ms</h3><p>在 Windows 上，<code>Thread.Sleep</code> 會進位到系統計時器精度，預設為 15.6 ms。每次睡眠都可能多睡最多一個時間片，而實際頻率穩定在約 21 Hz，<em>不論設定寫的是什麼</em>。更糟的是，用戶端的平滑常數是憑肉眼對著這個意外的頻率調出來的，修正之後就得改以 tick 為單位重新表示。以 <code>timeBeginPeriod(1)</code>（1 ms 精度，自 Windows 10 2004 起以程序為單位）加上截止時間前的一小段自旋修正。</p></div></li>
+<li><span class="tl-tag">陷阱 3</span><div><h3>Windows 11 在背景時會忽略這個請求</h3><p>自 Windows 11 起，對於沒有視窗在前景的程序，<code>timeBeginPeriod</code> 會被忽略：這是刻意設計的電源節流。一個躲在 Unity 編輯器後面的伺服器主控台，就退回了 15.6 ms 的時間片與 21 Hz。而且最後的自旋使用的是 <code>SpinWait.SpinOnce()</code>，它在幾次迭代後會退回 <code>Sleep(1)</code>：在本來要找回最後兩毫秒的階段裡，多睡了一整個時間片。</p></div></li>
+</ol>
+<p>這三個陷阱的教訓：<strong>完全不要依賴系統計時器精度。</strong>現在迴圈分三段等待，從最精確的到最粗略的後備方案：</p>
+<ul>
+<li>一個<strong>高精度可等待計時器</strong>（帶 <code>HIGH_RESOLUTION</code> 旗標的 <code>CreateWaitableTimerExW</code>，Windows 10 1803 及以後）：約 0.5 ms 的精度，與程序的計時器精度以及視窗狀態無關。這正是 Windows 為這種需求提供的工具，每條迴圈執行緒一個控制代碼；</li>
+<li>如果無法使用，就用 <code>Thread.Sleep</code>，搭配 <code>timeBeginPeriod(1)</code>，<em>並</em>明確地退出 Windows 11 的計時器節流（<code>SetProcessInformation</code>），讓這個請求在背景時仍然有效；</li>
+<li>最後一小段，用 <code>SpinOnce(-1)</code> 自旋。正是這個 <code>-1</code> 禁止了退回 <code>Sleep(1)</code>。</li>
+</ul></div>
 <div class="code"><div class="code-head"><span class="file">GameServer/Services/TickService.cs · RunLoop, simplified</span></div><pre><code data-lang="cs">void RunLoop(TimeSpan interval, Action tick, ThreadPriority priority)
 {
     Thread.CurrentThread.Priority = priority;            // world: Highest, snapshots: AboveNormal
@@ -181,6 +213,9 @@
 <div class="note project"><p class="note-label">Dans MoonQwak</p><p>Quand la minuterie attendable n'arrive pas à s'armer, le repli dort quand même. Se contenter de reboucler ferait de la boucle un spin à 100 % d'un cœur qui a l'air de marcher : la cadence est parfaite, et un cœur a disparu. Les replis méritent la même attention que le chemin principal.</p></div>
 <div class="note rule"><p class="note-label">Règle</p><p>Ancrer l'échéance sur la grille, borner le rattrapage, et ne jamais faire dépendre la précision d'un réglage que le système d'exploitation a le droit d'ignorer.</p><p>Chacun des trois pièges a produit un serveur qui avait l'air normal et tournait un sixième plus lentement que prévu, en silence, jusqu'à ce que quelqu'un mesure la cadence réelle.</p></div>
 </div>
+<div lang="zh-TW">
+<div class="note project"><p class="note-label">在 MoonQwak 中</p><p>當可等待計時器無法啟動時，後備方案仍然會睡眠。單純地再跑一次迴圈，會讓迴圈變成在一個核心上 100 % 自旋，看起來卻運作正常：頻率完美，但一個核心就這樣沒了。後備方案值得與主要路徑同等的審視。</p></div>
+<div class="note rule"><p class="note-label">規則</p><p>把排程錨定在格線上、限制追趕的上限，並且絕不讓精確度依賴作業系統可以自由忽略的設定。</p><p>這三個陷阱中的每一個，都產生了一台看起來正常、卻默默比設定慢六分之一的伺服器，直到有人量了實際頻率。</p></div></div>
 </section>
 
 <section class="sec" id="priority">
@@ -210,6 +245,18 @@
 </tbody></table></div>
 <p>Deux threads prioritaires qui dorment 95 % du temps ne gênent personne. Le danger commence quand il y a plus de threads prioritaires prêts que de cœurs, ce qui est le sujet du chapitre <a href="threading.html">3.3</a>.</p>
 </div>
+<div lang="zh-TW">
+<h2>優先權：核心空出來時誰先執行</h2>
+<p>精確地醒來，如果執行緒之後還得在排程器的佇列中等待，就毫無用處。在開發機上，Unity 編輯器與用戶端把核心佔滿了；一條變成就緒狀態的一般優先權執行緒，可能要等上一整個排程時間片才能執行，而監控器顯示每三個 tick 就有一個遲到，卻完全沒有慢的程式碼。因此，tick 執行緒的優先權高於程序中的其他一切：</p>
+<div class="table-wrap"><table>
+<thead><tr><th>執行緒</th><th>優先權</th><th>原因</th></tr></thead>
+<tbody>
+<tr><td>世界 tick</td><td><code>Highest</code></td><td>唯一一條能讓所有人遲到的執行緒。它必須搶佔自己的助手，而不是排在它們後面等。</td></tr>
+<tr><td>快照傳送、tick 工作執行緒</td><td><code>AboveNormal</code></td><td>高於網路與執行緒集區，低於世界執行緒。</td></tr>
+<tr><td>網路、執行緒集區、背景寫入</td><td><code>Normal</code></td><td>重要，但不緊急。資料庫寫入絕不能與 tick 搶核心。</td></tr>
+<tr><td>主控台寫入</td><td><code>BelowNormal</code></td><td>日誌可以等。見第 <a href="gateway.html">2.1</a> 章關於主控台的那個坑。</td></tr>
+</tbody></table></div>
+<p>兩條 95 % 時間都在睡眠的高優先權執行緒不會打擾任何人。危險始於就緒的高優先權執行緒比核心還多的時候，那是第 <a href="threading.html">3.3</a> 章的主題。</p></div>
 </section>
 
 <section class="sec" id="interval-vs-work">
@@ -229,6 +276,13 @@
 <li><strong>peu de travail, grand intervalle</strong> : le thread s'est réveillé en retard. La machine, pas le serveur : d'autres processus, des bots de test sur le même PC, un cœur affamé.</li>
 </ul>
 </div>
+<div lang="zh-TW">
+<h2>間隔不等於工作量</h2>
+<p>描述一個 tick 有兩個數字，而把它們搞混讓我做了一整輪調查。<strong>間隔</strong>是從一個 tick 開始到下一個 tick 開始的時間。<strong>工作</strong>是處理常式實際執行的時間。在健康的伺服器上，無論工作量多少，間隔都維持在 40 ms，因為迴圈會等待格線。當間隔超過 40 ms 時，間隔與工作之間的差距會告訴你是誰的錯：</p>
+<ul>
+<li><strong>工作接近間隔</strong>：tick 真的算了那麼久。去看它的各個階段（第 <a href="tick-anatomy.html">3.2</a> 章）；</li>
+<li><strong>工作很少、間隔很大</strong>：執行緒醒得晚。問題在機器，而不在伺服器：其他程序、同一台電腦上的負載測試機器人、一個被餓死的核心。</li>
+</ul></div>
 <div lang="en">
 <div class="note measured"><p class="note-label">Measured</p><p>On a 400-bot bench, the worst tick of the session showed a 50.4 ms interval made of <strong>1.2 ms of work</strong> and a <strong>49.3 ms late wake-up</strong>: the bots, the gateway and Unity were sharing the machine. On another bench I spent time looking for "8 missing milliseconds" between a 41.7 ms tick and 34 ms of phases, before realising that the 41.7 was an interval: its minimum was 40.04 ms and would have been 40 with an empty tick.</p></div>
 <div class="note rule"><p class="note-label">Rule</p><p>Print a duration next to its budget, and check that two numbers measure the same thing before looking for the gap between them.</p><p>"22.5 ms" means nothing on its own; "22.5 ms of work out of a 40 ms budget (56 %)" cannot be misread. The server's periodic report now prints exactly that.</p></div>
@@ -237,6 +291,9 @@
 <div class="note measured"><p class="note-label">Mesuré</p><p>Sur un banc à 400 bots, le pire tick de la session affichait un intervalle de 50,4 ms composé de <strong>1,2 ms de travail</strong> et d'un <strong>réveil en retard de 49,3 ms</strong> : les bots, la gateway et Unity partageaient la machine. Sur un autre banc, j'ai passé du temps à chercher « 8 millisecondes manquantes » entre un tick de 41,7 ms et 34 ms de phases, avant de comprendre que 41,7 était un intervalle : son minimum valait 40,04 ms, et il aurait valu 40 avec un tick vide.</p></div>
 <div class="note rule"><p class="note-label">Règle</p><p>Afficher une durée à côté de son budget, et vérifier que deux nombres mesurent la même chose avant de chercher l'écart entre eux.</p><p>« 22,5 ms » ne veut rien dire seul ; « 22,5 ms de travail sur 40 de budget (56 %) » ne peut pas être mal lu. Le rapport périodique du serveur affiche exactement ça.</p></div>
 </div>
+<div lang="zh-TW">
+<div class="note measured"><p class="note-label">實測</p><p>在一個 400 個機器人的測試台中，整場最差的 tick 顯示 50.4 ms 的間隔，由 <strong>1.2 ms 的工作</strong>與 <strong>49.3 ms 的延遲醒來</strong>組成：機器人、閘道與 Unity 共用了這台機器。在另一個測試台中，我花時間在一個 41.7 ms 的 tick 與 34 ms 的各階段總和之間尋找「消失的 8 毫秒」，後來才發現 41.7 是一個間隔：它的最小值是 40.04 ms，而在一個空的 tick 上就會是 40。</p></div>
+<div class="note rule"><p class="note-label">規則</p><p>把一個時間長度印在它的預算旁邊，並在尋找兩個數字之間的差距之前，先確認它們量的是同一件事。</p><p>「22.5 ms」單獨出現毫無意義；「40 ms 預算中用了 22.5 ms 的工作（56 %）」則不可能被誤讀。伺服器的定期報告現在印的正是這個。</p></div></div>
 </section>
 
 <section class="sec" id="takeaways">
@@ -255,6 +312,13 @@
 <li>Tirer la précision d'une minuterie haute résolution et d'un court spin, pas de la résolution par défaut du système.</li>
 <li>Donner aux threads du tick la priorité sur tout le reste, et lire l'intervalle et le travail comme deux nombres différents.</li>
 </ul></div>
+<div lang="zh-TW"><h2>重點整理</h2><ul>
+<li>以固定步長模擬，並給物理一個固定的步長；快照的送出速度不要快於世界推進的速度。</li>
+<li>在專屬執行緒上手寫迴圈，讓兩個 tick 永遠不可能重疊。</li>
+<li>把每個截止時間錨定在前一個之上，並在長時間停頓後重設格線，而不是陷入螺旋。</li>
+<li>精確度來自高精度計時器加上一小段自旋，而不是作業系統的預設精度。</li>
+<li>讓 tick 執行緒的優先權高於其他一切，並把間隔與工作當成兩個不同的數字來讀。</li>
+</ul></div>
 </div>
 </section>
 
@@ -267,6 +331,7 @@
 <footer class="site-footer" id="mq-footer"></footer>
 <script src="assets/js/site-data.js" defer></script>
 <script src="assets/js/glossary-data.js" defer></script>
+<script src="assets/js/ui-zh.js" defer></script>
 <script src="assets/js/app.js" defer></script>
 <script src="assets/js/widgets.js" defer></script>
 </body>

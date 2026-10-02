@@ -7,12 +7,12 @@
 <meta name="description" content="The phases of one 40 ms world step, in order, and why each one sits exactly where it does.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Chakra+Petch:wght@500;600&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Chakra+Petch:wght@500;600&family=JetBrains+Mono:wght@400;500;600&family=Noto+Sans+TC:wght@400;700&display=swap">
 <link rel="stylesheet" href="assets/css/site.css">
-<script>(function(){var r=document.documentElement,l,t;try{l=localStorage.getItem("mq-lang");t=localStorage.getItem("mq-theme");}catch(e){}if(l!=="en"&&l!=="fr"){l=(navigator.language||"").toLowerCase().indexOf("fr")===0?"fr":"en";}r.setAttribute("data-lang",l);r.setAttribute("lang",l);if(t==="light"||t==="dark")r.setAttribute("data-theme",t);})();</script>
+<script>(function(){var r=document.documentElement,l,t,n;try{l=localStorage.getItem("mq-lang");t=localStorage.getItem("mq-theme");}catch(e){}if(l!=="en"&&l!=="fr"&&l!=="zh"){n=(navigator.language||"").toLowerCase();l=n.indexOf("fr")===0?"fr":n.indexOf("zh")===0?"zh":"en";}r.setAttribute("data-lang",l);r.setAttribute("lang",l==="zh"?"zh-TW":l);if(t==="light"||t==="dark")r.setAttribute("data-theme",t);})();</script>
 </head>
 <body data-page="tick-anatomy">
-<a class="skip-link" href="#main"><span lang="en">Skip to content</span><span lang="fr">Aller au contenu</span></a>
+<a class="skip-link" href="#main"><span lang="en">Skip to content</span><span lang="fr">Aller au contenu</span><span lang="zh-TW">跳到主要內容</span></a>
 <header class="site-header" id="mq-header"></header>
 <div class="layout">
 <aside class="sidebar" id="mq-sidebar"></aside>
@@ -20,8 +20,8 @@
 <article>
 <header class="chapter-head">
   <div class="eyebrow" data-auto></div>
-  <h1><span lang="en">Anatomy of a tick</span><span lang="fr">Anatomie d'un tick</span></h1>
-  <p class="dek"><span lang="en">The phases of one 40 ms world step, in order, and why each one sits exactly where it does.</span><span lang="fr">Les phases d'un pas de monde de 40 ms, dans l'ordre, et pourquoi chacune est exactement à sa place.</span></p>
+  <h1><span lang="en">Anatomy of a tick</span><span lang="fr">Anatomie d'un tick</span><span lang="zh-TW">Tick 解剖</span></h1>
+  <p class="dek"><span lang="en">The phases of one 40 ms world step, in order, and why each one sits exactly where it does.</span><span lang="fr">Les phases d'un pas de monde de 40 ms, dans l'ordre, et pourquoi chacune est exactement à sa place.</span><span lang="zh-TW">一個 40 ms 世界步進的各個階段、執行順序，以及每個階段為什麼剛好放在那裡。</span></p>
   <div class="meta-row" data-auto></div>
 </header>
 
@@ -38,34 +38,38 @@
 <p>Un tick est un pipeline. Chaque phase lit ce que les précédentes ont écrit, donc l'ordre des phases encode la cause et l'effet : un propulseur pousse avant que le solveur déplace le vaisseau, le vaisseau bouge avant qu'une balle teste si elle l'a touché, tout bouge avant qu'on dise aux joueurs où sont les choses. Placez une phase un cran trop tôt et tout le serveur a un tick de retard sur cette chose, ce que les joueurs voient comme un à-coup, un fantôme, ou un tir qui n'a pas compté.</p>
 <p>Le tick de MoonQwak a deux niveaux. Le <strong>tick du monde</strong> tourne sur un thread et se découpe en neuf sections. L'une d'elles, « cartes », fait tourner le tick propre à chaque carte, plusieurs cartes en parallèle. La frise ci-dessous montre un tick typique avec 600 vaisseaux sur une seule carte, le scénario le plus lourd des bancs de charge.</p>
 </div>
+<div lang="zh-TW">
+<h2>順序就是設計</h2>
+<p>一個 tick 是一條管線。每個階段讀取前面階段寫下的東西，所以階段的順序編碼了因果關係：推進器在求解器移動船艦之前施力，船艦在子彈測試是否擊中它之前移動，所有東西都在告訴玩家東西在哪裡之前移動。只要把某個階段提前一步，整台伺服器在那件事上就會晚一個 tick，玩家看到的是卡頓、幽靈，或一次沒有算到的命中。</p>
+<p>MoonQwak 的 tick 有兩個層級。<strong>世界 tick</strong> 在一條執行緒上執行，分成九個區段。其中一個區段「地圖」會執行每張地圖自己的 tick，好幾張地圖平行進行。下面的時間軸展示了單一地圖上 600 艘船時一個典型的 tick，這是負載測試用過最重的情境。</p></div>
 <div class="lab" data-widget="phases" id="anat">
-<div class="lab-head"><span class="lab-title"><span lang="en">One world tick at 600 ships</span><span lang="fr">Un tick du monde à 600 vaisseaux</span></span><span class="lab-sub"><span lang="en">Hover a segment for what it does. The playhead moves at a quarter of real time.</span><span lang="fr">Survolez un segment pour savoir ce qu'il fait. La tête de lecture avance au quart du temps réel.</span></span></div>
+<div class="lab-head"><span class="lab-title"><span lang="en">One world tick at 600 ships</span><span lang="fr">Un tick du monde à 600 vaisseaux</span><span lang="zh-TW">600 艘船時的一個世界 tick</span></span><span class="lab-sub"><span lang="en">Hover a segment for what it does. The playhead moves at a quarter of real time.</span><span lang="fr">Survolez un segment pour savoir ce qu'il fait. La tête de lecture avance au quart du temps réel.</span><span lang="zh-TW">把滑鼠移到區段上看它做什麼。播放頭以四分之一的實際速度移動。</span></span></div>
 <script type="application/json">
 {
   "budget": 40,
-  "aria": { "en": "Timeline of one 40 ms world tick at 600 ships: maps 13.8 ms, snapshot preparation 6 ms, snapshot build 3.9 ms, about 24 ms of work in total; inside the map, tick objects 8.7 ms and physics 2.5 ms", "fr": "Frise d'un tick du monde de 40 ms à 600 vaisseaux : cartes 13,8 ms, préparation des snapshots 6 ms, construction 3,9 ms, environ 24 ms de travail au total ; dans la carte, tick des objets 8,7 ms et physique 2,5 ms" },
+  "aria": { "en": "Timeline of one 40 ms world tick at 600 ships: maps 13.8 ms, snapshot preparation 6 ms, snapshot build 3.9 ms, about 24 ms of work in total; inside the map, tick objects 8.7 ms and physics 2.5 ms", "fr": "Frise d'un tick du monde de 40 ms à 600 vaisseaux : cartes 13,8 ms, préparation des snapshots 6 ms, construction 3,9 ms, environ 24 ms de travail au total ; dans la carte, tick des objets 8,7 ms et physique 2,5 ms", "zh": "600 艘船時一個 40 ms 世界 tick 的時間軸：地圖 13.8 ms、快照準備 6 ms、快照建構 3.9 ms，總共約 24 ms 的工作；在地圖內，物件 tick 8.7 ms、物理 2.5 ms" },
   "lanes": [
-    { "name": { "en": "World thread", "fr": "Thread du monde" }, "segs": [
-      { "s": 0, "d": 0.3, "tone": "muted", "label": { "en": "sweeps", "fr": "balayages" }, "desc": { "en": "Catalog swap, pending map creations (3 ms budget), 1 Hz group vitals, the checkpoint capture once a minute. The writes themselves go to the background thread.", "fr": "Échange de catalogue, créations de cartes en attente (budget de 3 ms), vitals de groupe à 1 Hz, capture du point de sauvegarde une fois par minute. Les écritures partent sur le thread de fond." } },
-      { "s": 0.3, "d": 13.8, "tone": "s1", "label": { "en": "maps", "fr": "cartes" }, "desc": { "en": "Each map's own tick, one map per worker when there are several (lane below). Measured: 13.8 ms at 600 ships.", "fr": "Le tick propre à chaque carte, une carte par ouvrier quand il y en a plusieurs (ligne suivante). Mesuré : 13,8 ms à 600 vaisseaux." } },
-      { "s": 14.1, "d": 0.3, "tone": "muted", "label": { "en": "after maps", "fr": "après cartes" }, "desc": { "en": "Lingering hulls, field and node broadcasts, per-player deadlines (death, channels, trade), viewer count. All together: about 0.3 ms.", "fr": "Coques rémanentes, diffusions de champ et de nœuds, échéances par joueur (mort, canaux, échange), compte des spectateurs. Le tout : environ 0,3 ms." } },
-      { "s": 14.4, "d": 6.0, "tone": "s2", "label": { "en": "snapshot prep", "fr": "prépa snapshots" }, "desc": { "en": "Serialize each object once for this tick. Measured: 6.0 ms at 600. Chapter 4.3.", "fr": "Sérialiser chaque objet une fois pour ce tick. Mesuré : 6,0 ms à 600. Chapitre 4.3." } },
-      { "s": 20.4, "d": 3.9, "tone": "s3", "label": { "en": "build", "fr": "construction" }, "desc": { "en": "One packet per player, by copying prepared blocks, in parallel. Measured: 3.9 ms at 600.", "fr": "Un paquet par joueur, en recopiant les blocs préparés, en parallèle. Mesuré : 3,9 ms à 600." } },
-      { "s": 24.3, "d": 0.2, "tone": "muted", "label": { "en": "stats", "fr": "stats" }, "desc": { "en": "Load statistics for the Monitor; idle-map sweep every 30 ticks.", "fr": "Statistiques de charge pour le Monitor ; balayage des cartes vides tous les 30 ticks." } }
+    { "name": { "en": "World thread", "fr": "Thread du monde", "zh": "世界執行緒" }, "segs": [
+      { "s": 0, "d": 0.3, "tone": "muted", "label": { "en": "sweeps", "fr": "balayages", "zh": "掃除" }, "desc": { "en": "Catalog swap, pending map creations (3 ms budget), 1 Hz group vitals, the checkpoint capture once a minute. The writes themselves go to the background thread.", "fr": "Échange de catalogue, créations de cartes en attente (budget de 3 ms), vitals de groupe à 1 Hz, capture du point de sauvegarde une fois par minute. Les écritures partent sur le thread de fond.", "zh": "替換目錄、建立待建立的地圖（3 ms 預算）、1 Hz 的隊伍生命狀態、每分鐘一次的檢查點記錄。寫入本身交給背景執行緒。" } },
+      { "s": 0.3, "d": 13.8, "tone": "s1", "label": { "en": "maps", "fr": "cartes", "zh": "地圖" }, "desc": { "en": "Each map's own tick, one map per worker when there are several (lane below). Measured: 13.8 ms at 600 ships.", "fr": "Le tick propre à chaque carte, une carte par ouvrier quand il y en a plusieurs (ligne suivante). Mesuré : 13,8 ms à 600 vaisseaux.", "zh": "每張地圖自己的 tick，有多張地圖時每個工作執行緒一張（見下一列）。實測：600 艘船時 13.8 ms。" } },
+      { "s": 14.1, "d": 0.3, "tone": "muted", "label": { "en": "after maps", "fr": "après cartes", "zh": "地圖之後" }, "desc": { "en": "Lingering hulls, field and node broadcasts, per-player deadlines (death, channels, trade), viewer count. All together: about 0.3 ms.", "fr": "Coques rémanentes, diffusions de champ et de nœuds, échéances par joueur (mort, canaux, échange), compte des spectateurs. Le tout : environ 0,3 ms.", "zh": "殘留船體、力場與節點廣播、每位玩家的期限（死亡、引導、交易）、觀察者計數。全部加起來：約 0.3 ms。" } },
+      { "s": 14.4, "d": 6.0, "tone": "s2", "label": { "en": "snapshot prep", "fr": "prépa snapshots", "zh": "快照準備" }, "desc": { "en": "Serialize each object once for this tick. Measured: 6.0 ms at 600. Chapter 4.3.", "fr": "Sérialiser chaque objet une fois pour ce tick. Mesuré : 6,0 ms à 600. Chapitre 4.3.", "zh": "為這個 tick 把每個物件序列化一次。實測：600 時 6.0 ms。第 4.3 章。" } },
+      { "s": 20.4, "d": 3.9, "tone": "s3", "label": { "en": "build", "fr": "construction", "zh": "建構" }, "desc": { "en": "One packet per player, by copying prepared blocks, in parallel. Measured: 3.9 ms at 600.", "fr": "Un paquet par joueur, en recopiant les blocs préparés, en parallèle. Mesuré : 3,9 ms à 600.", "zh": "每位玩家一個封包，複製準備好的區塊，平行進行。實測：600 時 3.9 ms。" } },
+      { "s": 24.3, "d": 0.2, "tone": "muted", "label": { "en": "stats", "fr": "stats", "zh": "統計" }, "desc": { "en": "Load statistics for the Monitor; idle-map sweep every 30 ticks.", "fr": "Statistiques de charge pour le Monitor ; balayage des cartes vides tous les 30 ticks.", "zh": "給監控器的負載統計；每 30 個 tick 掃除閒置地圖。" } }
     ] },
-    { "name": { "en": "Inside one map", "fr": "Dans une carte" }, "segs": [
-      { "s": 0.3, "d": 0.4, "tone": "muted", "label": { "en": "pending", "fr": "en attente" }, "desc": { "en": "Spent bullets aged, gravity field applied, debris drift, deferred body creations and removals. Approximate.", "fr": "Balles usées vieillies, champ de gravité appliqué, dérive des débris, créations et retraits de corps différés. Approximatif." } },
-      { "s": 0.7, "d": 8.7, "tone": "s1", "label": { "en": "tick objects", "fr": "tick des objets" }, "desc": { "en": "Inputs, aim, fire and behaviours of every object on the map. Measured: about 8.7 ms, roughly 14 µs per ship.", "fr": "Entrées, visée, tir et comportements de chaque objet de la carte. Mesuré : environ 8,7 ms, soit à peu près 14 µs par vaisseau." } },
-      { "s": 9.4, "d": 0.8, "tone": "muted", "label": { "en": "pre-step", "fr": "pré-pas" }, "desc": { "en": "Power, fire, shields, shape rebuilds; velocities saved for contact damage. Approximate.", "fr": "Énergie, feu, boucliers, reconstruction de formes ; vitesses sauvegardées pour les dégâts de contact. Approximatif." } },
-      { "s": 10.2, "d": 2.5, "tone": "s4", "label": { "en": "physics", "fr": "physique" }, "desc": { "en": "One Box2D step with 4 sub-steps. Measured: 2.5 ms, after the shape cut of chapter 3.5 (about 15 ms at only 400 ships before it).", "fr": "Un pas Box2D avec 4 sous-pas. Mesuré : 2,5 ms, après la division des formes du chapitre 3.5 (environ 15 ms à seulement 400 vaisseaux avant elle)." } },
-      { "s": 12.7, "d": 1.0, "tone": "muted", "label": { "en": "hits", "fr": "impacts" }, "desc": { "en": "Contact damage, bullets and missiles integrated and swept, hits applied. Approximate.", "fr": "Dégâts de contact, balles et missiles intégrés et balayés, impacts appliqués. Approximatif." } },
-      { "s": 13.7, "d": 0.4, "tone": "accent", "label": { "en": "index", "fr": "index" }, "desc": { "en": "Area-of-interest grid rebuilt last, so snapshots read this tick's positions. Approximate.", "fr": "Grille de zone d'intérêt reconstruite en dernier, pour que les snapshots lisent les positions de ce tick. Approximatif." } }
+    { "name": { "en": "Inside one map", "fr": "Dans une carte", "zh": "單一地圖內部" }, "segs": [
+      { "s": 0.3, "d": 0.4, "tone": "muted", "label": { "en": "pending", "fr": "en attente", "zh": "待處理" }, "desc": { "en": "Spent bullets aged, gravity field applied, debris drift, deferred body creations and removals. Approximate.", "fr": "Balles usées vieillies, champ de gravité appliqué, dérive des débris, créations et retraits de corps différés. Approximatif.", "zh": "老化用盡的子彈、套用重力場、碎片漂移、延後的剛體建立與移除。概略值。" } },
+      { "s": 0.7, "d": 8.7, "tone": "s1", "label": { "en": "tick objects", "fr": "tick des objets", "zh": "物件 tick" }, "desc": { "en": "Inputs, aim, fire and behaviours of every object on the map. Measured: about 8.7 ms, roughly 14 µs per ship.", "fr": "Entrées, visée, tir et comportements de chaque objet de la carte. Mesuré : environ 8,7 ms, soit à peu près 14 µs par vaisseau.", "zh": "地圖上每個物件的輸入、瞄準、開火與行為。實測：約 8.7 ms，大約每艘船 14 µs。" } },
+      { "s": 9.4, "d": 0.8, "tone": "muted", "label": { "en": "pre-step", "fr": "pré-pas", "zh": "前置步驟" }, "desc": { "en": "Power, fire, shields, shape rebuilds; velocities saved for contact damage. Approximate.", "fr": "Énergie, feu, boucliers, reconstruction de formes ; vitesses sauvegardées pour les dégâts de contact. Approximatif.", "zh": "電力、火災、護盾、形狀重建；為接觸傷害保存速度。概略值。" } },
+      { "s": 10.2, "d": 2.5, "tone": "s4", "label": { "en": "physics", "fr": "physique", "zh": "物理" }, "desc": { "en": "One Box2D step with 4 sub-steps. Measured: 2.5 ms, after the shape cut of chapter 3.5 (about 15 ms at only 400 ships before it).", "fr": "Un pas Box2D avec 4 sous-pas. Mesuré : 2,5 ms, après la division des formes du chapitre 3.5 (environ 15 ms à seulement 400 vaisseaux avant elle).", "zh": "一次含 4 個子步驟的 Box2D 步驟。實測：2.5 ms，這是在第 3.5 章的形狀削減之後（在那之前只有 400 艘船時就約 15 ms）。" } },
+      { "s": 12.7, "d": 1.0, "tone": "muted", "label": { "en": "hits", "fr": "impacts", "zh": "命中" }, "desc": { "en": "Contact damage, bullets and missiles integrated and swept, hits applied. Approximate.", "fr": "Dégâts de contact, balles et missiles intégrés et balayés, impacts appliqués. Approximatif.", "zh": "接觸傷害、子彈與飛彈的積分與掃掠、套用命中。概略值。" } },
+      { "s": 13.7, "d": 0.4, "tone": "accent", "label": { "en": "index", "fr": "index", "zh": "索引" }, "desc": { "en": "Area-of-interest grid rebuilt last, so snapshots read this tick's positions. Approximate.", "fr": "Grille de zone d'intérêt reconstruite en dernier, pour que les snapshots lisent les positions de ce tick. Approximatif.", "zh": "興趣區域網格最後重建，讓快照讀到這個 tick 的位置。概略值。" } }
     ] },
-    { "name": { "en": "Snapshot thread", "fr": "Thread snapshot" }, "segs": [
-      { "s": 26, "d": 10, "tone": "s2", "label": { "en": "send", "fr": "envoi" }, "desc": { "en": "Its own 25 Hz clock: sends each player's pending packet, sequentially. About 10 ms per 400 sends was measured; drawn for scale.", "fr": "Sa propre horloge à 25 Hz : envoie le paquet en attente de chaque joueur, séquentiellement. Environ 10 ms pour 400 envois ont été mesurés ; dessiné pour l'échelle." } }
+    { "name": { "en": "Snapshot thread", "fr": "Thread snapshot", "zh": "快照執行緒" }, "segs": [
+      { "s": 26, "d": 10, "tone": "s2", "label": { "en": "send", "fr": "envoi", "zh": "傳送" }, "desc": { "en": "Its own 25 Hz clock: sends each player's pending packet, sequentially. About 10 ms per 400 sends was measured; drawn for scale.", "fr": "Sa propre horloge à 25 Hz : envoie le paquet en attente de chaque joueur, séquentiellement. Environ 10 ms pour 400 envois ont été mesurés ; dessiné pour l'échelle.", "zh": "它自己的 25 Hz 時鐘：依序送出每位玩家待送的封包。實測每 400 次傳送約 10 ms；依比例繪製。" } }
     ] },
-    { "name": { "en": "Background", "fr": "Fond" }, "segs": [
-      { "s": 3, "d": 12, "tone": "muted", "label": { "en": "database writes", "fr": "écritures en base" }, "desc": { "en": "Checkpoints, minute sweeps, the slow half of map transitions: queued by the tick, never waited for. Chapter 3.4.", "fr": "Points de sauvegarde, balayages à la minute, moitié lente des transitions : mis en file par le tick, jamais attendus. Chapitre 3.4." } }
+    { "name": { "en": "Background", "fr": "Fond", "zh": "背景" }, "segs": [
+      { "s": 3, "d": 12, "tone": "muted", "label": { "en": "database writes", "fr": "écritures en base", "zh": "資料庫寫入" }, "desc": { "en": "Checkpoints, minute sweeps, the slow half of map transitions: queued by the tick, never waited for. Chapter 3.4.", "fr": "Points de sauvegarde, balayages à la minute, moitié lente des transitions : mis en file par le tick, jamais attendus. Chapitre 3.4.", "zh": "檢查點、每分鐘掃除、地圖切換中慢的那一半：由 tick 排入佇列，從不等待。第 3.4 章。" } }
     ] }
   ]
 }
@@ -77,6 +81,8 @@
 <div lang="fr">
 <p>Environ 24 ms de travail pour un budget de 40. Les sections « cartes », « prépa snapshots » et « construction », le tick des objets et le pas physique sont des valeurs mesurées aux bancs à 600 joueurs ; les petites phases sont dessinées à leur part approximative, sous la milliseconde chacune. Le reste de l'intervalle se passe à attendre la prochaine échéance.</p>
 </div>
+<div lang="zh-TW">
+<p>40 ms 的預算中約有 24 ms 的工作。「地圖」、「快照準備」與「建構」區段、物件 tick 與物理步驟，都是 600 名玩家測試台的實測值；小階段則依其大致比例繪製，每個都不到一毫秒。間隔的其餘時間都花在等待下一個到期時間。</p></div>
 </section>
 
 <section class="sec" id="world-sections">
@@ -112,6 +118,21 @@
 <tr><td>9</td><td>Stats</td><td>Agrège les chiffres de charge pour le Monitor, balaie les cartes vides tous les 30 ticks.</td><td>Des lectures séquentielles de champs que chaque propriétaire a déjà écrits : mesurer ne coûte rien.</td></tr>
 </tbody></table></div>
 </div>
+<div lang="zh-TW">
+<h2>世界 tick，逐一區段</h2>
+<div class="table-wrap"><table>
+<thead><tr><th>#</th><th>區段</th><th>做什麼</th><th>為什麼放在這裡</th></tr></thead>
+<tbody>
+<tr><td>1</td><td>雜務</td><td>替換熱重載的遊戲資料、建立等待建立的地圖、以 1 Hz 送出隊伍生命狀態、記錄每分鐘的檢查點、觸發每分鐘的掃除。</td><td>還沒有任何地圖在移動，所以替換目錄參考或建立物理世界是安全的。任何碰到資料庫的東西在這裡都只是<em>排入佇列</em>。</td></tr>
+<tr><td>2</td><td>地圖</td><td>每張地圖自己的 tick（下一張表）。有多張地圖時，每個工作執行緒一張。</td><td>地圖之間不共享任何東西，這就是為什麼這是模擬中唯一平行的區段。</td></tr>
+<tr><td>3</td><td>殘留船體</td><td>移除 20 秒已到的斷線船體。</td><td>在所有地圖都 tick 完之後：從一張正被另一條執行緒模擬的地圖中移除物件，是一個競爭條件。</td></tr>
+<tr><td>4</td><td>廣播</td><td>重力場變化、資源節點、首領施法條、自毀倒數。</td><td>地圖只負責舉旗；傳送發生在這裡，在一條執行緒上。從平行迴圈內部傳送，會把網路寫入放到任意的工作執行緒上，與快照執行緒自己的傳送互相競爭。</td></tr>
+<tr><td>5</td><td>玩家期限</td><td>船員重新就座、消耗品、死亡倒數、引導動作、交易距離。循序執行。</td><td>它們會改變世界，所以必須在世界被序列化<em>之前</em>執行；它們也會碰到其他玩家，所以不能平行執行。</td></tr>
+<tr><td>6</td><td>觀察者</td><td>計算每張地圖的玩家數。</td><td>下一個區段需要它來判斷預先準備共用區塊是否划算。</td></tr>
+<tr><td>7</td><td>快照準備</td><td>為這個 tick 把每個物件序列化一次。</td><td>一切都已經移動，而這個 tick 不會再有東西移動。第 <a href="serialize-once.html">4.3</a> 章。</td></tr>
+<tr><td>8</td><td>快照建構</td><td>從準備好的區塊為每位玩家建構一個封包，平行進行。</td><td>依契約只讀不寫。封包等待快照執行緒來取。</td></tr>
+<tr><td>9</td><td>統計</td><td>為監控器彙整負載數據，每 30 個 tick 掃除閒置地圖。</td><td>循序讀取各擁有者早已寫好的欄位，所以量測不花成本。</td></tr>
+</tbody></table></div></div>
 <div lang="en">
 <div class="note pitfall"><p class="note-label">Pitfall I hit</p><p>The player deadlines used to run inside the parallel snapshot loop. Taking the controls of a ship is a channelled action: when it completes, the pilot sits down and their walking character leaves the map. That happened <em>after</em> the tick's bytes had been frozen, so the client received "you are seated" followed by a snapshot that still showed its character standing on the deck. The client took the character as proof that it was still walking, stopped sending ship inputs, and the ship no longer moved. Moving four calls ten lines up, into a sequential pass before serialization, fixed it.</p></div>
 <div class="note rule"><p class="note-label">Rule</p><p>Anything that changes the world runs before the world is serialized, sequentially; everything after that point only reads.</p><p>A snapshot is a photograph of one instant. A mutation that lands between the photograph and the send makes the client receive two contradictory truths.</p></div>
@@ -120,6 +141,9 @@
 <div class="note pitfall"><p class="note-label">Piège rencontré</p><p>Les échéances des joueurs tournaient autrefois dans la boucle parallèle des snapshots. Prendre les commandes d'un vaisseau est une action canalisée : à son terme, le pilote s'assied et son personnage à pied quitte la carte. Cela arrivait <em>après</em> que les octets du tick avaient été figés : le client recevait « vous êtes assis » puis un snapshot qui montrait encore son personnage debout sur le pont. Le client prenait ce personnage pour la preuve qu'il marchait encore, cessait d'envoyer les commandes du vaisseau, et le vaisseau ne bougeait plus. Remonter quatre appels de dix lignes, dans une passe séquentielle avant la sérialisation, l'a corrigé.</p></div>
 <div class="note rule"><p class="note-label">Règle</p><p>Tout ce qui change le monde passe avant sa sérialisation, séquentiellement ; tout ce qui suit ne fait que lire.</p><p>Un snapshot est la photo d'un instant. Une mutation qui tombe entre la photo et l'envoi fait recevoir au client deux vérités contradictoires.</p></div>
 </div>
+<div lang="zh-TW">
+<div class="note pitfall"><p class="note-label">我踩過的坑</p><p>玩家期限過去是在平行的快照迴圈中執行的。接手一艘船的控制是一個引導動作：完成時，駕駛員坐下，他行走中的角色離開地圖。這件事發生在 tick 的位元組被凍結<em>之後</em>，所以用戶端先收到「你已就座」，接著收到一份仍然顯示它的角色站在甲板上的快照。用戶端把這個角色當成仍在行走的證據，於是停止送出船艦輸入，船就再也不動了。把四個呼叫往上移十行，移到序列化之前的一個循序階段，就修好了。</p></div>
+<div class="note rule"><p class="note-label">規則</p><p>任何會改變世界的東西，都在世界被序列化之前循序執行；在那之後的一切都只能讀取。</p><p>快照是某一瞬間的照片。在拍照與傳送之間落下的修改，會讓用戶端收到兩個互相矛盾的真相。</p></div></div>
 </section>
 
 <section class="sec" id="map-phases">
@@ -159,12 +183,31 @@
 <tr><td>10</td><td>Reconstruire l'index</td><td>En dernier. Les snapshots lisent cette grille ; la reconstruire plus tôt montrerait à chaque spectateur un monde en retard d'un tick. Chapitre <a href="aoi.html">4.1</a>.</td></tr>
 </tbody></table></div>
 </div>
+<div lang="zh-TW">
+<h2>單一地圖的內部</h2>
+<p>每張地圖擁有自己的物件、自己的 Box2D 世界與自己的暫存緩衝區，並回傳自己的計時結果，而不是加到共用的計數器上。兩張地圖之間不共享任何東西，這是新增階段時必須維持的不變條件。</p>
+<div class="table-wrap"><table>
+<thead><tr><th>#</th><th>階段</th><th>為什麼放在這裡</th></tr></thead>
+<tbody>
+<tr><td>1</td><td>老化用盡的子彈</td><td>放在最前面，讓在第 N 個 tick 中死亡的子彈，在它殘留的每個 tick 的快照中都保有最終狀態（以及命中旗標）。第 <a href="snapshots.html">4.2</a> 章。</td></tr>
+<tr><td>2</td><td>重力場</td><td>在物理步驟之前，讓求解器把引力視為這個 tick 速度的一部分；也在物件 tick 之前，讓駕駛員的推力與引力合成，而不是與過時的速度合成。</td></tr>
+<tr><td>3</td><td>碎片漂移</td><td>在物件 tick 之前，讓正在收集碎片的收集器看到這個 tick 的位置。</td></tr>
+<tr><td>4</td><td>套用待處理項目</td><td>從其他執行緒排入的剛體建立與移除（連線、停靠、消失）在這裡套用，在兩次物理步驟之間。第 <a href="threading.html">3.3</a> 章。</td></tr>
+<tr><td>5</td><td>物件 tick</td><td>屬於這張地圖的每個物件的輸入、瞄準、開火與行為。第 <a href="entities.html">3.6</a> 章。</td></tr>
+<tr><td>6</td><td>前置步驟</td><td>每艘船：先電力，再火災，再護盾，最後重建有變動的碰撞形狀。一個剛失去電力的六角格，不能再多充一個 tick 的護盾。速度在這裡為接觸階段保存下來。</td></tr>
+<tr><td>7</td><td>物理步驟</td><td>一次 1/25 秒、含四個子步驟的 Box2D 步驟。第 <a href="physics.html">3.5</a> 章。</td></tr>
+<tr><td>8</td><td>接觸事件</td><td>衝撞傷害，以步驟<em>之前</em>保存的速度計算。</td></tr>
+<tr><td>9</td><td>子彈與飛彈</td><td>在步驟之後，讓每顆子彈掃過的線段與船艦的新位置做測試。命中會造成傷害；移除則延後一個 tick。</td></tr>
+<tr><td>10</td><td>重建索引</td><td>最後。快照會讀取這個網格；更早重建，會讓每位觀察者看到慢了一個 tick 的世界。第 <a href="aoi.html">4.1</a> 章。</td></tr>
+</tbody></table></div></div>
 <div lang="en">
 <div class="note pitfall"><p class="note-label">Pitfall I hit</p><p>Box2D reports a contact <em>after</em> the step has resolved it: impulses and damping are already applied. Reading the ships' velocities at that point gives the post-impact speed, not the speed at which they closed in. Ramming damage became erratic: whether the remaining speed still cleared the minimum impact threshold depended on how much the solver had already absorbed, not on how hard the ships actually hit. The fix is phase 6 saving every ship's velocity before the step, and phase 8 reading the saved value.</p></div>
 </div>
 <div lang="fr">
 <div class="note pitfall"><p class="note-label">Piège rencontré</p><p>Box2D signale un contact <em>après</em> que le pas l'a résolu : impulsions et amortissement sont déjà appliqués. Lire la vitesse des vaisseaux à ce moment donne la vitesse après l'impact, pas celle à laquelle ils se sont rapprochés. Les dégâts d'éperonnage devenaient erratiques : que la vitesse restante dépasse encore le seuil minimal d'impact dépendait de ce que le solveur avait déjà absorbé, pas de la violence réelle du choc. La correction : la phase 6 sauvegarde la vitesse de chaque vaisseau avant le pas, et la phase 8 lit la valeur sauvegardée.</p></div>
 </div>
+<div lang="zh-TW">
+<div class="note pitfall"><p class="note-label">我踩過的坑</p><p>Box2D 是在步驟已經解決接觸<em>之後</em>才回報接觸：衝量與阻尼都已經套用了。在那時讀取船艦的速度，得到的是撞擊後的速度，而不是它們接近時的速度。衝撞傷害變得忽高忽低：剩餘速度是否仍然超過最低撞擊門檻，取決於求解器已經吸收了多少，而不是船艦實際撞得多猛。修正方式是在第 6 階段於步驟之前保存每艘船的速度，再由第 8 階段讀取保存的值。</p></div></div>
 </section>
 
 <section class="sec" id="one-tick-late">
@@ -178,6 +221,10 @@
 <p>Certaines choses sont délibérément retardées d'exactement un tick. Une balle qui touche quelque chose cesse aussitôt d'être simulée, mais reste enregistrée dans sa carte jusqu'à la phase « appliquer l'attente » du tick suivant. Ce délai est ce qui permet au snapshot de ce tick de porter sa position finale et son drapeau d'impact : retirez-la immédiatement et le client n'apprend jamais où elle est morte, et continue de la faire voler à travers la cible.</p>
 <p>Le même différé protège Box2D. Créer ou détruire un corps pendant qu'un autre thread fait avancer le monde corrompt la mémoire native : chaque création et chaque retrait demandés hors du tick sont mis en file et appliqués à la phase 4, quand aucun pas ne tourne. Le chapitre <a href="threading.html">3.3</a> raconte l'unique endroit qui l'avait oublié, et ça ne s'est pas terminé par une exception managée.</p>
 </div>
+<div lang="zh-TW">
+<h2>刻意延後一個 tick</h2>
+<p>有些事情被刻意延後剛好一個 tick。擊中某物的子彈會立即停止模擬，但會一直登記在它的地圖中，直到下一個 tick 的「套用待處理項目」階段。正是這個延遲，讓這個 tick 的快照能攜帶它的最終位置與命中旗標：如果立即移除，用戶端永遠不會知道它死在哪裡，還會讓它一路飛穿目標。</p>
+<p>同樣的延後也保護了 Box2D。在另一條執行緒推進世界時建立或摧毀剛體，會損毀原生記憶體，所以每一個從 tick 之外請求的建立與移除都會排入佇列，並在沒有任何步驟正在執行的第 4 階段套用。第 <a href="threading.html">3.3</a> 章講述了唯一忘了這件事的那個地方的故事，而它的結局可不是一個受控的例外。</p></div>
 </section>
 
 <section class="sec" id="timing-phases">
@@ -193,6 +240,11 @@
 <div class="note rule"><p class="note-label">Règle</p><p>Une mesure qui mesure plus que son nom est pire que pas de mesure du tout.</p><p>L'absence de mesure pousse à chercher. Une mesure fausse envoie dans la mauvaise direction, avec assurance.</p></div>
 <p>Deux autres habitudes en sont sorties. Les sommes par carte répondent à « quelle phase coûte cher », mais une somme sur les cartes ne distingue pas une carte à 76 ms de deux cartes à 38 : la pire carte seule est donc rapportée à côté, avec son identifiant et son nombre d'objets. Et rien dans le tick parallèle des cartes n'écrit sur la console : <code>Console.WriteLine</code> prend un verrou global au processus, et une ligne de journal par contact sérialiserait toutes les cartes derrière la sortie standard, défaisant en silence le parallélisme qu'elle cherchait à déboguer.</p>
 </div>
+<div lang="zh-TW">
+<h2>誠實地為各階段計時</h2>
+<p>每個階段都重新啟動自己的碼錶。以前並非如此：「前置步驟」的數字過去是從一個在地圖 tick 開頭啟動、從未重設的碼錶讀取的，所以它默默地包含了力場、碎片、延後的 Box2D 工作，以及整個物件 tick。監控器因此顯示前置步驟是最大的階段，而我還據此下了結論。</p>
+<div class="note rule"><p class="note-label">規則</p><p>一個量得比它的名稱還多的指標，比沒有指標更糟。</p><p>沒有指標，會讓你去找。錯誤的指標，會讓你充滿自信地往錯誤的方向走。</p></div>
+<p>由此又養成了兩個量測習慣。各地圖的總和回答的是「哪個階段昂貴」，但跨地圖的總和無法區分一張 76 ms 的地圖與兩張 38 ms 的地圖，所以最差的單一地圖會附上 ID 與物件數，一起回報在旁邊。而且平行的地圖 tick 內部不寫任何東西到主控台：<code>Console.WriteLine</code> 會取得一個程序層級的鎖，每次接觸一行日誌，就會讓每張地圖都排在標準輸出後面依序執行，悄悄地抵銷掉它本來要除錯的平行性。</p></div>
 </section>
 
 <section class="sec" id="takeaways">
@@ -211,6 +263,13 @@
 <li>Différer les retraits d'un tick pour que le dernier état atteigne les clients, et ne toucher au moteur physique qu'entre deux pas.</li>
 <li>Donner à chaque phase son propre chronomètre, et rapporter la pire carte à côté de la somme.</li>
 </ul></div>
+<div lang="zh-TW"><h2>重點整理</h2><ul>
+<li>依因果關係排列階段：一個階段讀取的東西，必須在同一個 tick 中更早被寫入。</li>
+<li>先修改，而且循序進行；一切都移動完後再序列化；之後只能讀取。</li>
+<li>讓地圖彼此獨立，才能平行 tick，並把橫跨各處的工作（傳送、移除）放在平行區段之後。</li>
+<li>把移除延後一個 tick，讓最後的狀態送達用戶端，並且只在步驟之間碰物理引擎。</li>
+<li>給每個階段自己的計時器，並在總和旁邊回報最差的那張地圖。</li>
+</ul></div>
 </div>
 </section>
 
@@ -223,6 +282,7 @@
 <footer class="site-footer" id="mq-footer"></footer>
 <script src="assets/js/site-data.js" defer></script>
 <script src="assets/js/glossary-data.js" defer></script>
+<script src="assets/js/ui-zh.js" defer></script>
 <script src="assets/js/app.js" defer></script>
 <script src="assets/js/widgets.js" defer></script>
 </body>

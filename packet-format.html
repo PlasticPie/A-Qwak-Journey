@@ -7,12 +7,12 @@
 <meta name="description" content="Framing, positional payloads, and the discipline that keeps a hand-written serializer honest.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Chakra+Petch:wght@500;600&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Chakra+Petch:wght@500;600&family=JetBrains+Mono:wght@400;500;600&family=Noto+Sans+TC:wght@400;700&display=swap">
 <link rel="stylesheet" href="assets/css/site.css">
-<script>(function(){var r=document.documentElement,l,t;try{l=localStorage.getItem("mq-lang");t=localStorage.getItem("mq-theme");}catch(e){}if(l!=="en"&&l!=="fr"){l=(navigator.language||"").toLowerCase().indexOf("fr")===0?"fr":"en";}r.setAttribute("data-lang",l);r.setAttribute("lang",l);if(t==="light"||t==="dark")r.setAttribute("data-theme",t);})();</script>
+<script>(function(){var r=document.documentElement,l,t,n;try{l=localStorage.getItem("mq-lang");t=localStorage.getItem("mq-theme");}catch(e){}if(l!=="en"&&l!=="fr"&&l!=="zh"){n=(navigator.language||"").toLowerCase();l=n.indexOf("fr")===0?"fr":n.indexOf("zh")===0?"zh":"en";}r.setAttribute("data-lang",l);r.setAttribute("lang",l==="zh"?"zh-TW":l);if(t==="light"||t==="dark")r.setAttribute("data-theme",t);})();</script>
 </head>
 <body data-page="packet-format">
-<a class="skip-link" href="#main"><span lang="en">Skip to content</span><span lang="fr">Aller au contenu</span></a>
+<a class="skip-link" href="#main"><span lang="en">Skip to content</span><span lang="fr">Aller au contenu</span><span lang="zh-TW">跳到主要內容</span></a>
 <header class="site-header" id="mq-header"></header>
 <div class="layout">
 <aside class="sidebar" id="mq-sidebar"></aside>
@@ -20,8 +20,8 @@
 <article>
 <header class="chapter-head">
   <div class="eyebrow" data-auto></div>
-  <h1><span lang="en">A binary protocol of your own</span><span lang="fr">Un protocole binaire à soi</span></h1>
-  <p class="dek"><span lang="en">Framing, positional payloads, and the discipline that keeps a hand-written serializer honest.</span><span lang="fr">Les trames, les charges utiles positionnelles, et la discipline qui garde un sérialiseur écrit à la main honnête.</span></p>
+  <h1><span lang="en">A binary protocol of your own</span><span lang="fr">Un protocole binaire à soi</span><span lang="zh-TW">自訂二進位協定</span></h1>
+  <p class="dek"><span lang="en">Framing, positional payloads, and the discipline that keeps a hand-written serializer honest.</span><span lang="fr">Les trames, les charges utiles positionnelles, et la discipline qui garde un sérialiseur écrit à la main honnête.</span><span lang="zh-TW">訊框、依位置排列的酬載，以及讓手寫序列化器保持誠實的紀律。</span></p>
   <div class="meta-row" data-auto></div>
 </header>
 
@@ -48,6 +48,15 @@
 </ul>
 <p>Le prix est réel. Un format écrit à la main n'a ni schéma ni noms de champs sur le fil : rien d'autre que la discipline ne garantit que l'écrivain et le lecteur sont d'accord. Le chapitre <a href="protocol-testing.html">1.6</a> est l'autre moitié de celui-ci : les tests et la porte de version qui ont transformé cette discipline en quelque chose de vérifié.</p>
 </div>
+<div lang="zh-TW">
+<h2>為什麼要手寫格式</h2>
+<p>JSON 好讀又能自我描述，但對每位玩家每秒 25 次更新來說實在太大了：每個值都帶著它的欄位名稱一起傳送。Protocol Buffers、FlatBuffers 或 MessagePack 這類基於結構描述的二進位格式很精簡，新增欄位時也處理得很優雅，對遊戲來說是完全合理的選擇。但 MoonQwak 選擇手寫封包，理由有三：</p>
+<ul>
+<li><strong>掌控每一個位元組。</strong>最熱門的訊息用了通用序列化器不提供的技巧：一個表示後面跟著哪些區塊的旗標位元組、量化的數字、依接收端已知內容而以兩種不同格式送出的子彈（第 4 部）。</li>
+<li><strong>熱路徑上不配置記憶體。</strong>每位玩家的快照以每秒 25 次的頻率序列化到一個重複使用的緩衝區，不會替垃圾回收器製造垃圾。在自己寫的程式碼裡，這比較容易保證。</li>
+<li><strong>兩端是同一份 C#。</strong>封包類別放在一個同時為伺服器與 Unity 用戶端編譯的函式庫中，所以沒有任何產生出來的程式碼需要和別的東西保持同步。</li>
+</ul>
+<p>代價是真實存在的。手寫格式沒有結構描述，線路上也沒有欄位名稱，所以除了紀律之外，沒有任何東西能讓寫入端與讀取端保持一致。第 <a href="protocol-testing.html">1.6</a> 章是本章的另一半：那些把紀律變成可被檢查之事的測試與版本閘門。</p></div>
 </section>
 
 <section class="sec" id="frame">
@@ -59,15 +68,18 @@
 <h2>La trame</h2>
 <p>Chaque message, quel que soit son type, commence par le même petit en-tête. Survolez ou sélectionnez chaque champ pour voir à quoi il sert.</p>
 </div>
+<div lang="zh-TW">
+<h2>訊框</h2>
+<p>每則訊息，無論類型為何，開頭都是同一個小小的標頭。把滑鼠移到（或聚焦）每個欄位上，看看它的用途。</p></div>
 <div data-bytes>
 <div class="bytes">
-  <div class="byte-field" data-en="Version (1 byte): the frame layout version. Only V1 exists; it tells the parser where the type field is and how long the header is." data-fr="Version (1 octet) : la version de la disposition de la trame. Seule V1 existe ; elle dit au parseur où se trouve le champ de type et quelle est la longueur de l'en-tête."><b>Version</b><span>01</span></div>
-  <div class="byte-field" data-en="Type (2 bytes, little-endian): which packet this is. About 140 types exist; the receiver uses it to pick the class that parses the payload." data-fr="Type (2 octets, petit-boutiste) : de quel paquet il s'agit. Il en existe environ 140 ; le récepteur s'en sert pour choisir la classe qui parse la charge utile."><b>Type</b><span>17 00</span></div>
-  <div class="byte-field" data-en="Reserved (1 byte): unused today. Keeping a spare byte in a header costs almost nothing and avoids a format change the day you need a flag." data-fr="Réservé (1 octet) : inutilisé aujourd'hui. Garder un octet libre dans un en-tête ne coûte presque rien et évite un changement de format le jour où il faut un drapeau."><b>RSV</b><span>00</span></div>
-  <div class="byte-field" data-en="Payload length (varint, 1 to 9 bytes): lets the parser refuse a truncated frame before reading any field." data-fr="Longueur de la charge utile (varint, 1 à 9 octets) : permet au parseur de refuser une trame tronquée avant de lire le moindre champ."><b>Length</b><span>82 1C</span></div>
-  <div class="byte-field grow" data-en="Payload: the fields of this packet type, written one after the other in a fixed order, without names. Snapshot (type 0x17) is shown here." data-fr="Charge utile : les champs de ce type de paquet, écrits les uns après les autres dans un ordre fixe, sans noms. Ici un Snapshot (type 0x17)."><b>Payload</b><span>tick · flags · self · others…</span></div>
+  <div class="byte-field" data-en="Version (1 byte): the frame layout version. Only V1 exists; it tells the parser where the type field is and how long the header is." data-fr="Version (1 octet) : la version de la disposition de la trame. Seule V1 existe ; elle dit au parseur où se trouve le champ de type et quelle est la longueur de l'en-tête." data-zh="版本（1 位元組）：訊框格式的版本。目前只有 V1；它告訴解析器類型欄位在哪裡、標頭有多長。"><b>Version</b><span>01</span></div>
+  <div class="byte-field" data-en="Type (2 bytes, little-endian): which packet this is. About 140 types exist; the receiver uses it to pick the class that parses the payload." data-fr="Type (2 octets, petit-boutiste) : de quel paquet il s'agit. Il en existe environ 140 ; le récepteur s'en sert pour choisir la classe qui parse la charge utile." data-zh="類型（2 位元組，小端序）：這是哪一種封包。大約有 140 種類型；接收端用它挑選負責解析酬載的類別。"><b>Type</b><span>17 00</span></div>
+  <div class="byte-field" data-en="Reserved (1 byte): unused today. Keeping a spare byte in a header costs almost nothing and avoids a format change the day you need a flag." data-fr="Réservé (1 octet) : inutilisé aujourd'hui. Garder un octet libre dans un en-tête ne coûte presque rien et évite un changement de format le jour où il faut un drapeau." data-zh="保留（1 位元組）：目前沒有使用。在標頭中保留一個備用位元組幾乎不花成本，等到哪天需要一個旗標時，就不必變更格式。"><b>RSV</b><span>00</span></div>
+  <div class="byte-field" data-en="Payload length (varint, 1 to 9 bytes): lets the parser refuse a truncated frame before reading any field." data-fr="Longueur de la charge utile (varint, 1 à 9 octets) : permet au parseur de refuser une trame tronquée avant de lire le moindre champ." data-zh="酬載長度（varint，1 到 9 位元組）：讓解析器在讀取任何欄位之前，就能拒絕被截斷的訊框。"><b>Length</b><span>82 1C</span></div>
+  <div class="byte-field grow" data-en="Payload: the fields of this packet type, written one after the other in a fixed order, without names. Snapshot (type 0x17) is shown here." data-fr="Charge utile : les champs de ce type de paquet, écrits les uns après les autres dans un ordre fixe, sans noms. Ici un Snapshot (type 0x17)." data-zh="酬載：這種封包類型的各個欄位，依固定順序一個接一個寫入，沒有名稱。這裡展示的是快照（類型 0x17）。"><b>Payload</b><span>tick · flags · self · others…</span></div>
 </div>
-<p class="byte-legend"><span lang="en">After encryption, the datagram on the wire is <code>[16-byte tag][nonce varint][ciphertext of this whole frame]</code>. See <a href="encryption.html">1.4</a>.</span><span lang="fr">Après chiffrement, le datagramme sur le fil est <code>[tag de 16 octets][nonce varint][chiffré de toute cette trame]</code>. Voir <a href="encryption.html">1.4</a>.</span></p>
+<p class="byte-legend"><span lang="en">After encryption, the datagram on the wire is <code>[16-byte tag][nonce varint][ciphertext of this whole frame]</code>. See <a href="encryption.html">1.4</a>.</span><span lang="fr">Après chiffrement, le datagramme sur le fil est <code>[tag de 16 octets][nonce varint][chiffré de toute cette trame]</code>. Voir <a href="encryption.html">1.4</a>.</span><span lang="zh-TW">加密之後，線路上的資料包是 <code>[16 位元組標籤][nonce varint][整個訊框的密文]</code>。見 <a href="encryption.html">1.4</a>。</span></p>
 </div>
 <div lang="en">
 <p>The length field is not redundant with the transport: the transport delivers a whole datagram, but the parser still checks that the declared payload fits in what arrived before reading anything. A frame that claims more bytes than it carries is rejected as a whole instead of being half-parsed.</p>
@@ -75,6 +87,8 @@
 <div lang="fr">
 <p>Le champ de longueur n'est pas redondant avec le transport : le transport livre un datagramme entier, mais le parseur vérifie quand même que la charge utile annoncée tient dans ce qui est arrivé avant de lire quoi que ce soit. Une trame qui annonce plus d'octets qu'elle n'en porte est refusée en bloc au lieu d'être parsée à moitié.</p>
 </div>
+<div lang="zh-TW">
+<p>長度欄位與傳輸層並不重複：傳輸層會遞送完整的資料包，但解析器在讀取任何東西之前，仍會檢查宣告的酬載長度是否裝得進實際到達的內容。宣稱的位元組數比實際攜帶的多的訊框會被整個拒絕，而不是被解析一半。</p></div>
 </section>
 
 <section class="sec" id="positional">
@@ -98,6 +112,15 @@
 <li><strong>L'absence a un sens, ou elle a un compte de zéro.</strong> Ne regarder « reste-t-il quelque chose ? » que quand « non envoyé » doit vouloir dire autre chose que « zéro ». Sinon, toujours écrire le champ : un champ toujours écrit ne peut pas être oublié par le lecteur.</li>
 </ol>
 </div>
+<div lang="zh-TW">
+<h2>依位置排列的酬載</h2>
+<p>在酬載內部，欄位以固定順序寫入，沒有名稱，也沒有標籤。登入封包是一個字串、一個字串，再一個數字。快照是一個 tick 編號、一個旗標位元組、一個代表玩家自己船艦的選用區塊，接著是一個數量，再跟著那麼多個物件。讀取端必須以相同順序、相同大小，讀出寫入端寫下的東西。只要少讀或多讀一個位元組，之後的每個欄位都會是垃圾，而位元組本身不會告訴你這件事。</p>
+<p>這是最小的編碼方式，也是最脆弱的。有三條規則讓它可行：</p>
+<ol>
+<li><strong>只附加，絕不插入。</strong>新欄位放在封包的最後。之後建置的讀取端就能透過檢查是否還有剩餘位元組，偵測出較舊的寫入端沒有送出這個欄位。</li>
+<li><strong>存在與否必須明示。</strong>選用區塊由寫在它之前的旗標位元組中的一個位元，或一個數量來宣告。解析器從不猜測。</li>
+<li><strong>缺席要嘛有意義，要嘛數量為零。</strong>只有在「沒送」必須與「零」意義不同時，才去讀「還有剩東西嗎？」。否則一律寫入該欄位；一個永遠會被寫入的欄位，不可能被讀取端遺忘。</li>
+</ol></div>
 <div class="code"><div class="code-head"><span class="file">Packet/Packets/Auth/Login.cs · an appended field, read defensively</span></div><pre><code data-lang="cs">// The default value is a compile-time constant, inlined at each call site:
 // every binary sends the protocol number it was built with, without anyone thinking about it.
 public Login(string username, string password, int protocol = ProtocolVersion.Current) { ... }
@@ -132,6 +155,10 @@ protected override bool ParsePayload()
 <p>Chaque type de paquet est une classe dérivée de <code>BasePacket</code>, avec une méthode <code>Build()</code> qui écrit la charge utile et une méthode <code>ParsePayload()</code> qui la lit. La classe de base possède le flux, l'en-tête et les primitives (entiers de taille fixe, chaînes, varints, nombres quantifiés, angles). Une instance de paquet est soit en écriture, soit en lecture, jamais les deux : demander à un paquet parsé de se sérialiser lève une exception.</p>
 <p>Cette dernière règle a l'air d'un détail et a façonné une habitude. Quand le serveur de jeu relaie à un client un message reçu de la gateway, il ne peut pas transmettre l'objet parsé : il en construit un neuf à partir des champs lus. Un simple « transfert » aurait marché par hasard avec certains types de paquets et levé une exception avec d'autres.</p>
 </div>
+<div lang="zh-TW">
+<h2>一個類別，兩個方向</h2>
+<p>每種封包類型都是一個衍生自 <code>BasePacket</code> 的類別，有一個寫入酬載的 <code>Build()</code> 方法，以及一個讀取酬載的 <code>ParsePayload()</code> 方法。基底類別負責資料流、標頭與基本型別（固定大小整數、字串、varint、量化數字、角度）。一個封包實例要嘛正在被寫入，要嘛正在被讀取，絕不會兩者兼具：要求一個解析出來的封包序列化自己，會拋出例外。</p>
+<p>最後這條規則看起來只是細節，卻養成了一個習慣。當遊戲伺服器把從閘道收到的訊息轉送給用戶端時，它不能直接轉送自己解析出來的物件：它會用解析出的欄位建立一個新的。「直接轉送」在某些封包類型上會碰巧能用，在另一些上則會拋出例外。</p></div>
 <div class="code"><div class="code-head"><span class="file">Packet/BasePacket.cs · framing, shared by every send path</span></div><pre><code data-lang="cs">private void FrameIntoStream()
 {
     var ms = GetMemoryStream();
@@ -157,6 +184,8 @@ protected override bool ParsePayload()
 <div lang="fr">
 <div class="note pitfall"><p class="note-label">Piège rencontré</p><p>La remise à zéro en tête de cette méthode n'était autrefois qu'à la fin. Un diffuseur de debug envoyait le même objet paquet à plusieurs outils connectés dans une boucle : le second <code>Build()</code> ajoutait sa charge utile après la trame complète du premier appel. Les outils affichaient « des milliards de pairs connectés » et des compteurs d'octets négatifs. La correction tenait en une ligne ; la trouver a pris un après-midi, parce que les chiffres ressemblaient à un débordement de compteur, pas à un bug de trame.</p></div>
 </div>
+<div lang="zh-TW">
+<div class="note pitfall"><p class="note-label">我踩過的坑</p><p>那個方法開頭的重設，曾經只放在結尾。一個除錯用的廣播程式在迴圈中把同一個封包物件送給好幾個已連線的工具，於是第二次 <code>Build()</code> 把它的酬載接在第一次呼叫的完整訊框之後。工具顯示「數十億個已連線的端點」與負數的位元組數。修正只要一行；找出它卻花了一個下午，因為那些數字看起來像計數器溢位，而不像訊框錯誤。</p></div></div>
 </section>
 
 <section class="sec" id="dispatch">
@@ -170,6 +199,10 @@ protected override bool ParsePayload()
 <p>Le récepteur lit le champ de type et demande à une <code>ParserFactory</code> une instance neuve de la classe correspondante, puis la laisse parser. Un <code>Dispatcher</code> associe chaque type à un ou plusieurs gestionnaires. Enregistrer un gestionnaire pour un type enregistre le parseur en même temps : impossible de gérer un paquet qu'on ne sait pas parser, ou d'en parser un que personne ne gère sans que le client le dise dans son journal.</p>
 <p>Quelques paquets doivent porter un jeton de session devant leur charge utile. Plutôt que de demander à chacun de s'en souvenir, une classe de base <code>AuthenticatedPacket</code> écrit et lit le jeton elle-même, puis appelle la sous-classe pour le reste. Ses <code>Build</code> et <code>ParsePayload</code> sont scellées : une sous-classe ne peut pas oublier le jeton, elle n'a jamais eu l'occasion de l'écrire.</p>
 </div>
+<div lang="zh-TW">
+<h2>從類型 ID 到處理常式</h2>
+<p>接收端讀取類型欄位，向 <code>ParserFactory</code> 要一個對應類別的新實例，再讓它進行解析。<code>Dispatcher</code> 把每種類型對應到一個或多個處理常式。為某個類型註冊處理常式時，同時也會註冊它的解析器，所以不可能處理一個你無法解析的封包，也不可能解析一個沒人處理的封包而用戶端不在日誌中提及。</p>
+<p>有幾個封包需要在酬載前面加上連線階段權杖。與其要求每一個都記得這件事，<code>AuthenticatedPacket</code> 基底類別會自己寫入與讀取權杖，再呼叫子類別處理其餘部分。它的 <code>Build</code> 與 <code>ParsePayload</code> 是 sealed 的：子類別不可能忘記權杖，因為它根本沒有機會去寫它。</p></div>
 <div class="code"><div class="code-head"><span class="file">Network/Dispatcher.cs · one call registers parsing and handling</span></div><pre><code data-lang="cs">public bool Register&lt;T&gt;(ushort id, Handler handler) where T : IPacket, new()
 {
     ParserFactory.Register&lt;T&gt;(id);   // how to build an instance of this type
@@ -201,6 +234,14 @@ server.Dispatcher.Register&lt;PlayerInput&gt;((ushort)Type.PlayerInput,
 </div>
 <p>Un écran de marché s'ouvre quelques fois par session et pèse quelques kilo-octets. Le rendre idempotent (le même message appliqué deux fois donne le même résultat) vaut bien plus que les octets qu'un delta économiserait : aucune course ne peut laisser un ordre fantôme à l'écran, et une resynchronisation coûte un paquet.</p>
 </div>
+<div lang="zh-TW">
+<h2>兩種風格的封包</h2>
+<p>並不是每則訊息都值得同樣斤斤計較位元組。MoonQwak 最後刻意採用了兩種不同的風格。</p>
+<div class="compare">
+<div><h4>遊戲資料流</h4><p>快照、輸入、子彈。每秒送很多次，送給很多玩家。</p><ul><li>精簡：varint、量化、旗標位元組。</li><li>可以是差量或有條件的。</li><li>依量測結果調整。</li></ul></div>
+<div class="pick"><h4>社交與經濟狀態</h4><p>市場、郵件、交易、公會名冊。在畫面開啟或某些東西改變時送出。</p><ul><li>永遠是完整狀態；用戶端直接取代自己的副本，從不累加。</li><li>使用時間長度（「3,600 秒後到期」），從不使用日期，所以不需要同步時鐘。</li><li>使用代碼，從不使用句子（見 <a href="protocol-testing.html#codes-not-words">1.6</a>）。</li></ul></div>
+</div>
+<p>市場畫面在一次遊戲中只會開啟幾次，大小只有幾 KB。讓它具備冪等性（同一則訊息套用兩次，結果相同），價值遠超過差量能省下的位元組，因為沒有任何競爭條件能在畫面上留下幽靈訂單，而重新同步只需要一個封包。</p></div>
 </section>
 
 <section class="sec" id="shared-codecs">
@@ -214,6 +255,10 @@ server.Dispatcher.Register&lt;PlayerInput&gt;((ushort)Type.PlayerInput,
 <p>Longtemps, le corps d'un objet de snapshot a été écrit par des classes de domaine du serveur (un vaisseau, une balle) et lu par des classes Unity (le vaisseau du client, la balle du client). Deux fichiers, dans deux projets, liés seulement par un commentaire « miroir exact du Marshal du serveur ». Cinq bugs de fil en une seule session d'optimisation sont venus de cet écart, et aucun ne pouvait être attrapé par un test, puisqu'aucun projet de test ne pouvait référencer les deux côtés.</p>
 <p>La correction a été de déplacer la <em>disposition</em> des blocs les plus chauds dans de petits codecs de la bibliothèque de paquets partagée. Le serveur remplit une structure simple depuis son vaisseau et appelle <code>Write</code> ; le client appelle <code>Read</code> et applique la structure. Le codec ne sait rien d'un vaisseau. Ajouter un champ l'ajoute pour les deux lecteurs d'un coup, ou le client ne compile plus.</p>
 </div>
+<div lang="zh-TW">
+<h2>共用編解碼器：一種格式，兩個讀取端</h2>
+<p>有很長一段時間，快照物件的內容由伺服器的領域類別（一艘船、一顆子彈）寫入，再由 Unity 類別（用戶端的船、用戶端的子彈）讀取。兩個檔案、兩個專案，唯一把它們綁在一起的，是一行寫著「與伺服器的 Marshal 完全對應」的註解。一次最佳化工作中出現的五個線路 bug 都來自這道縫隙，而且沒有一個能被測試抓到，因為沒有任何測試專案能同時參考兩端。</p>
+<p>修正方式是把最熱門區塊的<em>格式配置</em>移到共用封包函式庫中的小型編解碼器裡。伺服器從自己的船艦填好一個單純的 struct，再呼叫 <code>Write</code>；用戶端呼叫 <code>Read</code>，再套用這個 struct。編解碼器對船艦一無所知。新增一個欄位，就會同時為兩個讀取端新增，否則用戶端就無法編譯。</p></div>
 <div class="code"><div class="code-head"><span class="file">Packet/Wire/MovementWire.cs</span></div><pre><code data-lang="cs">public struct MovementFields { public double X, Y, Rotation, VelX, VelY, AngularVelocity; }
 
 public static class MovementWire
@@ -246,6 +291,9 @@ public static class MovementWire
 <div class="note pitfall"><p class="note-label">Piège rencontré</p><p>Le client sautait autrefois le bloc par hex d'un vaisseau qu'il ne pouvait pas encore appliquer, avec une constante <code>bytesPerPart</code> écrite en dur. Le serveur a ensuite retiré un champ de ce bloc. La constante est devenue fausse, le lecteur s'est désynchronisé, et le client levait <code>EndOfStreamException</code> sur les vaisseaux en pleine reconstruction. Il saute maintenant ce bloc en le parsant avec le même code que le chemin normal.</p></div>
 <div class="note rule"><p class="note-label">Règle</p><p>La connaissance d'un format de fil doit exister à un seul endroit : la paire écrivain/lecteur.</p><p>Une constante qui « sait » combien d'octets fait un bloc, un second parseur écrit pour un cas particulier, un commentaire qui promet un miroir : chacun est une copie du format qui ne sera pas mise à jour avec lui.</p></div>
 </div>
+<div lang="zh-TW">
+<div class="note pitfall"><p class="note-label">我踩過的坑</p><p>用戶端曾經用一個寫死的 <code>bytesPerPart</code> 常數，跳過一艘它還無法套用的船艦的每格區塊。後來伺服器從那個區塊移除了一個欄位。常數變得不正確，讀取端失去同步，用戶端在處於重建中的船艦上拋出 <code>EndOfStreamException</code>。現在它改用與正常路徑相同的程式碼解析該區塊來跳過它。</p></div>
+<div class="note rule"><p class="note-label">規則</p><p>關於線路格式的知識，必須恰好只存在於一個地方：寫入端／讀取端這一對。</p><p>一個「知道」某區塊佔多少位元組的常數、一個為特殊情況另外寫的解析器、一行承諾兩邊對應的註解：每一個都是格式的副本，而它們不會跟著格式一起更新。</p></div></div>
 </section>
 
 <section class="sec" id="takeaways">
@@ -264,6 +312,13 @@ public static class MovementWire
 <li>Utiliser des paquets d'état complet et idempotents pour tout ce qui n'est pas envoyé plusieurs fois par seconde.</li>
 <li>Mettre la disposition des blocs les plus chauds dans des codecs partagés par les deux bouts, pour qu'un changement de format ne puisse pas n'en atteindre qu'un.</li>
 </ul></div>
+<div lang="zh-TW"><h2>重點整理</h2><ul>
+<li>每則訊息前面都有一個小而固定的標頭（版本、類型、保留位元組、酬載長度），讓接收端在讀取欄位之前就能拒絕格式錯誤的訊框。</li>
+<li>依位置排列的酬載是最精簡、也最脆弱的編碼：欄位一律附加在最後，選用區塊要明確宣告。</li>
+<li>一個封包的寫入與讀取放在同一個類別中，而且絕不重複使用解析出來的封包來傳送。</li>
+<li>對於不是每秒送很多次的東西，使用完整狀態、具冪等性的封包。</li>
+<li>把最熱門區塊的格式放在兩端共用的編解碼器中，讓格式變更不可能只影響其中一端。</li>
+</ul></div>
 </div>
 </section>
 
@@ -276,6 +331,7 @@ public static class MovementWire
 <footer class="site-footer" id="mq-footer"></footer>
 <script src="assets/js/site-data.js" defer></script>
 <script src="assets/js/glossary-data.js" defer></script>
+<script src="assets/js/ui-zh.js" defer></script>
 <script src="assets/js/app.js" defer></script>
 <script src="assets/js/widgets.js" defer></script>
 </body>

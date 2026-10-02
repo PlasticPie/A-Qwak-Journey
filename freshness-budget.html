@@ -7,12 +7,12 @@
 <meta name="description" content="Bounding the per-player cost of a crowd with three cadence rings, a heartbeat and a histogram instead of a sort.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Chakra+Petch:wght@500;600&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Chakra+Petch:wght@500;600&family=JetBrains+Mono:wght@400;500;600&family=Noto+Sans+TC:wght@400;700&display=swap">
 <link rel="stylesheet" href="assets/css/site.css">
-<script>(function(){var r=document.documentElement,l,t;try{l=localStorage.getItem("mq-lang");t=localStorage.getItem("mq-theme");}catch(e){}if(l!=="en"&&l!=="fr"){l=(navigator.language||"").toLowerCase().indexOf("fr")===0?"fr":"en";}r.setAttribute("data-lang",l);r.setAttribute("lang",l);if(t==="light"||t==="dark")r.setAttribute("data-theme",t);})();</script>
+<script>(function(){var r=document.documentElement,l,t,n;try{l=localStorage.getItem("mq-lang");t=localStorage.getItem("mq-theme");}catch(e){}if(l!=="en"&&l!=="fr"&&l!=="zh"){n=(navigator.language||"").toLowerCase();l=n.indexOf("fr")===0?"fr":n.indexOf("zh")===0?"zh":"en";}r.setAttribute("data-lang",l);r.setAttribute("lang",l==="zh"?"zh-TW":l);if(t==="light"||t==="dark")r.setAttribute("data-theme",t);})();</script>
 </head>
 <body data-page="freshness-budget">
-<a class="skip-link" href="#main"><span lang="en">Skip to content</span><span lang="fr">Aller au contenu</span></a>
+<a class="skip-link" href="#main"><span lang="en">Skip to content</span><span lang="fr">Aller au contenu</span><span lang="zh-TW">跳到主要內容</span></a>
 <header class="site-header" id="mq-header"></header>
 <div class="layout">
 <aside class="sidebar" id="mq-sidebar"></aside>
@@ -20,8 +20,8 @@
 <article>
 <header class="chapter-head">
   <div class="eyebrow" data-auto></div>
-  <h1><span lang="en">The freshness budget</span><span lang="fr">Le budget de fraîcheur</span></h1>
-  <p class="dek"><span lang="en">Bounding the per-player cost of a crowd with three cadence rings, a heartbeat and a histogram instead of a sort.</span><span lang="fr">Borner le coût par joueur d'une foule avec trois anneaux de cadence, un battement et un histogramme plutôt qu'un tri.</span></p>
+  <h1><span lang="en">The freshness budget</span><span lang="fr">Le budget de fraîcheur</span><span lang="zh-TW">新鮮度預算</span></h1>
+  <p class="dek"><span lang="en">Bounding the per-player cost of a crowd with three cadence rings, a heartbeat and a histogram instead of a sort.</span><span lang="fr">Borner le coût par joueur d'une foule avec trois anneaux de cadence, un battement et un histogramme plutôt qu'un tri.</span><span lang="zh-TW">用三圈更新頻率、一個心跳與一個直方圖（而不是排序），限制人潮對每位玩家造成的成本。</span></p>
   <div class="meta-row" data-auto></div>
 </header>
 
@@ -40,6 +40,11 @@
 <div class="note measured"><p class="note-label">Mesuré</p><p>Avec 201 joueurs regroupés, chacun recevait <strong>457 objets par snapshot</strong> : 27,3 Mo/s sortants, 1,09 Mbit/s par joueur, contre 147 kbit/s quand les mêmes joueurs étaient dispersés. La foule coûtait 7,4 fois plus par tête, et c'est le régime de tout vrai combat.</p></div>
 <p>La correction évidente est une cadence selon la distance : les objets proches à chaque tick, les lointains moins souvent. Dans une foule, ça aide à peine. Dans un disque de rayon 60, la distance moyenne entre deux points est d'environ 55 : la majeure partie de la foule tombe dans la bande « proche », et des paliers à 25, 8 et 3 Hz ne rendraient qu'un facteur 1,4. La distance cesse de discriminer précisément quand on en a besoin.</p>
 </div>
+<div lang="zh-TW">
+<h2>人潮的成本隨人潮增長</h2>
+<p>興趣區域把告訴玩家的內容限制在他附近的東西。但當一切都在他附近時，它就毫無作用，而戰鬥恰恰就是這樣。視野內的每個船體、太空站與角色，過去每個 tick 都會送出。</p>
+<div class="note measured"><p class="note-label">實測</p><p>201 位玩家擠在一起時，每位玩家每份快照收到 <strong>457 個物件</strong>：出站 27.3 MB/s，每位玩家 1.09 Mbit/s，而同樣這些玩家分散開來時只有 147 kbit/s。人潮讓每人的成本變成 7.4 倍，而這正是每一場真實戰鬥的情況。</p></div>
+<p>顯而易見的修正是依距離調整頻率：近的物件每個 tick 送，遠的少送一點。在人潮中這幾乎沒有幫助。在半徑 60 的圓盤中，兩點之間的平均距離約為 55，所以大部分人潮都落在「近」的那一圈，而 25、8、3 Hz 的分層只能帶來 1.4 倍的改善。距離恰恰在你最需要它的時候失去了鑑別力。</p></div>
 </section>
 
 <section class="sec" id="budget">
@@ -65,6 +70,16 @@
 </ul>
 <p>Le battement n'est pas un raffinement. Sans lui, un objet hors budget resterait silencieux jusqu'à la fin de la grâce du client, et serait <em>détruit</em> au lieu de geler : le contraire de ce qu'on veut (chapitre <a href="snapshots.html#absence">4.2</a>).</p>
 </div>
+<div lang="zh-TW">
+<h2>一個預算，而不是一個半徑</h2>
+<p>答案是一個<strong>預算</strong>：每位玩家每份快照最多收到固定數量的非緊急物件，由近到遠。每位玩家的成本變成<em>有上限</em>，而不是成比例：視野內兩百艘船的成本，和六十艘一樣。距離仍然會用到，但用來排優先順序，而不是用來過濾。</p>
+<p>這不是動態的視野半徑。沒有任何東西消失：超出預算的物件只是不再被<em>刷新</em>，而不是不再被<em>看見</em>。它會凍結零點幾秒，然後趕上來。隨著人潮增加而收緊的不是視野，而是注意力：你看得到整場混戰，並精確地追蹤你的鄰居。品質的降低落在正確的地方，因為你正在交戰的對象就在附近，所以永遠以完整頻率更新。</p>
+<p>每個 tick，物件會被分成兩群：</p>
+<ul>
+<li><strong>必要的</strong>：從未送給這位玩家的物件（它剛進入視野），或<strong>心跳</strong>到期的物件（距上次傳送已 2 秒）。這些不受預算限制，一定會送出。</li>
+<li><strong>可選的</strong>：其他一切都依由近到遠的順序，競爭預算的名額。</li>
+</ul>
+<p>心跳不是錦上添花。沒有它，預算外的物件會一直沉默到用戶端的寬限期到期，然後被<em>摧毀</em>而不是凍結：這與我們想要的正好相反（第 <a href="snapshots.html#absence">4.2</a> 章）。</p></div>
 </section>
 
 <section class="sec" id="rings">
@@ -98,6 +113,20 @@
 <p>Il n'y avait autrefois que deux anneaux, et les resserrer a montré pourquoi c'était faux. À 600 vaisseaux, 95 % de chaque snapshot était le bloc de base des coques (mouvement et tourelles) : le levier évident était le budget, BUDGET 30, NEAR 15. C'est devenu injouable dès qu'il y avait du monde, et pas à cause de la cadence. Avec deux anneaux, une coque qui sort du budget ne descend pas à une cadence plus basse : elle tombe au <em>battement</em>, de 12,5 Hz à 0,5 Hz, un facteur vingt-cinq. Avec 45 coques en vue, quinze étaient gelées. Au réglage par défaut 60/30, on atteignait rarement le bord, ce qui explique exactement pourquoi le défaut passait et pas le réglage serré.</p>
 <p>Le levier n'a jamais été la cadence, c'était la <strong>pente</strong>. Un troisième anneau à 6,25 Hz coûte le quart d'un anneau à pleine cadence : on peut donc le faire large ; la séquence devient 25 → 12,5 → 6,25 → battement, et la falaise recule à un rang que personne n'atteint. Au banc, 20 / 40 / 100 coûtait exactement les 45 envois de l'ancien réglage à deux anneaux, montrait trois paliers nets de coques dans les traces d'octets, faisait passer le sortant de 14,5 à 12,2 Mo/s, et était juste à l'œil. À bande passante égale, la même scène est devenue jouable.</p>
 </div>
+<div lang="zh-TW">
+<h2>三圈，因為兩圈會形成斷崖</h2>
+<p>預算以四個 tick 為一個循環運轉，而每個 tick 之間只有一個數字會改變：上限。第 0 個 tick 的上限是 FAR，第 2 個是 BUDGET，第 1 與第 3 個是 NEAR。依距離排名後，每個船體就得到四種頻率之一，程式碼的其他部分完全不需要知道有「圈」的存在：</p>
+<div class="table-wrap"><table>
+<thead><tr><th>船體的排名（依距離）</th><th>在哪些 tick 送出</th><th>頻率</th></tr></thead>
+<tbody>
+<tr><td>低於 NEAR</td><td>每個 tick</td><td>25 Hz</td></tr>
+<tr><td>低於 BUDGET</td><td>第 0 與第 2 個 tick</td><td>12.5 Hz</td></tr>
+<tr><td>低於 FAR</td><td>第 0 個 tick</td><td>6.25 Hz</td></tr>
+<tr><td>超出</td><td>只靠心跳</td><td>0.5 Hz</td></tr>
+</tbody></table></div>
+<p>每個 tick 的平均成本是 NEAR + (BUDGET − NEAR)/2 + (FAR − BUDGET)/4。預設值 30 / 60 / 120 每個 tick 花 60 次傳送；測試台上使用的 20 / 40 / 100 花 45 次。</p>
+<p>過去只有兩圈，而收緊它們讓人看清了這為什麼是錯的。在 600 艘船時，每份快照的 95 % 是船體的基本區塊（移動與砲塔），所以顯而易見的槓桿是預算：BUDGET 30、NEAR 15。只要一有人潮，它就變得無法遊玩，而原因不在頻率。只有兩圈時，一個離開預算的船體不會降到較低的頻率：它會掉到<em>心跳</em>，從 12.5 Hz 降到 0.5 Hz，二十五倍。視野內有 45 個船體時，有十五個是凍結的。在預設的 60/30 下，很少碰到邊緣，這正是預設值沒問題、而更緊的設定卻不行的原因。</p>
+<p>槓桿從來不是頻率，而是<strong>斜率</strong>。一個 6.25 Hz 的第三圈，成本是全頻率那一圈的四分之一，所以可以設得很寬；順序變成 25 → 12.5 → 6.25 → 心跳，而斷崖退到一個沒有人會到達的排名。在測試台上，20 / 40 / 100 的成本恰好等於舊兩圈設定的 45 次傳送，在位元組追蹤中呈現出三個乾淨的船體層級，讓出站流量從 14.5 MB/s 降到 12.2 MB/s，而且肉眼看起來是對的。在相同頻寬下，同一個場景變得可以遊玩了。</p></div>
 <div data-widget="budget"></div>
 <div lang="en">
 <div class="note rule"><p class="note-label">Rule</p><p>When you degrade, degrade in steps small enough that each one is invisible.</p><p>A factor-two step (25 to 12.5 Hz) is smoothed away by interpolation. A factor-twenty-five step is a frozen ship. The cost of an extra tier is often lower than the cost of the cliff it removes.</p></div>
@@ -105,6 +134,8 @@
 <div lang="fr">
 <div class="note rule"><p class="note-label">Règle</p><p>Quand on dégrade, dégrader par marches assez petites pour que chacune soit invisible.</p><p>Une marche d'un facteur deux (25 à 12,5 Hz) est effacée par l'interpolation. Une marche d'un facteur vingt-cinq est un vaisseau gelé. Le coût d'un palier de plus est souvent inférieur à celui de la falaise qu'il supprime.</p></div>
 </div>
+<div lang="zh-TW">
+<div class="note rule"><p class="note-label">規則</p><p>要降級時，以每一步都小到看不出來的步伐降級。</p><p>兩倍的一步（25 到 12.5 Hz）會被內插抹平。二十五倍的一步就是一艘凍結的船。多一個層級的成本，往往低於它所消除的那道斷崖的成本。</p></div></div>
 </section>
 
 <section class="sec" id="histogram">
@@ -116,6 +147,9 @@
 <h2>Un histogramme plutôt qu'un tri</h2>
 <p>Choisir « les soixante plus proches » ressemble à un tri. Trier 457 candidats coûte environ 4 000 comparaisons ; multiplié par 200 joueurs et 25 ticks, c'est 20 millions de comparaisons par seconde pour choisir soixante objets. Le budget utilise à la place deux passes linéaires sur 32 bandes de distance : compter les candidats par bande, trouver la bande où le plafond s'épuise, puis émettre tout ce qui est sous cette bande et remplir la bande de coupure jusqu'à épuisement du quota. Le résultat est juste à une bande près, et cette imprécision n'a aucune conséquence : le but est soixante objets <em>proches</em>, pas <em>les</em> soixante plus proches.</p>
 </div>
+<div lang="zh-TW">
+<h2>用直方圖取代排序</h2>
+<p>挑出「最近的六十個」聽起來像是排序。排序 457 個候選者約需 4,000 次比較；乘以 200 位玩家和 25 個 tick，就是每秒 2,000 萬次比較，只為了挑出六十個物件。預算改用對 32 個距離區段的兩次線性掃描：計算每個區段的候選者數量，找出上限用完的那個區段，然後送出該區段以下的所有物件，再從截止區段中補足，直到用完配額。結果的誤差在一個區段之內，而這點不精確毫無影響：目標是六十個<em>夠近</em>的物件，而不是<em>最近的</em>六十個。</p></div>
 <div class="code"><div class="code-head"><span class="file">GameServer/Players/Player.cs · AppendHullsWithinBudget, simplified</span></div><pre><code data-lang="cs">var cap = (int)(_snapshotTick &amp; 3) switch { 0 =&gt; FarBudget, 2 =&gt; Budget, _ =&gt; NearBudget };
 if (candidates.Count &lt;= cap) { foreach (var c in candidates) EmitHull(c, nowMs); return; }
 
@@ -154,6 +188,12 @@ foreach (var c in candidates)             // pass 2: emit, no sort, no allocatio
 <p>C'était la même faute que l'histoire du battement en ticks du chapitre <a href="snapshots.html#absence">4.2</a>, corrigée côté lecture et laissée côté écriture. La moitié d'un bug est encore un bug. La correction est structurelle : l'horloge est lue une fois par snapshot et passée en paramètre à tout ce qui écrit dans le dictionnaire, pour que personne ne puisse y écrire sans tenir en main l'unité qu'attend le lecteur.</p>
 <p>Ce qui l'aurait trouvé en quelques minutes, ce sont trois compteurs, qui existent maintenant, éteints par défaut et imprimés une fois par seconde pour un joueur :</p>
 </div>
+<div lang="zh-TW">
+<h2>一個毀在單位上的夜晚</h2>
+<p>在預算 60、心跳 2 秒的情況下，一位玩家每份快照應該收到約 64 個船體。量測結果卻是 118，在 201 位玩家下穩定了五分鐘。我們提出並推翻了三個假設，每一個都要付出重新建置的代價：視野邊界上的翻攪、連線爬升期、太短的心跳。心跳從 500 ms 延長到 2 秒，數字卻幾乎沒動（121，然後 118），這本該是個線索：心跳變成四倍，卻幾乎沒有變化。</p>
+<p>原因出在記錄船體何時被送出的那一行。預算路徑寫入字典的是<strong>快照 tick 計數器</strong>（幾千），而心跳檢查拿它比較的卻是<strong>開機以來的毫秒數</strong>（數千萬）。差值永遠大於心跳，所以預算服務過的每個船體，在下一個 tick 都「心跳到期」，變成必要的、不受預算限制：60 的上限，被它自己製造出來的 60 次必要傳送加倍了。</p>
+<p>這與第 <a href="snapshots.html#absence">4.2</a> 章那個以 tick 計算心跳的故事是同一個錯誤，在讀取端修好了，寫入端卻沒修。修了一半的 bug 仍然是 bug。修正是結構性的：時鐘在每份快照中只讀取一次，並作為參數傳給每一個寫入字典的地方，所以沒有人能在不持有讀取端所預期之單位的情況下寫入那裡。</p>
+<p>能在幾分鐘內找到它的，是三個計數器，現在它們已經存在，預設關閉，每秒為一位玩家印出一次：</p></div>
 <div class="code"><div class="code-head"><span class="file">GameServer console · QWAK_SNAP_TRACE=1 · the line's format, with the values expected at 203 hulls</span></div><pre><code data-lang="txt">[Snap] pair 0 : 0 jamais envoyé · 4 battement échu · 60 budget · 64 envoyés au total
           never sent ─┘            heartbeat due ─┘      budget ─┘</code></pre></div>
 <div lang="en">
@@ -164,6 +204,9 @@ foreach (var c in candidates)             // pass 2: emit, no sort, no allocatio
 <p>« Jamais envoyé », c'est une coque qui vient d'entrer dans la vue ; « battement échu », c'est le plancher obligatoire ; « budget », c'est la part discrétionnaire. À 203 coques en vue, un budget de 60 et un battement de 2 s à 25 Hz, les valeurs attendues sont environ 0, 203 / (2 × 25) ≈ 4, et 60. Si « battement échu » remonte vers 60, une unité est de nouveau mélangée quelque part.</p>
 <div class="note rule"><p class="note-label">Règle</p><p>Avant de régler un mécanisme, compter chacun de ses chemins séparément.</p><p>Un total faux d'un facteur deux s'explique par une douzaine d'hypothèses. Trois compteurs, un par chemin, désignent le coupable immédiatement. On a passé une nuit à déduire de leur somme ce qu'ils auraient dit directement.</p></div>
 </div>
+<div lang="zh-TW">
+<p>「從未送出」是剛進入視野的船體，「心跳到期」是必要的下限，「預算」則是可選的部分。在視野內有 203 個船體、預算 60、25 Hz 下 2 秒心跳的情況下，期望值大約是 0、203 / (2 × 25) ≈ 4，以及 60。如果「心跳到期」又爬回接近 60，就代表某處又把單位搞混了。</p>
+<div class="note rule"><p class="note-label">規則</p><p>在調校一個機制之前，先分別計算它的每一條路徑。</p><p>一個錯了兩倍的總數，可以用十幾個假設來解釋。三個計數器，每條路徑一個，能立刻指出罪魁禍首。我們花了一整夜，從它們的總和中推導出它們本來會直接說出來的事。</p></div></div>
 </section>
 
 <section class="sec" id="forget">
@@ -177,12 +220,18 @@ foreach (var c in candidates)             // pass 2: emit, no sort, no allocatio
 <p>Le serveur doit retenir, par joueur, quand il a envoyé chaque coque pour la dernière fois. La première version oubliait une coque dès qu'elle sortait de la zone d'intérêt du joueur. Dans une foule de rayon 60 vue avec un rayon de vue de 120, les coques du pourtour traversent cette frontière en permanence, et d'autant plus quand tout le monde bouge. Chaque retour devenait « jamais envoyée », donc obligatoire, donc un bloc d'état complet. Le mouvement fabriquait des envois obligatoires : le sortant sautait de 13 à 22 Mo/s dès que la mêlée s'animait, et le budget n'y pouvait rien.</p>
 <p>Le serveur oublie maintenant par l'<strong>âge</strong> : une entrée disparaît quand sa coque est hors de vue <em>et</em> a été envoyée pour la dernière fois il y a plus de 4 secondes. Une coque encore en vue est rafraîchie au moins toutes les 2 secondes : son entrée ne vieillit jamais jusqu'au seuil ; une coque vraiment partie s'efface toute seule. Les 4 secondes restent sous la grâce de 5 secondes du client, et l'ordre compte : tant que le serveur se souvient d'avoir envoyé une coque, le client l'a encore ; au-delà, les deux ont oublié. Un serveur qui oublierait <em>plus tard</em> que le client croirait que celui-ci sait quelque chose qu'il a déjà détruit.</p>
 </div>
+<div lang="zh-TW">
+<h2>依時間遺忘，而不是依可見性</h2>
+<p>伺服器必須為每位玩家記住它最後一次送出每個船體的時間。第一版在船體一離開玩家的興趣區域時就忘掉它。在一個半徑 60 的人潮中、以 120 的視野半徑觀看時，邊緣上的船體會不斷跨越這條邊界，大家都在移動時更是如此。每一次重新進入都變成「從未送出」，因此是必要的，因此是一個完整的狀態區塊。移動製造出了必要的傳送：混戰一熱鬧起來，出站流量就從 13 MB/s 跳到 22 MB/s，而預算對此無能為力。</p>
+<p>現在伺服器依<strong>時間</strong>遺忘：只有當船體位於視野之外，<em>而且</em>最後一次送出已超過 4 秒時，才丟棄它的項目。仍在視野內的船體至少每 2 秒就會刷新一次，所以它的項目永遠不會老到門檻；真正離開的船體則會自己消失。這 4 秒低於用戶端 5 秒的寬限期，而這個順序很重要：只要伺服器記得送過某個船體，用戶端就還擁有它；過了這段時間，兩者都已經忘了。一個比用戶端<em>更晚</em>遺忘的伺服器，會以為用戶端知道某個它早已摧毀的東西。</p></div>
 <div lang="en">
 <div class="note tradeoff"><p class="note-label">Trade-off</p><p>Why a 2-second heartbeat and not 500 ms? Because the heartbeat is a floor, and a high floor eats the budget. At 500 ms with about 200 hulls in view, the mandatory sends alone are 200 / (0.5 × 25) = 16 per tick per player; at 2 s they are 4. The price is that a hull that really left your view lingers, frozen, up to the 5-second grace. That floor will only disappear with an explicit "this one left your view" message, which the server could send since it already detects the case; it is written down as the next step rather than done.</p></div>
 </div>
 <div lang="fr">
 <div class="note tradeoff"><p class="note-label">Compromis</p><p>Pourquoi un battement de 2 secondes et pas de 500 ms ? Parce que le battement est un plancher, et qu'un plancher haut mange le budget. À 500 ms avec environ 200 coques en vue, les envois obligatoires seuls valent 200 / (0,5 × 25) = 16 par tick et par joueur ; à 2 s, ils valent 4. Le prix est qu'une coque vraiment sortie de votre vue s'attarde, figée, jusqu'à la grâce de 5 secondes. Ce plancher ne disparaîtra qu'avec un message explicite « celle-ci a quitté ta vue », que le serveur pourrait envoyer puisqu'il détecte déjà le cas ; c'est noté comme prochaine étape plutôt que fait.</p></div>
 </div>
+<div lang="zh-TW">
+<div class="note tradeoff"><p class="note-label">取捨</p><p>為什麼心跳是 2 秒而不是 500 ms？因為心跳是一個下限，而高的下限會吃掉預算。在 500 ms、視野內約 200 個船體時，光是必要傳送就是每位玩家每個 tick 200 / (0.5 × 25) = 16 次；在 2 秒時是 4 次。代價是一個真正離開你視野的船體，會凍結地停留最多到 5 秒的寬限期。只有一則明確的「這一個離開了你的視野」訊息才能消除這個下限，而伺服器既然已經偵測得到這種情況，就能送出它；這被記錄為下一步，而還沒有實作。</p></div></div>
 </section>
 
 <section class="sec" id="takeaways">
@@ -201,6 +250,13 @@ foreach (var c in candidates)             // pass 2: emit, no sort, no allocatio
 <li>Choisir « assez proche » par un histogramme plutôt que par un tri ; l'exactitude n'y a aucune valeur.</li>
 <li>Lire l'horloge une fois et la passer en paramètre, compter chaque chemin d'un mécanisme séparément, et oublier par l'âge plutôt que par la visibilité.</li>
 </ul></div>
+<div lang="zh-TW"><h2>重點整理</h2><ul>
+<li>以依距離排名的預算為每位玩家的成本設下上限；在人潮中，光靠距離無法區分。</li>
+<li>把必要的傳送（新物件、心跳）與可選的傳送分開，並讓心跳遠遠落在用戶端寬限期之內。</li>
+<li>以小步伐降級：在相同頻寬下，三圈消除了一道二十五倍的斷崖。</li>
+<li>以直方圖而不是排序來挑選「夠近」的物件；在這裡精確毫無價值。</li>
+<li>時鐘只讀一次並傳遞下去、分別計算機制的每一條路徑，並依時間而不是依可見性遺忘。</li>
+</ul></div>
 </div>
 </section>
 
@@ -213,6 +269,7 @@ foreach (var c in candidates)             // pass 2: emit, no sort, no allocatio
 <footer class="site-footer" id="mq-footer"></footer>
 <script src="assets/js/site-data.js" defer></script>
 <script src="assets/js/glossary-data.js" defer></script>
+<script src="assets/js/ui-zh.js" defer></script>
 <script src="assets/js/app.js" defer></script>
 <script src="assets/js/widgets.js" defer></script>
 </body>

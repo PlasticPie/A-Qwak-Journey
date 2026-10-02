@@ -24,6 +24,9 @@ loadBrowserScript("assets/js/site-data.js", ctx);
 const D = ctx.window.MQ.data;
 if (existsSync(join(siteRoot, "assets/js/glossary-data.js"))) loadBrowserScript("assets/js/glossary-data.js", ctx);
 const GLOSSARY = ctx.window.MQ_GLOSSARY || [];
+const LANGS = ["en", "fr", "zh"];
+// Page blocks carry a BCP 47 tag; records use the site's language code.
+const LANG_CODE = { "zh-TW": "zh" };
 
 /* ---------------------------------------------------------------- tiny HTML reader */
 const VOID = new Set(["area", "base", "br", "col", "embed", "hr", "img", "input", "link", "meta", "source", "track", "wbr"]);
@@ -79,7 +82,7 @@ function extract(file, pageId) {
   let heading = null;            // {tag, l, parts[]}
   let inArticle = false;
 
-  const langOf = () => { for (let i = stack.length - 1; i >= 0; i--) if (stack[i].lang) return stack[i].lang; return null; };
+  const langOf = () => { for (let i = stack.length - 1; i >= 0; i--) if (stack[i].lang) return LANG_CODE[stack[i].lang] || stack[i].lang; return null; };
   const skipText = () => stack.some((s) => s.tag === "svg" || s.tag === "script" || s.tag === "style" || s.tag === "canvas" || s.tag === "noscript");
 
   for (const t of tokens) {
@@ -114,7 +117,7 @@ function extract(file, pageId) {
         if (idx + 1 === ruleCapture.depth && t.tag === "div") {
           const text = ruleCapture.text.join(" ").replace(/\s+/g, " ").trim();
           const inner = ruleCapture.html.join("").replace(/<p class="note-label"[\s\S]*?<\/p>/, "").trim();
-          if (text) rules.push({ p: pageId, a: ruleCapture.a || "", l: ruleCapture.l, html: inner, t: text.replace(/^(Rule|Règle)\s*/i, "") });
+          if (text) rules.push({ p: pageId, a: ruleCapture.a || "", l: ruleCapture.l, html: inner, t: text.replace(/^(Rule|Règle|規則)\s*/i, "") });
           ruleCapture = null;
         } else if (KEEP.has(t.tag)) ruleCapture.html.push("</" + t.tag + ">");
       }
@@ -166,7 +169,7 @@ function extract(file, pageId) {
   }
   for (const r of rules) {
     if (!r.l) continue;
-    docs.push({ p: pageId, a: r.a, l: r.l, h: r.t.split(/(?<=[.!?])\s/)[0].slice(0, 140), t: r.t.slice(0, 600), k: "rule" });
+    docs.push({ p: pageId, a: r.a, l: r.l, h: r.t.split(/(?<=[.!?])\s|(?<=[。！？])/)[0].slice(0, 140), t: r.t.slice(0, 600), k: "rule" });
   }
   return { docs, rules, takeaways };
 }
@@ -189,7 +192,7 @@ let missing = 0;
 for (const id of D.order) {
   const c = D.chapters[id];
   const file = c.file;
-  for (const l of ["en", "fr"]) allDocs.push({ p: id, a: "", l, h: c[l].t, t: c[l].d, k: "page" });
+  for (const l of LANGS) allDocs.push({ p: id, a: "", l, h: (c[l] || c.en).t, t: (c[l] || c.en).d, k: "page" });
   if (!existsSync(join(siteRoot, file))) { missing++; continue; }
   const { docs, rules, takeaways } = extract(file, id);
   allDocs.push(...docs);
@@ -197,7 +200,7 @@ for (const id of D.order) {
   allTakeaways.push(...takeaways);
 }
 for (const g of GLOSSARY) {
-  for (const l of ["en", "fr"]) {
+  for (const l of LANGS) {
     if (!g[l]) continue;
     allDocs.push({ p: "glossary", a: g.id, l, h: g[l].term, t: (g[l].aka ? g[l].aka + ". " : "") + g[l].def.replace(/<[^>]+>/g, ""), k: "term" });
   }

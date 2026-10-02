@@ -7,12 +7,12 @@
 <meta name="description" content="What a snapshot means, why absence stopped meaning 'gone', and how bullets, missiles and debris each live differently.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Chakra+Petch:wght@500;600&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Chakra+Petch:wght@500;600&family=JetBrains+Mono:wght@400;500;600&family=Noto+Sans+TC:wght@400;700&display=swap">
 <link rel="stylesheet" href="assets/css/site.css">
-<script>(function(){var r=document.documentElement,l,t;try{l=localStorage.getItem("mq-lang");t=localStorage.getItem("mq-theme");}catch(e){}if(l!=="en"&&l!=="fr"){l=(navigator.language||"").toLowerCase().indexOf("fr")===0?"fr":"en";}r.setAttribute("data-lang",l);r.setAttribute("lang",l);if(t==="light"||t==="dark")r.setAttribute("data-theme",t);})();</script>
+<script>(function(){var r=document.documentElement,l,t,n;try{l=localStorage.getItem("mq-lang");t=localStorage.getItem("mq-theme");}catch(e){}if(l!=="en"&&l!=="fr"&&l!=="zh"){n=(navigator.language||"").toLowerCase();l=n.indexOf("fr")===0?"fr":n.indexOf("zh")===0?"zh":"en";}r.setAttribute("data-lang",l);r.setAttribute("lang",l==="zh"?"zh-TW":l);if(t==="light"||t==="dark")r.setAttribute("data-theme",t);})();</script>
 </head>
 <body data-page="snapshots">
-<a class="skip-link" href="#main"><span lang="en">Skip to content</span><span lang="fr">Aller au contenu</span></a>
+<a class="skip-link" href="#main"><span lang="en">Skip to content</span><span lang="fr">Aller au contenu</span><span lang="zh-TW">跳到主要內容</span></a>
 <header class="site-header" id="mq-header"></header>
 <div class="layout">
 <aside class="sidebar" id="mq-sidebar"></aside>
@@ -20,8 +20,8 @@
 <article>
 <header class="chapter-head">
   <div class="eyebrow" data-auto></div>
-  <h1><span lang="en">Snapshots: state and events</span><span lang="fr">Snapshots : état et événements</span></h1>
-  <p class="dek"><span lang="en">What a snapshot means, why absence stopped meaning 'gone', and how bullets, missiles and debris each live differently.</span><span lang="fr">Ce que veut dire un snapshot, pourquoi l'absence a cessé de vouloir dire « parti », et comment balles, missiles et débris vivent chacun à leur façon.</span></p>
+  <h1><span lang="en">Snapshots: state and events</span><span lang="fr">Snapshots : état et événements</span><span lang="zh-TW">快照：狀態與事件</span></h1>
+  <p class="dek"><span lang="en">What a snapshot means, why absence stopped meaning 'gone', and how bullets, missiles and debris each live differently.</span><span lang="fr">Ce que veut dire un snapshot, pourquoi l'absence a cessé de vouloir dire « parti », et comment balles, missiles et débris vivent chacun à leur façon.</span><span lang="zh-TW">快照代表什麼、為什麼「不在快照裡」不再代表「消失了」，以及子彈、飛彈和碎片各自不同的生命週期。</span></p>
   <div class="meta-row" data-auto></div>
 </header>
 
@@ -40,15 +40,20 @@
 <div class="note beginner"><p class="note-label">Pour débuter</p><p>Comparez « le vaisseau est en (40, 12) » et « le vaisseau s'est déplacé de 3 unités vers la droite ». Le premier est un <em>état</em> : on peut le recevoir en retard, deux fois, ou après en avoir sauté dix, et on finit juste. Le second est un <em>événement</em> : en manquer un, et on a tort pour toujours. Une conception de réplication est surtout l'art d'exprimer le plus de choses possible comme de l'état, et de traiter les quelques vrais événements (une balle qui touche, un objet qui s'en va) avec un soin explicite.</p></div>
 <p>Un snapshot MoonQwak a trois parties :</p>
 </div>
+<div lang="zh-TW">
+<h2>一張照片，而不是一場對話</h2>
+<p>每個 tick，每位玩家都會收到一份<strong>快照</strong>：描述他在意的那部分世界在這個 tick 的樣子。一份設計良好的快照，關鍵特性是它是<em>冪等的完整狀態</em>：套用兩次不會改變任何事，只套用最新的一份就足夠。遺失或跳過一份快照，代價是一個影格的新鮮度，而絕不是正確性，因為下一份會修復一切。</p>
+<div class="note beginner"><p class="note-label">新手須知</p><p>比較「船在 (40, 12)」與「船向右移動了 3 單位」。前者是<em>狀態</em>：你可以晚收到、收到兩次，或在跳過十份之後才收到，結果仍然正確。後者是<em>事件</em>：漏了一次，你就永遠錯了。同步設計的藝術，大部分在於盡可能把一切表達成狀態，並以明確的謹慎處理少數真正的事件（子彈命中、物件離開）。</p></div>
+<p>MoonQwak 的快照有三個部分：</p></div>
 <div data-bytes>
 <div class="bytes">
-  <div class="byte-field" data-en="The world tick number, as a varint. Lets the client order snapshots and place them on its interpolation timeline." data-fr="Le numéro du tick du monde, en varint. Permet au client d'ordonner les snapshots et de les placer sur sa frise d'interpolation."><b>Tick</b><span>varint</span></div>
-  <div class="byte-field" data-en="Two bits: is there a self ship block, is there a self character block." data-fr="Deux bits : y a-t-il un bloc « ma coque », y a-t-il un bloc « mon personnage »."><b>Flags</b><span>1 B</span></div>
-  <div class="byte-field" data-en="The player's own ship and/or character, in an exact, richer format: precise values of every hex, ammunition, power. Sent every tick, outside any budget." data-fr="La coque et/ou le personnage du joueur, dans un format exact et plus riche : valeurs précises de chaque hex, munitions, énergie. Envoyé à chaque tick, hors de tout budget."><b>Self</b><span>id · type · exact state</span></div>
-  <div class="byte-field" data-en="How many other objects follow." data-fr="Combien d'autres objets suivent."><b>Count</b><span>varint</span></div>
-  <div class="byte-field grow" data-en="Each other object: id (varint), type (1 byte), then its compact block. Ships: a flag byte, then only the blocks that apply this tick." data-fr="Chaque autre objet : identifiant (varint), type (1 octet), puis son bloc compact. Vaisseaux : un octet de drapeaux, puis seulement les blocs qui s'appliquent à ce tick."><b>Others</b><span>id · type · block …</span></div>
+  <div class="byte-field" data-en="The world tick number, as a varint. Lets the client order snapshots and place them on its interpolation timeline." data-fr="Le numéro du tick du monde, en varint. Permet au client d'ordonner les snapshots et de les placer sur sa frise d'interpolation." data-zh="世界 tick 編號，以 varint 表示。讓用戶端為快照排序，並把它們放到自己的內插時間軸上。"><b>Tick</b><span>varint</span></div>
+  <div class="byte-field" data-en="Two bits: is there a self ship block, is there a self character block." data-fr="Deux bits : y a-t-il un bloc « ma coque », y a-t-il un bloc « mon personnage »." data-zh="兩個位元：是否有自己船艦的區塊、是否有自己角色的區塊。"><b>Flags</b><span>1 B</span></div>
+  <div class="byte-field" data-en="The player's own ship and/or character, in an exact, richer format: precise values of every hex, ammunition, power. Sent every tick, outside any budget." data-fr="La coque et/ou le personnage du joueur, dans un format exact et plus riche : valeurs précises de chaque hex, munitions, énergie. Envoyé à chaque tick, hors de tout budget." data-zh="玩家自己的船艦和／或角色，以精確、更豐富的格式表示：每個六角格的精確數值、彈藥、電力。每個 tick 都送出，不受任何預算限制。"><b>Self</b><span>id · type · exact state</span></div>
+  <div class="byte-field" data-en="How many other objects follow." data-fr="Combien d'autres objets suivent." data-zh="後面跟著多少個其他物件。"><b>Count</b><span>varint</span></div>
+  <div class="byte-field grow" data-en="Each other object: id (varint), type (1 byte), then its compact block. Ships: a flag byte, then only the blocks that apply this tick." data-fr="Chaque autre objet : identifiant (varint), type (1 octet), puis son bloc compact. Vaisseaux : un octet de drapeaux, puis seulement les blocs qui s'appliquent à ce tick." data-zh="每個其他物件：ID（varint）、類型（1 位元組），然後是它的精簡區塊。船艦：一個旗標位元組，然後只有這個 tick 適用的區塊。"><b>Others</b><span>id · type · block …</span></div>
 </div>
-<p class="byte-legend"><span lang="en">Hover or focus a field to see what it carries.</span><span lang="fr">Survolez ou sélectionnez un champ pour voir ce qu'il porte.</span></p>
+<p class="byte-legend"><span lang="en">Hover or focus a field to see what it carries.</span><span lang="fr">Survolez ou sélectionnez un champ pour voir ce qu'il porte.</span><span lang="zh-TW">把滑鼠移到（或聚焦）某個欄位上，看看它攜帶了什麼。</span></p>
 </div>
 <div lang="en">
 <p>The asymmetry is deliberate. Your own ship matters more than anyone else's: you steer it, read its gauges, and your client predicts it (chapter <a href="prediction.html">5.3</a>). It goes out every tick in an exact format. Everyone else's ships go out in a compact, quantized format, and only as often as the freshness budget allows (chapter <a href="freshness-budget.html">4.5</a>).</p>
@@ -56,6 +61,8 @@
 <div lang="fr">
 <p>L'asymétrie est voulue. Votre propre vaisseau compte plus que celui des autres : vous le pilotez, vous lisez ses jauges, et votre client le prédit (chapitre <a href="prediction.html">5.3</a>). Il part à chaque tick dans un format exact. Les vaisseaux des autres partent dans un format compact et quantifié, et seulement aussi souvent que le permet le budget de fraîcheur (chapitre <a href="freshness-budget.html">4.5</a>).</p>
 </div>
+<div lang="zh-TW">
+<p>這種不對稱是刻意的。你自己的船比任何人的都重要：你駕駛它、看它的儀表，而你的用戶端會預測它（第 <a href="prediction.html">5.3</a> 章）。它每個 tick 都以精確的格式送出。其他人的船則以精簡、量化的格式送出，而且只在新鮮度預算允許的頻率下送出（第 <a href="freshness-budget.html">4.5</a> 章）。</p></div>
 </section>
 
 <section class="sec" id="discover">
@@ -69,6 +76,10 @@
 <p>La disposition d'un vaisseau (ses hex, ses pièces, ses couleurs, son propriétaire) est grosse et ne change presque jamais. La répéter 25 fois par seconde serait absurde. Un snapshot ne porte donc qu'un identifiant, un type et l'état qui change ; quand le client rencontre un identifiant inconnu, il demande sa description par une requête <code>Discover</code>, et le serveur répond une fois avec la disposition complète. Vaisseaux, stations et personnages fonctionnent ainsi.</p>
 <p>Les autres types sautent entièrement cet aller-retour, parce que leur état porte déjà un identifiant de catalogue et que le client résout tout le reste à partir des données de jeu partagées : les balles portent la spécification de leur arme, les astéroïdes leur famille et leur palier, les débris leur objet. Une seconde requête ne ferait qu'ajouter de la latence à un objet qui vit peut-être une seconde.</p>
 </div>
+<div lang="zh-TW">
+<h2>描述一次，經常更新</h2>
+<p>一艘船的配置（它的六角格、零件、顏色、擁有者）很大，而且幾乎從不改變。每秒重複它 25 次是荒謬的。所以快照只攜帶 ID、類型與變動中的狀態；當用戶端遇到一個它不認識的 ID 時，會以 <code>Discover</code> 請求索取它的描述，伺服器回覆一次完整的配置。船艦、太空站與角色都是這樣運作的。</p>
+<p>其他類型則完全省掉這次往返，因為它們的狀態已經攜帶了目錄 ID，其餘的一切由用戶端從共用的遊戲資料中解析：子彈攜帶它的武器規格，小行星攜帶它的族系與階層，碎片攜帶它的物品。對一個可能只活一秒的物件，再多一次請求只會增加延遲。</p></div>
 </section>
 
 <section class="sec" id="absence">
@@ -86,6 +97,12 @@
 <div class="note pitfall"><p class="note-label">Piège rencontré</p><p>La première grâce était de 1,5 seconde contre un battement serveur de 20 ticks de snapshot, soit 0,8 s en théorie. Sous charge, le serveur produisait moins de 25 snapshots par seconde, ses 20 ticks s'étiraient à 1,5 puis 2 secondes réelles, et passaient derrière la grâce du client : les objets étaient détruits, puis renvoyés au battement suivant, et tout clignotait. Deux leçons dans un seul bug : les deux bouts d'un contrat doivent parler la même <em>unité</em> (les deux sont maintenant en millisecondes réelles), et une marge de sécurité du même ordre que le bruit qu'elle doit absorber n'est pas une marge.</p></div>
 <div class="note rule"><p class="note-label">Règle</p><p>Toute constante dont le commentaire doit nommer une cadence est dans la mauvaise unité.</p><p>« 20 ticks (~0,8 s à 25 Hz) » devient en silence 1,6 s le jour où la cadence est divisée par deux, ou le jour où le serveur ne suit plus. Les durées qui comptent pour un humain, ou pour l'autre bout du fil, s'écrivent en secondes.</p></div>
 </div>
+<div lang="zh-TW">
+<h2>「不在快照裡」不再代表「消失了」</h2>
+<p>原本的用戶端會摧毀任何不在最新快照中的已知物件。只要伺服器每個 tick 都送出一切，這就是正確的，而這也恰恰<em>迫使</em>伺服器每個 tick 都送出一切。只要「沒送」代表「消失了」，你就永遠不能不送：這個模型在結構上就禁止了任何節奏、任何差量、任何頻寬的節省。第一次嘗試依距離調整節奏時，一切都在閃爍，因為每三個 tick 跳過一個物件一次，等於每秒告訴用戶端八次「消失、回來、消失」。</p>
+<p>現在，用戶端只有在一個物件已經有 5 秒的<strong>寬限期</strong>（以真實時間計）沒被看到時，才會摧毀它。伺服器想跳過一個物件多少個 tick 都可以，只要在寬限期到期之前再送一次即可，而這正是第 <a href="freshness-budget.html">4.5</a> 章的心跳所保證的。這個模型能自我修復：沒有可能遺失的摧毀訊息，所以沒有任何東西需要確認或重傳。</p>
+<div class="note pitfall"><p class="note-label">我踩過的坑</p><p>第一版的寬限期是 1.5 秒，對應伺服器 20 個快照 tick 的心跳，名義上是 0.8 秒。在負載下，伺服器每秒產生不到 25 份快照，它的 20 個 tick 被拉長到 1.5、再到 2 個真實秒數，超過了用戶端的寬限期：物件被摧毀，又在下一次心跳時被重新送出，一切都在閃爍。一個 bug 裡有兩個教訓：契約的兩端必須使用同一種<em>單位</em>（現在兩者都使用真實的毫秒），而一個與它要吸收的雜訊同一數量級的安全餘裕，根本不算餘裕。</p></div>
+<div class="note rule"><p class="note-label">規則</p><p>任何一個註解必須提到 tick 頻率的常數，都用錯了單位。</p><p>「20 個 tick（在 25 Hz 下約 0.8 秒）」會在頻率減半的那一天，或伺服器跟不上的那一天，悄悄地變成 1.6 秒。對人類或線路另一端重要的時間長度，應該以秒為單位。</p></div></div>
 </section>
 
 <section class="sec" id="gone">
@@ -109,26 +126,35 @@
 <li>Il porte des identifiants seulement, pas de cause. Pourquoi un objet est parti (mort, amarrage, saut) ne change pas ce que le client en fait, et un champ de cause inviterait quelqu'un à en déclencher un effet, qui serait faux une fois sur trois. Les explosions se jouent sur la mort des hex, pas sur ce message.</li>
 </ul>
 </div>
+<div lang="zh-TW">
+<h2>「已離開」是一種加速，而不是保證</h2>
+<p>基於寬限期的摧毀有一個看得見的代價：它也適用於剛剛死掉的東西。一艘船爆炸了，它的殘骸卻在原地停留五秒，凍結而且完好如初。畫面在說謊。答案是一則明確的 <code>ObjectsGone</code> 訊息，而它的設計方式才是有趣的部分：它不<em>取代</em>寬限期，而是<em>加速</em>它。</p>
+<ul>
+<li>在正常情況下，這則訊息會讓物件立即消失。</li>
+<li>如果訊息遺失了，長時間的缺席會在五秒後移除物件，與之前完全一樣。所以這則訊息不需要可靠性、不需要確認、不需要重傳，而遺失的訊息也不會留下幽靈。</li>
+<li>它仍然會重複三個 tick，因為這幾乎不花成本，又能涵蓋單獨一次的遺失。</li>
+<li>它只攜帶 ID，不攜帶原因。物件為什麼離開（死亡、停靠、跳躍），不會改變用戶端要怎麼處理它，而一個原因欄位會誘使某人據此觸發效果，而那三次會錯一次。爆炸是根據六角格的死亡來播放的，而不是根據這則訊息。</li>
+</ul></div>
 <figure class="fig fig-scroll">
 <svg viewBox="0 0 760 200" role="img" aria-label="Timeline of a departure: the object leaves the map at tick N; the ObjectsGone message is sent after the snapshot on ticks N, N+1 and N+2; the client removes the object at the first message it receives; if all three are lost, the object is removed when the five-second grace expires">
   <defs><marker id="sn-arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="currentColor" opacity="0.7"/></marker></defs>
   <line x1="40" y1="70" x2="720" y2="70" class="dg-line"/>
-  <text class="dg-small" x="40" y="30"><tspan lang="en">server, snapshot thread</tspan><tspan lang="fr">serveur, thread snapshot</tspan></text>
+  <text class="dg-small" x="40" y="30"><tspan lang="en">server, snapshot thread</tspan><tspan lang="fr">serveur, thread snapshot</tspan><tspan lang="zh-TW">伺服器，快照執行緒</tspan></text>
   <g class="dg-hot"><rect x="80" y="56" width="70" height="28" rx="5"/><rect x="160" y="56" width="70" height="28" rx="5"/><rect x="240" y="56" width="70" height="28" rx="5"/></g>
   <text class="dg-small dg-mono" x="115" y="75" text-anchor="middle">gone ×1</text>
   <text class="dg-small dg-mono" x="195" y="75" text-anchor="middle">gone ×2</text>
   <text class="dg-small dg-mono" x="275" y="75" text-anchor="middle">gone ×3</text>
-  <text class="dg-small" x="195" y="104" text-anchor="middle"><tspan lang="en">ticks N, N+1, N+2 · after the snapshot</tspan><tspan lang="fr">ticks N, N+1, N+2 · après le snapshot</tspan></text>
+  <text class="dg-small" x="195" y="104" text-anchor="middle"><tspan lang="en">ticks N, N+1, N+2 · after the snapshot</tspan><tspan lang="fr">ticks N, N+1, N+2 · après le snapshot</tspan><tspan lang="zh-TW">第 N、N+1、N+2 個 tick · 在快照之後</tspan></text>
   <line x1="40" y1="150" x2="720" y2="150" class="dg-line"/>
-  <text class="dg-small" x="40" y="136"><tspan lang="en">client</tspan><tspan lang="fr">client</tspan></text>
+  <text class="dg-small" x="40" y="136"><tspan lang="en">client</tspan><tspan lang="fr">client</tspan><tspan lang="zh-TW">用戶端</tspan></text>
   <line x1="120" y1="86" x2="140" y2="144" class="dg-line" marker-end="url(#sn-arr)"/>
   <circle cx="142" cy="150" r="6" class="dg-accent"/>
-  <text class="dg-small" x="152" y="176"><tspan lang="en">normal case: removed at once</tspan><tspan lang="fr">cas normal : retiré aussitôt</tspan></text>
+  <text class="dg-small" x="152" y="176"><tspan lang="en">normal case: removed at once</tspan><tspan lang="fr">cas normal : retiré aussitôt</tspan><tspan lang="zh-TW">正常情況：立即移除</tspan></text>
   <rect x="140" y="143" width="560" height="14" rx="3" class="dg-box" style="opacity:0.55"/>
   <circle cx="700" cy="150" r="6" class="dg-crit"/>
-  <text class="dg-small" x="700" y="176" text-anchor="end"><tspan lang="en">all three lost: removed when the 5 s grace expires</tspan><tspan lang="fr">les trois perdus : retiré à la fin de la grâce de 5 s</tspan></text>
+  <text class="dg-small" x="700" y="176" text-anchor="end"><tspan lang="en">all three lost: removed when the 5 s grace expires</tspan><tspan lang="fr">les trois perdus : retiré à la fin de la grâce de 5 s</tspan><tspan lang="zh-TW">三則全部遺失：5 秒寬限期到期時移除</tspan></text>
 </svg>
-<figcaption><span lang="en"><strong>The message makes departures fast; the grace makes them certain.</strong> Neither needs the other to be reliable, which is why the combination needs no acknowledgement.</span><span lang="fr"><strong>Le message rend les départs rapides ; la grâce les rend certains.</strong> Aucun des deux n'a besoin que l'autre soit fiable, et c'est pourquoi l'ensemble se passe d'acquittement.</span></figcaption>
+<figcaption><span lang="en"><strong>The message makes departures fast; the grace makes them certain.</strong> Neither needs the other to be reliable, which is why the combination needs no acknowledgement.</span><span lang="fr"><strong>Le message rend les départs rapides ; la grâce les rend certains.</strong> Aucun des deux n'a besoin que l'autre soit fiable, et c'est pourquoi l'ensemble se passe d'acquittement.</span><span lang="zh-TW"><strong>訊息讓離開變快；寬限期讓離開變確定。</strong>兩者都不需要對方可靠，這就是為什麼這個組合不需要確認。</span></figcaption>
 </figure>
 <div lang="en">
 <p>Two ordering details, both found because they only break with several players:</p>
@@ -144,6 +170,12 @@
 <li><strong>Envoyés après le snapshot, jamais avant.</strong> Le snapshot qu'on envoie a été bâti au tick du monde précédent et peut encore contenir l'objet. Annoncez le départ d'abord, et le client détruit l'objet puis le recrée depuis le snapshot plus ancien : un clignotement fabriqué par l'ordre d'envoi. Dans cet ordre-ci, l'annonce a toujours le dernier mot.</li>
 </ul>
 </div>
+<div lang="zh-TW">
+<p>有兩個順序上的細節，都是因為只有在多位玩家時才會出錯而被發現的：</p>
+<ul>
+<li><strong>每張地圖收集一次，而不是每位玩家一次。</strong>讀取離開清單會遞減它們「重複三次」的計數器。如果在每位玩家的迴圈中進行，一張有三位觀察者的地圖會在單一 tick 內用光三次重複：第一位被服務的玩家收到了宣告，其他兩位什麼都沒收到。這類 bug 在單人測試中永遠不會出現。</li>
+<li><strong>在快照之後送出，絕不在之前。</strong>正在送出的快照是在上一個世界 tick 建構的，可能仍然包含這個物件。如果先宣告離開，用戶端會摧毀物件，接著又從較舊的快照把它重新建立：一次由傳送順序製造出來的閃爍。按照這個順序，宣告永遠擁有最後的發言權。</li>
+</ul></div>
 </section>
 
 <section class="sec" id="lifetimes">
@@ -175,18 +207,35 @@
 </tbody></table></div>
 <p>La ligne des balles est le résultat d'un problème mesuré. À 1 000 balles par tir, renvoyer dans chaque snapshot l'état inchangé de chaque balle vivante coûtait octets, sérialisation serveur et analyse client en proportion de « balles vivantes × cadence des snapshots », et produisait des pics de 100 ms dans la mise à jour réseau du client. Aujourd'hui, chaque balle atteint un spectateur donné exactement deux fois, et une balle qui arrive simplement en bout de portée n'a besoin d'aucun message.</p>
 </div>
+<div lang="zh-TW">
+<h2>每種物件各有不同的生命方式</h2>
+<p>對所有東西使用單一的同步規則，對幾乎所有東西都是錯的。這張表是針對每種類型詢問「用戶端實際上需要什麼、何時需要」所得到的結果：</p>
+<div class="table-wrap"><table>
+<thead><tr><th>物件</th><th>線路上送什麼</th><th>原因</th></tr></thead>
+<tbody>
+<tr><td>其他船艦、太空站、角色</td><td>完整的精簡狀態，頻率依距離而定（25 到 6.25 Hz），外加 2 秒的心跳</td><td>它們的運動取決於玩家的選擇；除了伺服器沒有人知道。</td></tr>
+<tr><td>子彈</td><td>每位觀察者兩次：初次看見時（產生狀態），以及命中時（最終位置 + 命中旗標）</td><td>等速運動：用戶端能精確地以航位推算計算飛行，並根據共用規格自行計算射程到期。</td></tr>
+<tr><td>飛彈</td><td>每個 tick 完整狀態</td><td>數量夠少，負擔得起，而且導引的路徑會以無法預測的方式彎曲。</td></tr>
+<tr><td>碎片</td><td>初次看見時、每 1 秒的心跳、消失時；被牽引光束拉住時每個 tick 都送</td><td>漂移由共用規則決定；心跳能救回遺失的產生訊息，並修正浮點數漂移。</td></tr>
+<tr><td>小行星</td><td>視野內的即時狀態；遠景則用一份全地圖的登錄表</td><td>採礦者在近處需要即時的耗竭狀態；其他人只需要知道岩石在哪裡。</td></tr>
+</tbody></table></div>
+<p>子彈那一列，是一個被量測出來的問題的結果。每次射擊 1,000 顆子彈時，在每份快照中重送每顆存活子彈未改變的狀態，其位元組、伺服器序列化與用戶端解析的成本都與「存活子彈數 × 快照頻率」成正比，並在用戶端的網路更新中造成 100 ms 的尖峰。現在每顆子彈恰好到達某位觀察者兩次，而一顆單純飛出射程的子彈則完全不需要任何訊息。</p></div>
 <div lang="en">
 <div class="note pitfall"><p class="note-label">Pitfall I hit</p><p>A bullet's hit is the one real <em>event</em> in its life, and it was announced in exactly one snapshot. Two things can make a viewer miss one particular tick's content: the server skips building a player's snapshot while the previous one is still waiting to be sent (see below), and the freshness budget does not serve every viewer every tick. Either way, the client never learned the bullet died and kept flying it past the target, through a station hull. A spent bullet now stays registered, frozen, for enough world ticks to span three snapshots, so its final state is repeated and any single miss is invisible.</p></div>
 </div>
 <div lang="fr">
 <div class="note pitfall"><p class="note-label">Piège rencontré</p><p>L'impact d'une balle est le seul vrai <em>événement</em> de sa vie, et il était annoncé dans exactement un snapshot. Deux choses peuvent faire manquer à un spectateur le contenu d'un tick précis : le serveur saute la construction du snapshot d'un joueur tant que le précédent attend encore d'être envoyé (voir plus bas), et le budget de fraîcheur ne sert pas chaque spectateur à chaque tick. Dans les deux cas, le client n'apprenait jamais que la balle était morte et continuait de la faire voler au-delà de la cible, à travers une coque de station. Une balle usée reste maintenant enregistrée, figée, assez de ticks du monde pour couvrir trois snapshots : son état final est répété, et un manqué isolé devient invisible.</p></div>
 </div>
+<div lang="zh-TW">
+<div class="note pitfall"><p class="note-label">我踩過的坑</p><p>子彈的命中是它一生中唯一真正的<em>事件</em>，而它只在恰好一份快照中被宣告。有兩件事會讓觀察者錯過某個特定 tick 的內容：當前一份快照還在等待送出時，伺服器會跳過為這位玩家建構快照（見下文），而新鮮度預算也不會在每個 tick 服務每位觀察者。不論哪一種，用戶端都永遠不知道子彈死了，而讓它繼續飛過目標、穿過太空站的船體。現在一顆用盡的子彈會凍結並保持登記，持續足以橫跨三份快照的世界 tick 數，所以它的最終狀態會被重複，任何單一一次的錯過都看不出來。</p></div></div>
 <div lang="en">
 <div class="note rule"><p class="note-label">Rule</p><p>Make every event self-healing: repeat it, or back it with a state that will eventually say the same thing.</p><p>Bullet hits are repeated for three snapshots, departures are repeated and backed by the grace, debris spawns are backed by a heartbeat. Nothing important lives in a single packet.</p></div>
 </div>
 <div lang="fr">
 <div class="note rule"><p class="note-label">Règle</p><p>Rendre chaque événement auto-réparateur : le répéter, ou l'adosser à un état qui finira par dire la même chose.</p><p>Les impacts de balles sont répétés sur trois snapshots, les départs sont répétés et adossés à la grâce, les apparitions de débris sont adossées à un battement. Rien d'important ne vit dans un seul paquet.</p></div>
 </div>
+<div lang="zh-TW">
+<div class="note rule"><p class="note-label">規則</p><p>讓每個事件都能自我修復：重複它，或用一個終究會說出同一件事的狀態來支撐它。</p><p>子彈命中重複三份快照，離開被重複並由寬限期支撐，碎片的產生由心跳支撐。沒有任何重要的東西只存在於單一封包中。</p></div></div>
 </section>
 
 <section class="sec" id="handoff">
@@ -208,12 +257,22 @@
 <li><strong>Ne garder que le plus récent côté client.</strong> Le thread réseau ne stocke qu'une référence vers le dernier snapshot et planifie un seul rappel sur le thread principal ; si un plus récent arrive d'abord, il remplace simplement la référence. Un client qui prend du retard saute les photos périmées au lieu de traiter un arriéré (chapitre <a href="client-architecture.html">5.1</a>).</li>
 </ul>
 </div>
+<div lang="zh-TW">
+<h2>從世界執行緒到線路</h2>
+<p>快照由世界執行緒建構、由快照執行緒送出，這是兩個彼此獨立的時鐘（第 <a href="tick-loop.html#two-loops">3.1</a> 章）。每位玩家最多只持有一份待送的快照，而有三個小決定讓這次交接變得安全：</p>
+<ul>
+<li><strong>寧可跳過，也不覆寫。</strong>如果在上一份快照送出之前，第二個世界 tick 就到了，建構器會在這個 tick 跳過這位玩家，而不是覆寫待送的那一份。待送的快照一定會送出；玩家看到的是多一個 tick 的延遲，而不是一個無聲的空洞。</li>
+<li><strong>獨佔地取走。</strong>傳送端以一次不可分割的交換取走待送的快照，所以即使兩輪傳送真的重疊了，也恰好只有一輪會送出它，並把它的緩衝區還回池中。一個被還回池中兩次的緩衝區就是資料損毀，之後會由別人在一個毫不相關的封包中付出代價。</li>
+<li><strong>用戶端只保留最新的。</strong>網路執行緒只儲存指向最新快照的參考，並排定一次主執行緒回呼；如果更新的快照先到，它就直接取代這個參考。落後的用戶端會跳過過時的照片，而不是處理一整批積壓（第 <a href="client-architecture.html">5.1</a> 章）。</li>
+</ul></div>
 <div lang="en">
 <div class="note project"><p class="note-label">In MoonQwak</p><p>Snapshots currently travel on the same reliable, ordered channel as everything else (chapter <a href="transport.html">1.1</a>). The design never relies on it: every rule in this chapter would work unchanged on an unreliable channel, which keeps that switch open for the day head-of-line blocking costs more than the bandwidth it saves.</p></div>
 </div>
 <div lang="fr">
 <div class="note project"><p class="note-label">Dans MoonQwak</p><p>Les snapshots voyagent aujourd'hui sur le même canal fiable et ordonné que tout le reste (chapitre <a href="transport.html">1.1</a>). La conception ne compte jamais dessus : chaque règle de ce chapitre marcherait sans changement sur un canal non fiable, ce qui garde cette bascule ouverte pour le jour où le blocage en tête de file coûtera plus que la bande passante qu'il économise.</p></div>
 </div>
+<div lang="zh-TW">
+<div class="note project"><p class="note-label">在 MoonQwak 中</p><p>快照目前和其他一切一樣，走的是同一條可靠、有序的通道（第 <a href="transport.html">1.1</a> 章）。設計從未依賴它：本章的每一條規則在不可靠通道上都能原封不動地運作，這讓切換的大門保持敞開，等到隊頭阻塞的代價高於它省下的頻寬的那一天。</p></div></div>
 </section>
 
 <section class="sec" id="takeaways">
@@ -232,6 +291,13 @@
 <li>Traiter les messages « parti » explicites comme des accélérations adossées à la grâce, et les envoyer après le snapshot.</li>
 <li>Donner à chaque type d'objet la réplication que son comportement demande, et répéter chaque vrai événement jusqu'à ce qu'un manqué soit invisible.</li>
 </ul></div>
+<div lang="zh-TW"><h2>重點整理</h2><ul>
+<li>把快照設計成冪等的完整狀態：任何一份單獨拿出來都必須足夠。</li>
+<li>大而穩定的東西在被請求時描述一次，每個 tick 只送變動中的狀態。</li>
+<li>以寬限期而不是以缺席來摧毀，否則你永遠無法停止傳送；兩端的時間長度都使用真實時間。</li>
+<li>把明確的「已離開」訊息當成由寬限期支撐的加速，並在快照之後送出。</li>
+<li>給每種物件類型符合其行為的同步方式，並重複每個真正的事件，直到錯過一次也看不出來。</li>
+</ul></div>
 </div>
 </section>
 
@@ -244,6 +310,7 @@
 <footer class="site-footer" id="mq-footer"></footer>
 <script src="assets/js/site-data.js" defer></script>
 <script src="assets/js/glossary-data.js" defer></script>
+<script src="assets/js/ui-zh.js" defer></script>
 <script src="assets/js/app.js" defer></script>
 <script src="assets/js/widgets.js" defer></script>
 </body>

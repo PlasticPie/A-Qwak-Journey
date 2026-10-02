@@ -7,12 +7,12 @@
 <meta name="description" content="A protocol version gate, byte-exact round-trip tests, golden bytes, shared codecs, and codes instead of words.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Chakra+Petch:wght@500;600&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Chakra+Petch:wght@500;600&family=JetBrains+Mono:wght@400;500;600&family=Noto+Sans+TC:wght@400;700&display=swap">
 <link rel="stylesheet" href="assets/css/site.css">
-<script>(function(){var r=document.documentElement,l,t;try{l=localStorage.getItem("mq-lang");t=localStorage.getItem("mq-theme");}catch(e){}if(l!=="en"&&l!=="fr"){l=(navigator.language||"").toLowerCase().indexOf("fr")===0?"fr":"en";}r.setAttribute("data-lang",l);r.setAttribute("lang",l);if(t==="light"||t==="dark")r.setAttribute("data-theme",t);})();</script>
+<script>(function(){var r=document.documentElement,l,t,n;try{l=localStorage.getItem("mq-lang");t=localStorage.getItem("mq-theme");}catch(e){}if(l!=="en"&&l!=="fr"&&l!=="zh"){n=(navigator.language||"").toLowerCase();l=n.indexOf("fr")===0?"fr":n.indexOf("zh")===0?"zh":"en";}r.setAttribute("data-lang",l);r.setAttribute("lang",l==="zh"?"zh-TW":l);if(t==="light"||t==="dark")r.setAttribute("data-theme",t);})();</script>
 </head>
 <body data-page="protocol-testing">
-<a class="skip-link" href="#main"><span lang="en">Skip to content</span><span lang="fr">Aller au contenu</span></a>
+<a class="skip-link" href="#main"><span lang="en">Skip to content</span><span lang="fr">Aller au contenu</span><span lang="zh-TW">跳到主要內容</span></a>
 <header class="site-header" id="mq-header"></header>
 <div class="layout">
 <aside class="sidebar" id="mq-sidebar"></aside>
@@ -20,8 +20,8 @@
 <article>
 <header class="chapter-head">
   <div class="eyebrow" data-auto></div>
-  <h1><span lang="en">Keeping both ends in agreement</span><span lang="fr">Garder les deux bouts d'accord</span></h1>
-  <p class="dek"><span lang="en">A protocol version gate, byte-exact round-trip tests, golden bytes, shared codecs, and codes instead of words.</span><span lang="fr">Une porte de version, des tests aller-retour à l'octet près, des octets d'or, des codecs partagés, et des codes plutôt que des mots.</span></p>
+  <h1><span lang="en">Keeping both ends in agreement</span><span lang="fr">Garder les deux bouts d'accord</span><span lang="zh-TW">讓兩端保持一致</span></h1>
+  <p class="dek"><span lang="en">A protocol version gate, byte-exact round-trip tests, golden bytes, shared codecs, and codes instead of words.</span><span lang="fr">Une porte de version, des tests aller-retour à l'octet près, des octets d'or, des codecs partagés, et des codes plutôt que des mots.</span><span lang="zh-TW">協定版本閘門、逐位元組的往返測試、黃金位元組、共用編解碼器，以及用代碼取代文字。</span></p>
   <div class="meta-row" data-auto></div>
 </header>
 
@@ -38,6 +38,10 @@
 <p>Chaque format de fil de MoonQwak est écrit deux fois : une fois dans <code>Build()</code>, une fois dans <code>ParsePayload()</code>. Rien ne les force à être d'accord. Ajoutez un champ à l'écrivain en oubliant le lecteur, ou lisez deux champs dans l'ordre inverse, et chaque champ suivant se décode en bruit. Aucun schéma pour l'attraper, aucun nom de champ pour s'en apercevoir. Le symptôme apparaît ailleurs : une coque à la santé absurde, une exception de flux trois paquets plus loin, une fonctionnalité qui cesse « au hasard » de marcher.</p>
 <p>C'était, de loin, la catégorie de bug la plus coûteuse du projet, et elle coûte plus cher à chaque paquet ajouté. La réponse tient en trois couches indépendantes : une vérification de version qui tient à l'écart les programmes désaccordés, des tests qui prouvent que chaque paquet fait l'aller-retour, et du code partagé pour que les formats les plus complexes n'existent qu'une fois.</p>
 </div>
+<div lang="zh-TW">
+<h2>專案中最昂貴的 bug</h2>
+<p>MoonQwak 的每一種線路格式都寫了兩次：一次在 <code>Build()</code>，一次在 <code>ParsePayload()</code>。沒有任何東西強迫它們一致。在寫入端加了欄位卻忘了讀取端，或以相反順序讀取兩個欄位，之後的每個欄位都會被解碼成垃圾。沒有結構描述能抓到它，也沒有欄位名稱會讓人察覺。症狀會出現在別的地方：一個耐久度荒謬的船體、三個封包之後的資料流例外、一個「隨機」停止運作的功能。</p>
+<p>這是專案中代價最高的一類 bug，遙遙領先，而且每多加一個封包就更貴一點。對策是三道獨立的防線：一道讓不相符的程式彼此隔開的版本檢查、證明每個封包都能往返的測試，以及共用的程式碼，讓最複雜的格式只存在一份。</p></div>
 </section>
 
 <section class="sec" id="version-gate">
@@ -49,6 +53,9 @@
 <h2>Une porte de version à l'entrée</h2>
 <p>La bibliothèque partagée définit un entier, la version du protocole, compilée dans chaque programme. Le client l'envoie dans son paquet de login ; la gateway la compare à la sienne et refuse toute différence, dans un sens comme dans l'autre.</p>
 </div>
+<div lang="zh-TW">
+<h2>門口的版本閘門</h2>
+<p>共用函式庫定義了一個整數，也就是協定版本，編譯進每一支程式。用戶端在登入封包中送出它；閘道把它與自己的版本比較，任何一個方向的差異都拒絕。</p></div>
 <div class="code"><div class="code-head"><span class="file">Gateway/Services/AuthHandlers.cs</span></div><pre><code data-lang="cs">public bool HandleLogin(int peerId, Login packet, Server server)
 {
     // BEFORE the database, BEFORE the password hash: an outdated client retrying in a
@@ -82,12 +89,23 @@
 </ul>
 <p>Le launcher connaît le protocole du build qu'il installe : quand la gateway refuse un client, le message peut dire quel build parle quel protocole au lieu d'un simple « connexion refusée » (chapitre <a href="launcher.html">8.2</a>).</p>
 </div>
+<div lang="zh-TW">
+<p>有幾個細節決定了這樣的閘門是幫忙還是添亂：</p>
+<ul>
+<li><strong>它在任何昂貴的工作之前檢查。</strong>版本比較幾乎不花成本；密碼雜湊則是刻意設計得很慢。</li>
+<li><strong>嚴格相等，兩個方向都是。</strong>沒有結構描述的版本控管時，較新的用戶端與較舊的一樣危險。但兩種拒絕帶著不同的代碼：如果落後的是伺服器，卻告訴玩家「請更新你的用戶端」，只會讓他兜圈子。</li>
+<li><strong>舊用戶端會被拒絕，而且附上原因。</strong>在這個欄位出現之前建置的用戶端不會送出它；閘道讀到的是 0，不符合任何有效版本，於是玩家看到的是正式的拒絕，而不是一個永遠沒有回應的登入畫面。</li>
+<li><strong>每次線路變更都要改這個數字，也只有這時才改。</strong>機械式的規則：如果線路測試必須改，協定版本也要跟著改。忘了改，會放進一個本該被拒絕的用戶端；沒事亂改，會把所有人都鎖在外面，十秒內就會被發現。兩種錯誤都不會沉默太久。</li>
+</ul>
+<p>啟動器知道它所安裝的組建使用哪個協定，所以當閘道拒絕一個用戶端時，訊息可以說明哪個組建使用哪個協定，而不只是「連線被拒絕」（第 <a href="launcher.html">8.2</a> 章）。</p></div>
 <div lang="en">
 <div class="note rule"><p class="note-label">Rule</p><p>Bump the protocol version on every wire change, and on nothing else.</p><p>The gate does not remove the risk of mismatched formats; it bounds it to "refused at login, with a reason", which is the cheapest place for it to show up.</p></div>
 </div>
 <div lang="fr">
 <div class="note rule"><p class="note-label">Règle</p><p>Incrémenter la version du protocole à chaque changement de fil, et à rien d'autre.</p><p>La porte ne supprime pas le risque de formats désaccordés ; elle le borne à « refusé au login, avec une raison », l'endroit le moins cher où il puisse se montrer.</p></div>
 </div>
+<div lang="zh-TW">
+<div class="note rule"><p class="note-label">規則</p><p>每次線路變更都要提升協定版本，其他情況一律不動。</p><p>閘門並不能消除格式不相符的風險；它把風險限縮成「在登入時被拒絕，並附上原因」，這是它所能出現的最便宜的地方。</p></div></div>
 </section>
 
 <section class="sec" id="round-trip">
@@ -117,6 +135,18 @@
 </tbody></table></div>
 <p>L'aller-retour à l'octet près est celui qui porte la suite. Il ne sait rien du sens des champs : un échantillon paresseux ne peut pas le tromper, et tout champ écrit mais non lu le casse. La vérification par réflexion le complète, parce qu'intervertir deux entiers de même largeur entre l'écriture et la lecture laisse les octets identiques ; seules les valeurs trahissent l'erreur.</p>
 </div>
+<div lang="zh-TW">
+<h2>每個封包都有往返測試</h2>
+<p>測試專案 <code>WireTest</code> 為大約 150 種封包類型各準備了一個填好資料的樣本，並對它們全部執行四項檢查。</p>
+<div class="table-wrap"><table>
+<thead><tr><th>測試</th><th>它抓到什麼</th></tr></thead>
+<tbody>
+<tr><td>位元組完全相同的往返</td><td>序列化、解析、再序列化一次，要求位元組完全相同。抓出寫入了卻沒讀取、或以不同順序讀取的欄位。</td></tr>
+<tr><td>欄位保留下來</td><td>透過反射比較送出與收到的物件的每個屬性。抓出以正確大小讀進錯誤屬性的情況，這種情況下位元組是完美的。</td></tr>
+<tr><td>被截斷的訊框</td><td>把一個有效訊框的每一種前綴都餵給解析器，要求乾淨地拒絕。抓出不再成立的長度檢查。</td></tr>
+<tr><td>涵蓋率</td><td>只要任何一種封包類型沒有樣本，整個測試套件就失敗，並在訊息中寫出該類型的名稱。兩種類型共用同一個 ID 時也會失敗。</td></tr>
+</tbody></table></div>
+<p>位元組完全相同的檢查是整個測試套件的支柱。它對欄位的意義一無所知，所以偷懶的樣本騙不了它：任何寫入了卻沒讀取的欄位都會讓它失敗。反射檢查則補上它的不足，因為在寫入與讀取之間交換兩個寬度相同的整數，位元組仍然完全相同，只有數值會顯示出錯誤。</p></div>
 <div class="code"><div class="code-head"><span class="file">WireTest/RoundTripTests.cs · one case per packet type</span></div><pre><code data-lang="cs">// One [Theory] case per packet type rather than one giant [Fact]: a failure names the
 // packet in the test explorer instead of making you read a stack trace.
 [Theory]
@@ -146,6 +176,9 @@ public void FieldsSurviveTheRoundTrip(string name)
 <p>Deux décisions font bien vieillir la suite. La comparaison des champs passe par la réflexion plutôt que par une assertion par champ : un test qu'il faut penser à étendre a exactement la faiblesse du code qu'il surveille. Et le test de couverture échoue quand un nouveau paquet n'a pas d'échantillon : le faire taire demande une modification délibérée, donc une relecture. Les échantillons doivent utiliser partout des valeurs non nulles : un champ laissé à zéro fait un aller-retour parfait même quand personne ne l'écrit ni ne le lit, et le test annoncerait un succès sur un champ qu'il n'a jamais vérifié.</p>
 <div class="note rule"><p class="note-label">Règle</p><p>Un test qu'il faut penser à étendre a la même faiblesse que le code qu'il protège. Faire échouer le cas manquant de lui-même.</p></div>
 </div>
+<div lang="zh-TW">
+<p>有兩個決定讓這套測試能經得起時間。欄位比較使用反射，而不是每個欄位寫一個斷言：一個必須手動擴充的測試，恰好就有它所監看的程式碼的那個弱點。涵蓋率測試會在新封包沒有樣本時失敗，所以要讓它安靜，就必須刻意修改，也就是要經過審查。樣本在每個地方都必須使用非預設值：一個停在零的欄位，即使沒有人寫入或讀取它，也能完美往返，而測試會在一個它從未真正檢查過的欄位上回報成功。</p>
+<div class="note rule"><p class="note-label">規則</p><p>一個需要有人記得去擴充的測試，與它所保護的程式碼有同樣的弱點。讓遺漏的情況自己失敗。</p></div></div>
 </section>
 
 <section class="sec" id="golden-bytes">
@@ -157,6 +190,9 @@ public void FieldsSurviveTheRoundTrip(string name)
 <h2>Des octets d'or pour les codecs partagés</h2>
 <p>Un aller-retour prouve qu'un format est cohérent avec lui-même. Il ne prouve pas qu'il n'a pas changé : un codec qui se met à écrire la vitesse avant la position, et la lit dans ce même nouvel ordre, passe tous les allers-retours et casse chaque client déjà installé. Pour les codecs partagés des blocs les plus chauds (chapitre <a href="packet-format.html#shared-codecs">1.2</a>), les tests comparent donc la sortie à une chaîne hexadécimale fixe, calculée à la main avec un encodeur de référence indépendant.</p>
 </div>
+<div lang="zh-TW">
+<h2>共用編解碼器的黃金位元組</h2>
+<p>往返測試證明格式與自己一致。它不能證明格式沒有改變：一個開始先寫速度再寫位置、並以同樣新順序讀取的編解碼器，能通過每一次往返測試，卻會弄壞每一個已經安裝的用戶端。因此，對於最熱門區塊的共用編解碼器（第 <a href="packet-format.html#shared-codecs">1.2</a> 章），測試會把輸出與一個固定的十六進位字串比對，這個字串是用一個獨立的參考編碼器手工算出來的。</p></div>
 <div class="code"><div class="code-head"><span class="file">WireTest/WireCodecTests.cs</span></div><pre><code data-lang="cs">[Fact]
 public void MovementGolden()
 {
@@ -176,6 +212,8 @@ public void MovementGolden()
 <div lang="fr">
 <p>Changer une échelle reste permis. Ça fait simplement échouer ce test exprès, ce qui rappelle que les bibliothèques du client doivent être recompilées et livrées dans le même commit. Les valeurs d'échantillon évitent aussi les demi-pas exacts, parce que .NET arrondit les moitiés au pair le plus proche et qu'un test qui dépendrait de cette convention testerait la convention.</p>
 </div>
+<div lang="zh-TW">
+<p>改變比例仍然是允許的。它只會刻意讓這個測試失敗，提醒你用戶端函式庫必須在同一個 commit 中重新建置並發行。樣本數值也避開了剛好在一半的情況，因為 .NET 會把一半四捨五入到最接近的偶數，依賴這個慣例的測試，測的就只是那個慣例。</p></div>
 </section>
 
 <section class="sec" id="blind-spot">
@@ -189,6 +227,10 @@ public void MovementGolden()
 <p>Les snapshots et les détails d'objets portent des corps écrits par les classes de domaine du serveur et lus par les classes du client Unity. La bibliothèque de paquets, où vivent les tests, ne peut référencer ni les unes ni les autres. Ces deux paquets sont testés à la couche que possède la bibliothèque (l'enveloppe), avec de faux objets dont la charge utile imite la vraie forme : un octet de drapeaux, puis un bloc présent seulement si un bit est levé. Ça couvre le déplacement du curseur, pas l'accord sur le contenu.</p>
 <p>Un aller-retour côté serveur seul ne fermerait pas l'écart non plus : il prouverait que le serveur est d'accord avec lui-même. L'écart se ferme morceau par morceau, en déplaçant chaque bloc chaud dans un codec partagé, à la fois testé en octets d'or et compilé dans le client. Ce qui reste hors des codecs, c'est la liste des drapeaux et des comptes qui décident quels blocs sont présents.</p>
 </div>
+<div lang="zh-TW">
+<h2>測試看不到的東西</h2>
+<p>快照與物件細節攜帶的內容，是由伺服器的領域類別寫入、由 Unity 用戶端的類別讀取的。測試所在的封包函式庫兩邊都無法參考。這兩種封包是在函式庫擁有的那一層（外層封套）進行測試，使用的是酬載模仿真實形狀的假物件：一個旗標位元組，然後是只有在某個位元被設定時才存在的區塊。這涵蓋了游標的移動，而不是內容上的一致。</p>
+<p>只在伺服器上做往返測試也補不上這個缺口：它只能證明伺服器與自己一致。這個缺口是一塊一塊補上的，方法是把每個熱門區塊移進共用的編解碼器，它既用黃金位元組測試，也被編譯進用戶端。留在編解碼器之外的，是決定哪些區塊存在的那份旗標與數量清單。</p></div>
 </section>
 
 <section class="sec" id="codes-not-words">
@@ -206,12 +248,20 @@ public void MovementGolden()
 <p>La règle qui en est sortie est la seule règle définitive du projet sur le fil. Un message porte <strong>ce qui</strong> s'est passé (un code), <strong>pourquoi</strong> (un octet <code>Detail</code>, valeur d'une énumération partagée : une raison de refus, une attitude, un état de carte), et des <strong>données</strong> (un pseudo, un nom de guilde : du texte tapé par un humain, intraduisible par nature). Il ne porte jamais <strong>comment le dire</strong>. Les commandes sont parsées côté client et voyagent en codes d'opération ; les mots ne vivent que dans le client.</p>
 <p>Le test s'applique facilement à tout nouveau champ : <em>est-ce que traduire le jeu obligerait à toucher au serveur ?</em> Si un champ <code>string</code> contient autre chose que du texte tapé par un joueur, c'est une énumération qui s'ignore.</p>
 </div>
+<div lang="zh-TW">
+<h2>線路不說任何語言</h2>
+<p>兩端之間最後一種不一致，不在位元組上，而在意義上。有一段時間，好幾則訊息攜帶的是法文單字：一則拒絕寫著「Refusé」（已拒絕），一次地圖狀態變更寫著「Guerre civile」（內戰）。</p>
+<div class="note pitfall"><p class="note-label">我踩過的坑</p><p>為了讓一個徽章保持最新，用戶端把收到的詞句與某個列舉的每個值的標籤逐一比較，直到找到相符的為止。它能運作。但把遊戲翻譯成其他語言，就會在不弄壞任何看得見的東西的情況下，悄悄地讓這個徽章失效。另一個症狀本該更早拉響警報：<code>/selfdestruct</code> 必須加在 <code>/autodestruction</code> 旁邊，因為對其他人來說，一個法文動詞不好打。</p></div>
+<p>由此產生的規則，是專案中唯一一條關於線路的終極規則。一則訊息攜帶的是發生了<strong>什麼</strong>（一個代碼）、<strong>為什麼</strong>（一個 <code>Detail</code> 位元組，它是某個共用列舉的值：拒絕原因、態度、地圖狀態），以及<strong>資料</strong>（玩家名稱、公會名稱：人打出來的文字，本質上無法翻譯）。它從不攜帶<strong>該怎麼說</strong>。指令在用戶端解析，以操作碼的形式傳送；文字只存在於用戶端。</p>
+<p>這個測試很容易套用到任何新欄位上：<em>把遊戲翻譯成其他語言，需要動到伺服器嗎？</em>如果一個 <code>string</code> 欄位裝的不是玩家打出來的文字，它就是一個還不知道自己是列舉的列舉。</p></div>
 <div lang="en">
 <div class="note rule"><p class="note-label">Rule</p><p>A packet says what happened, why, and with which data. It never says how to phrase it.</p><p>Wording belongs to the client. A server that sends sentences has frozen the game in one language and invited the client to parse them back.</p></div>
 </div>
 <div lang="fr">
 <div class="note rule"><p class="note-label">Règle</p><p>Un paquet dit ce qui s'est passé, pourquoi, et avec quelles données. Il ne dit jamais comment le formuler.</p><p>La formulation appartient au client. Un serveur qui envoie des phrases a figé le jeu dans une langue et invité le client à les reparser.</p></div>
 </div>
+<div lang="zh-TW">
+<div class="note rule"><p class="note-label">規則</p><p>封包說的是發生了什麼、為什麼，以及帶著哪些資料。它從不說該怎麼措辭。</p><p>措辭屬於用戶端。送出句子的伺服器，已經把遊戲凍結在一種語言裡，還邀請用戶端把它們再解析回去。</p></div></div>
 </section>
 
 <section class="sec" id="takeaways">
@@ -230,6 +280,13 @@ public void MovementGolden()
 <li>Figer les codecs partagés en octets d'or, pour qu'un changement de format soit toujours une décision délibérée et visible.</li>
 <li>Garder la langue humaine hors du fil : des codes, des énumérations de raisons et des données tapées par les joueurs.</li>
 </ul></div>
+<div lang="zh-TW"><h2>重點整理</h2><ul>
+<li>手寫格式會無聲地不一致；規劃三道防線：版本閘門、往返測試、共用編解碼器。</li>
+<li>在任何昂貴的工作之前檢查協定版本，並對舊用戶端與舊伺服器給出不同的拒絕。</li>
+<li>位元組完全相同的往返能抓出沒被讀取的欄位；反射能抓出被交換的欄位；涵蓋率測試能抓出被遺忘的封包。</li>
+<li>用黃金位元組凍結共用編解碼器，讓格式變更永遠是刻意且看得見的決定。</li>
+<li>讓人類語言遠離線路：只用代碼、原因列舉，以及玩家輸入的資料。</li>
+</ul></div>
 </div>
 </section>
 
@@ -242,6 +299,7 @@ public void MovementGolden()
 <footer class="site-footer" id="mq-footer"></footer>
 <script src="assets/js/site-data.js" defer></script>
 <script src="assets/js/glossary-data.js" defer></script>
+<script src="assets/js/ui-zh.js" defer></script>
 <script src="assets/js/app.js" defer></script>
 <script src="assets/js/widgets.js" defer></script>
 </body>

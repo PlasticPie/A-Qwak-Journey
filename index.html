@@ -7,12 +7,12 @@
 <meta name="description" content="MMO architecture field notes: a custom UDP protocol, an authoritative 25 Hz simulation, interest management, prediction, persistence, a self-sizing fleet and a self-updating launcher, with the mistakes and the measurements.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Chakra+Petch:wght@500;600&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Chakra+Petch:wght@500;600&family=JetBrains+Mono:wght@400;500;600&family=Noto+Sans+TC:wght@400;700&display=swap">
 <link rel="stylesheet" href="assets/css/site.css">
-<script>(function(){var r=document.documentElement,l,t;try{l=localStorage.getItem("mq-lang");t=localStorage.getItem("mq-theme");}catch(e){}if(l!=="en"&&l!=="fr"){l=(navigator.language||"").toLowerCase().indexOf("fr")===0?"fr":"en";}r.setAttribute("data-lang",l);r.setAttribute("lang",l);if(t==="light"||t==="dark")r.setAttribute("data-theme",t);})();</script>
+<script>(function(){var r=document.documentElement,l,t,n;try{l=localStorage.getItem("mq-lang");t=localStorage.getItem("mq-theme");}catch(e){}if(l!=="en"&&l!=="fr"&&l!=="zh"){n=(navigator.language||"").toLowerCase();l=n.indexOf("fr")===0?"fr":n.indexOf("zh")===0?"zh":"en";}r.setAttribute("data-lang",l);r.setAttribute("lang",l==="zh"?"zh-TW":l);if(t==="light"||t==="dark")r.setAttribute("data-theme",t);})();</script>
 </head>
 <body data-page="index">
-<a class="skip-link" href="#main"><span lang="en">Skip to content</span><span lang="fr">Aller au contenu</span></a>
+<a class="skip-link" href="#main"><span lang="en">Skip to content</span><span lang="fr">Aller au contenu</span><span lang="zh-TW">跳到主要內容</span></a>
 <header class="site-header" id="mq-header"></header>
 <div class="layout full">
 <aside class="sidebar" id="mq-sidebar"></aside>
@@ -20,13 +20,13 @@
 
 <section class="home-hero">
 <div>
-  <p class="kicker"><span lang="en">MMO architecture field notes · ongoing solo project</span><span lang="fr">Carnets d'architecture MMO · projet solo en cours</span></p>
-  <h1><span lang="en">Building an MMO backend, decision by decision</span><span lang="fr">Construire le backend d'un MMO, décision par décision</span></h1>
-  <p class="dek"><span lang="en">Notes from MoonQwak, an ongoing project by one developer, self-taught in MMO architecture, who wanted to find out how far one person can go. From a custom UDP protocol to a server fleet that sizes itself: what I built, what broke, what the measurements said, and what I decided. Shared for learning, not as the way it must be done.</span><span lang="fr">Les carnets de MoonQwak, un projet en cours mené par un seul développeur, autodidacte en architecture de MMO, qui voulait savoir jusqu'où une personne seule peut aller. D'un protocole UDP maison à un parc de serveurs qui se dimensionne seul : ce que j'ai construit, ce qui a cassé, ce qu'ont dit les mesures, et ce que j'ai décidé. Partagé pour apprendre, pas comme la façon dont il faut faire.</span></p>
+  <p class="kicker"><span lang="en">MMO architecture field notes · ongoing solo project</span><span lang="fr">Carnets d'architecture MMO · projet solo en cours</span><span lang="zh-TW">MMO 架構實戰筆記 · 進行中的個人專案</span></p>
+  <h1><span lang="en">Building an MMO backend, decision by decision</span><span lang="fr">Construire le backend d'un MMO, décision par décision</span><span lang="zh-TW">打造 MMO 後端，一次一個決策</span></h1>
+  <p class="dek"><span lang="en">Notes from MoonQwak, an ongoing project by one developer, self-taught in MMO architecture, who wanted to find out how far one person can go. From a custom UDP protocol to a server fleet that sizes itself: what I built, what broke, what the measurements said, and what I decided. Shared for learning, not as the way it must be done.</span><span lang="fr">Les carnets de MoonQwak, un projet en cours mené par un seul développeur, autodidacte en architecture de MMO, qui voulait savoir jusqu'où une personne seule peut aller. D'un protocole UDP maison à un parc de serveurs qui se dimensionne seul : ce que j'ai construit, ce qui a cassé, ce qu'ont dit les mesures, et ce que j'ai décidé. Partagé pour apprendre, pas comme la façon dont il faut faire.</span><span lang="zh-TW">這是 MoonQwak 的筆記：一個由單一開發者進行中的專案，他自學 MMO 架構，想知道一個人究竟能走多遠。從自訂的 UDP 協定，到能自行調整規模的伺服器叢集：我做了什麼、什麼壞了、量測結果說了什麼，以及我最後怎麼決定。分享是為了學習，而不是主張事情非這樣做不可。</span></p>
   <div class="hero-actions">
-    <a class="btn primary" href="start-here.html"><span lang="en">Start here</span><span lang="fr">Commencer ici</span> →</a>
-    <a class="btn" href="topics.html"><span lang="en">Browse by topic</span><span lang="fr">Parcourir par thème</span></a>
-    <a class="btn" href="lessons.html"><span lang="en">Rules of thumb</span><span lang="fr">Règles d'or</span></a>
+    <a class="btn primary" href="start-here.html"><span lang="en">Start here</span><span lang="fr">Commencer ici</span><span lang="zh-TW">從這裡開始</span> →</a>
+    <a class="btn" href="topics.html"><span lang="en">Browse by topic</span><span lang="fr">Parcourir par thème</span><span lang="zh-TW">依主題瀏覽</span></a>
+    <a class="btn" href="lessons.html"><span lang="en">Rules of thumb</span><span lang="fr">Règles d'or</span><span lang="zh-TW">經驗法則</span></a>
   </div>
 </div>
 <figure class="hero-map">
@@ -43,50 +43,50 @@
   <path d="M148 344 L192 344" class="dg-line" marker-end="url(#hm-arr)" data-flow-path data-flow-class="alt2" data-flow-rate="0.2" data-flow-speed="40"/>
   <path d="M470 322 L470 208" class="dg-line" marker-end="url(#hm-arr)"/>
   <path d="M470 128 L470 60" class="dg-line" marker-end="url(#hm-arr)" data-flow-path data-flow-class="alt" data-flow-rate="1" data-flow-speed="40"/>
-  <text class="dg-small" x="258" y="160" text-anchor="middle"><tspan lang="en">inputs</tspan><tspan lang="fr">entrées</tspan></text>
-  <text class="dg-small" x="258" y="214" text-anchor="middle"><tspan lang="en">snapshots, 25/s</tspan><tspan lang="fr">snapshots, 25/s</tspan></text>
+  <text class="dg-small" x="258" y="160" text-anchor="middle"><tspan lang="en">inputs</tspan><tspan lang="fr">entrées</tspan><tspan lang="zh-TW">輸入</tspan></text>
+  <text class="dg-small" x="258" y="214" text-anchor="middle"><tspan lang="en">snapshots, 25/s</tspan><tspan lang="fr">snapshots, 25/s</tspan><tspan lang="zh-TW">快照，每秒 25 份</tspan></text>
 
   <rect x="16" y="16" width="132" height="40" rx="7" class="dg-box"/>
-  <text class="dg-small" x="82" y="40" text-anchor="middle" font-weight="700" style="fill:var(--ink)"><tspan lang="en">Update server</tspan><tspan lang="fr">Serveur de MAJ</tspan></text>
+  <text class="dg-small" x="82" y="40" text-anchor="middle" font-weight="700" style="fill:var(--ink)"><tspan lang="en">Update server</tspan><tspan lang="fr">Serveur de MAJ</tspan><tspan lang="zh-TW">更新伺服器</tspan></text>
   <rect x="16" y="86" width="132" height="40" rx="7" class="dg-box"/>
-  <text class="dg-small" x="82" y="110" text-anchor="middle" font-weight="700" style="fill:var(--ink)">Launcher</text>
+  <text class="dg-small" x="82" y="110" text-anchor="middle" font-weight="700" style="fill:var(--ink)"><tspan lang="en">Launcher</tspan><tspan lang="fr">Launcher</tspan><tspan lang="zh-TW">啟動器</tspan></text>
   <rect x="16" y="168" width="132" height="58" rx="7" class="dg-hot"/>
-  <text class="dg-text" x="82" y="192" text-anchor="middle" font-weight="700"><tspan lang="en">Game client</tspan><tspan lang="fr">Client de jeu</tspan></text>
-  <text class="dg-small" x="82" y="210" text-anchor="middle"><tspan lang="en">predicts, renders</tspan><tspan lang="fr">prédit, affiche</tspan></text>
+  <text class="dg-text" x="82" y="192" text-anchor="middle" font-weight="700"><tspan lang="en">Game client</tspan><tspan lang="fr">Client de jeu</tspan><tspan lang="zh-TW">遊戲用戶端</tspan></text>
+  <text class="dg-small" x="82" y="210" text-anchor="middle"><tspan lang="en">predicts, renders</tspan><tspan lang="fr">prédit, affiche</tspan><tspan lang="zh-TW">預測、繪製</tspan></text>
 
   <rect x="196" y="250" width="132" height="50" rx="7" class="dg-box-2"/>
-  <text class="dg-text" x="262" y="272" text-anchor="middle" font-weight="700">Gateway</text>
-  <text class="dg-small" x="262" y="289" text-anchor="middle"><tspan lang="en">login, placement</tspan><tspan lang="fr">login, placement</tspan></text>
+  <text class="dg-text" x="262" y="272" text-anchor="middle" font-weight="700"><tspan lang="en">Gateway</tspan><tspan lang="fr">Gateway</tspan><tspan lang="zh-TW">閘道</tspan></text>
+  <text class="dg-small" x="262" y="289" text-anchor="middle"><tspan lang="en">login, placement</tspan><tspan lang="fr">login, placement</tspan><tspan lang="zh-TW">登入、配置</tspan></text>
 
   <rect x="380" y="118" width="124" height="70" rx="7" class="dg-box-2" style="opacity:0.55"/>
   <rect x="376" y="124" width="124" height="70" rx="7" class="dg-box-2" style="opacity:0.8"/>
   <rect x="372" y="130" width="124" height="74" rx="7" class="dg-box-2"/>
-  <text class="dg-text" x="434" y="160" text-anchor="middle" font-weight="700"><tspan lang="en">Game servers</tspan><tspan lang="fr">Serveurs de jeu</tspan></text>
-  <text class="dg-small" x="434" y="178" text-anchor="middle"><tspan lang="en">25 Hz, authoritative</tspan><tspan lang="fr">25 Hz, autoritaires</tspan></text>
+  <text class="dg-text" x="434" y="160" text-anchor="middle" font-weight="700"><tspan lang="en">Game servers</tspan><tspan lang="fr">Serveurs de jeu</tspan><tspan lang="zh-TW">遊戲伺服器</tspan></text>
+  <text class="dg-small" x="434" y="178" text-anchor="middle"><tspan lang="en">25 Hz, authoritative</tspan><tspan lang="fr">25 Hz, autoritaires</tspan><tspan lang="zh-TW">25 Hz，權威</tspan></text>
 
   <rect x="372" y="16" width="132" height="40" rx="7" class="dg-box"/>
-  <text class="dg-small" x="438" y="40" text-anchor="middle" font-weight="700" style="fill:var(--ink)">Monitor</text>
+  <text class="dg-small" x="438" y="40" text-anchor="middle" font-weight="700" style="fill:var(--ink)"><tspan lang="en">Monitor</tspan><tspan lang="fr">Monitor</tspan><tspan lang="zh-TW">監控器</tspan></text>
   <rect x="196" y="322" width="132" height="44" rx="7" class="dg-box"/>
-  <text class="dg-small" x="262" y="348" text-anchor="middle" font-weight="700" style="fill:var(--ink)"><tspan lang="en">Database</tspan><tspan lang="fr">Base de données</tspan></text>
+  <text class="dg-small" x="262" y="348" text-anchor="middle" font-weight="700" style="fill:var(--ink)"><tspan lang="en">Database</tspan><tspan lang="fr">Base de données</tspan><tspan lang="zh-TW">資料庫</tspan></text>
   <rect x="16" y="322" width="132" height="44" rx="7" class="dg-box"/>
-  <text class="dg-small" x="82" y="341" text-anchor="middle" font-weight="700" style="fill:var(--ink)"><tspan lang="en">World sim</tspan><tspan lang="fr">Simu du monde</tspan></text>
-  <text class="dg-small" x="82" y="356" text-anchor="middle"><tspan lang="en">hourly</tspan><tspan lang="fr">à l'heure</tspan></text>
+  <text class="dg-small" x="82" y="341" text-anchor="middle" font-weight="700" style="fill:var(--ink)"><tspan lang="en">World sim</tspan><tspan lang="fr">Simu du monde</tspan><tspan lang="zh-TW">世界模擬</tspan></text>
+  <text class="dg-small" x="82" y="356" text-anchor="middle"><tspan lang="en">hourly</tspan><tspan lang="fr">à l'heure</tspan><tspan lang="zh-TW">每小時</tspan></text>
   <rect x="404" y="322" width="100" height="44" rx="7" class="dg-box"/>
-  <text class="dg-small" x="454" y="341" text-anchor="middle" font-weight="700" style="fill:var(--ink)"><tspan lang="en">Node agents</tspan><tspan lang="fr">Agents</tspan></text>
-  <text class="dg-small" x="454" y="356" text-anchor="middle"><tspan lang="en">start, retire</tspan><tspan lang="fr">lancent, retirent</tspan></text>
+  <text class="dg-small" x="454" y="341" text-anchor="middle" font-weight="700" style="fill:var(--ink)"><tspan lang="en">Node agents</tspan><tspan lang="fr">Agents</tspan><tspan lang="zh-TW">節點代理程式</tspan></text>
+  <text class="dg-small" x="454" y="356" text-anchor="middle"><tspan lang="en">start, retire</tspan><tspan lang="fr">lancent, retirent</tspan><tspan lang="zh-TW">啟動、退役</tspan></text>
 </svg>
-<figcaption><span lang="en">The whole system on one screen. Chapter <a href="big-picture.html">0.2</a> walks through every arrow.</span><span lang="fr">Tout le système sur un écran. Le chapitre <a href="big-picture.html">0.2</a> parcourt chaque flèche.</span></figcaption>
+<figcaption><span lang="en">The whole system on one screen. Chapter <a href="big-picture.html">0.2</a> walks through every arrow.</span><span lang="fr">Tout le système sur un écran. Le chapitre <a href="big-picture.html">0.2</a> parcourt chaque flèche.</span><span lang="zh-TW">整個系統一畫面看完。第 <a href="big-picture.html">0.2</a> 章會逐一走過每個箭頭。</span></figcaption>
 </figure>
 </section>
 
 <section class="home-section" id="about">
-<h2 class="section-title"><span lang="en">About this project</span><span lang="fr">À propos de ce projet</span></h2>
+<h2 class="section-title"><span lang="en">About this project</span><span lang="fr">À propos de ce projet</span><span lang="zh-TW">關於這個專案</span></h2>
 <div class="about-panel">
 <div class="chips about-badges">
-  <span class="chip"><span lang="en">Ongoing project</span><span lang="fr">Projet en cours</span></span>
-  <span class="chip"><span lang="en">One developer</span><span lang="fr">Un seul développeur</span></span>
-  <span class="chip"><span lang="en">Self-taught in MMO architecture</span><span lang="fr">Autodidacte en architecture MMO</span></span>
-  <span class="chip"><span lang="en">Educational purpose only</span><span lang="fr">But uniquement éducatif</span></span>
+  <span class="chip"><span lang="en">Ongoing project</span><span lang="fr">Projet en cours</span><span lang="zh-TW">進行中的專案</span></span>
+  <span class="chip"><span lang="en">One developer</span><span lang="fr">Un seul développeur</span><span lang="zh-TW">單一開發者</span></span>
+  <span class="chip"><span lang="en">Self-taught in MMO architecture</span><span lang="fr">Autodidacte en architecture MMO</span><span lang="zh-TW">自學 MMO 架構</span></span>
+  <span class="chip"><span lang="en">Educational purpose only</span><span lang="fr">But uniquement éducatif</span><span lang="zh-TW">僅供教學用途</span></span>
 </div>
 <div lang="en">
 <p class="about-lead">MoonQwak is an ongoing project, built by one person, self-taught in MMO architecture. It started from a simple question: <strong>how far can one developer go in building this kind of architecture alone?</strong></p>
@@ -100,6 +100,11 @@
 <p>Ce site existe dans un but uniquement éducatif. S'il vous évite une de mes erreurs, ou vous donne les mots pour remettre en cause une de mes décisions, il aura rempli son rôle.</p>
 <p class="about-contact">Une question, une erreur repérée, une autre façon de faire ? Écrivez-moi sur <a href="https://www.linkedin.com/in/matthieu-bastianel-80656b7b/" rel="noopener">LinkedIn</a>.</p>
 </div>
+<div lang="zh-TW">
+<p class="about-lead">MoonQwak 是一個進行中的專案，由一個自學 MMO 架構的人獨力打造。它源自一個簡單的問題：<strong>一位開發者獨自打造這類架構，究竟能走多遠？</strong></p>
+<p>這些頁面記錄了我一路上的選擇、學到的東西與量測結果。它們並不宣稱 MMO 就必須這樣打造，也不宣稱大型工作室是這樣做的：這只是我的選擇，以及背後的理由。我每天在做這個專案的同時持續改進、持續學習，所以內容會變，而且一定有錯誤、也有應該換個方式做的決定。如果你發現了，那正是這個網站希望引發的對話。</p>
+<p>本網站僅供教學用途。如果它幫你避開了我犯過的某個錯，或讓你有了質疑我某個決定的說法，它就達成任務了。</p>
+<p class="about-contact">有問題、發現錯誤，或知道更好的做法？歡迎透過 <a href="https://www.linkedin.com/in/matthieu-bastianel-80656b7b/" rel="noopener">LinkedIn</a> 聯絡我。</p></div>
 </div>
 
 <div lang="en">
@@ -148,6 +153,28 @@
 </div>
 </div>
 </div>
+<div lang="zh-TW">
+<h3 class="is-isnt-title">這個專案是什麼、不是什麼</h3>
+<div class="is-isnt">
+<div class="is">
+<h4>它是</h4>
+<ul>
+<li><strong>一次弄懂大廠怎麼做的嘗試。</strong>方法是自己一個人、一塊一塊地親手打造這類架構：自訂協定、權威模擬、興趣管理、持久化，以及能自行調整規模的伺服器叢集。</li>
+<li><strong>根據真實程式碼寫成。</strong>每一章都來自專案的程式碼與量測（負載機器人、<a href="bench-journal.html">測試台</a>、追蹤紀錄），而不是來自計畫書。</li>
+<li><strong>一本學習日誌。</strong>有哪些選項、做了哪些選擇、犯了哪些錯、哪些數字揭露了它們，以及之後改了什麼。</li>
+<li><strong>持續進行，也歡迎挑戰。</strong>它隨著我的學習而改變。如果你知道實際上是怎麼做的，我很想聽聽。</li>
+</ul>
+</div>
+<div class="isnt">
+<h4>它不是</h4>
+<ul>
+<li><strong>業界內幕。</strong>我在這個領域是自學的：這些筆記呈現的是我如何理解並解決每個問題，而不是任何工作室實際的做法。</li>
+<li><strong>唯一正解。</strong>每個取捨都是配合這個專案及其限制。其他選擇可能同樣成立，有些肯定更好。</li>
+<li><strong>遊戲展示。</strong>遊戲玩法刻意省略：這裡只談技術選擇。</li>
+<li><strong>已經完成，或毫無錯誤。</strong>已知的缺口公開列在第 <a href="open-problems.html">10.6</a> 章。</li>
+</ul>
+</div>
+</div></div>
 
 <div class="prose about-more">
 <div lang="en">
@@ -155,26 +182,32 @@
 <p>Honestly: taste, not a performance study. I wanted to come back to C#, a language I like and had not used for a long time. I know its constraints for this kind of server. A garbage-collected runtime gives less control over memory than C++ (chapter <a href="allocations.html">10.2</a> is what that costs), the runtime is heavier, and parts of this server lean on Windows-specific APIs that running on Linux would require replacing. It was a choice of preference, not a reasoned choice for performance.</p>
 <p>One practical benefit did come with it: the game rules, the data catalogs, the network protocol and even the networking layer live in C# libraries shared by the servers and the Unity client, which loads C# libraries natively. As for Unity, it is simply an engine I had worked with years ago. The goal at the start was the MMO architecture, not the engine, so I did not want to fight the tools. (The project has grown a little beyond that goal since.)</p>
 <h3>How to read these notes</h3>
-<p>Each chapter explains one building block from first principles, then shows what this project did: the options, the choice, the bugs, the numbers that exposed them, and the rule kept afterwards. If you are starting out, read in order from Part 0: each part builds on the previous ones. If you are looking for one answer, use the search (<kbd>Ctrl</kbd> <kbd>K</kbd>), the topics page, the rules of thumb or the key takeaways. Every chapter exists in English and in French.</p>
+<p>Each chapter explains one building block from first principles, then shows what this project did: the options, the choice, the bugs, the numbers that exposed them, and the rule kept afterwards. If you are starting out, read in order from Part 0: each part builds on the previous ones. If you are looking for one answer, use the search (<kbd>Ctrl</kbd> <kbd>K</kbd>), the topics page, the rules of thumb or the key takeaways. Every chapter exists in English, in French and in Traditional Chinese.</p>
 </div>
 <div lang="fr">
 <h3>Pourquoi C# et Unity ?</h3>
 <p>Honnêtement : par goût, pas après une étude de performance. Je voulais revenir au C#, un langage que j'aime et que je n'avais pas pratiqué depuis longtemps. Je connais ses contraintes pour ce genre de serveur. Un runtime à ramasse-miettes laisse moins de contrôle sur la mémoire que le C++ (le chapitre <a href="allocations.html">10.2</a> montre ce que ça coûte), le runtime est plus lourd, et une partie de ce serveur s'appuie sur des API propres à Windows qu'il faudrait remplacer pour tourner sous Linux. C'était un choix de préférence, pas un choix réfléchi en termes de performance.</p>
 <p>Un avantage pratique est quand même venu avec : les règles du jeu, les catalogues de données, le protocole réseau et même la couche réseau vivent dans des bibliothèques C# partagées par les serveurs et le client Unity, qui charge nativement les bibliothèques C#. Quant à Unity, c'est simplement un moteur avec lequel j'avais travaillé il y a des années. Au départ, le but était l'architecture du MMO, pas le moteur : je ne voulais pas me battre avec les outils. (Le projet a un peu dépassé ce but depuis.)</p>
 <h3>Comment lire ces carnets</h3>
-<p>Chaque chapitre explique une brique à partir des principes, puis montre ce que ce projet a fait : les options, le choix, les bugs, les chiffres qui les ont révélés, et la règle retenue ensuite. Si vous débutez, lisez dans l'ordre à partir de la partie 0 : chaque partie s'appuie sur les précédentes. Si vous cherchez une réponse précise, utilisez la recherche (<kbd>Ctrl</kbd> <kbd>K</kbd>), la page des thèmes, les règles d'or ou la page « À retenir ». Chaque chapitre existe en anglais et en français.</p>
+<p>Chaque chapitre explique une brique à partir des principes, puis montre ce que ce projet a fait : les options, le choix, les bugs, les chiffres qui les ont révélés, et la règle retenue ensuite. Si vous débutez, lisez dans l'ordre à partir de la partie 0 : chaque partie s'appuie sur les précédentes. Si vous cherchez une réponse précise, utilisez la recherche (<kbd>Ctrl</kbd> <kbd>K</kbd>), la page des thèmes, les règles d'or ou la page « À retenir ». Chaque chapitre existe en anglais, en français et en chinois traditionnel.</p>
 </div>
+<div lang="zh-TW">
+<h3>為什麼用 C# 和 Unity？</h3>
+<p>老實說：是出於喜好，不是效能研究的結果。我想回到 C#，一個我喜歡、但很久沒用的語言。我知道它在這類伺服器上的限制。有垃圾回收的執行環境，對記憶體的控制力不如 C++（第 <a href="allocations.html">10.2</a> 章說明了這要付出什麼代價），執行環境也比較笨重，而且這個伺服器有些部分依賴 Windows 專屬的 API，若要在 Linux 上執行就得替換掉。這是偏好的選擇，不是為了效能而做的理性選擇。</p>
+<p>不過它確實帶來了一個實際的好處：遊戲規則、資料目錄、網路協定，甚至網路層本身，都放在由伺服器與 Unity 用戶端共用的 C# 函式庫裡，而 Unity 原生就能載入 C# 函式庫。至於 Unity，只是我多年前用過的引擎。一開始的目標是 MMO 架構，不是引擎，所以我不想跟工具搏鬥。（從那之後，專案已經稍微超出了這個目標。）</p>
+<h3>如何閱讀這些筆記</h3>
+<p>每一章都從基本原理解釋一個構成要素，再說明這個專案怎麼做：有哪些選項、選了哪個、遇到哪些 bug、哪些數字揭露了它們，以及之後留下的規則。如果你是初學者，請從第 0 部依序閱讀：每一部都建立在前面幾部之上。如果你在找某個答案，可以使用搜尋（<kbd>Ctrl</kbd> <kbd>K</kbd>）、主題頁、經驗法則或重點整理。每一章都有英文、法文與繁體中文版本。</p></div>
 </div>
 </section>
 
 <section class="home-section">
-<h2 class="section-title"><span lang="en">The route</span><span lang="fr">Le parcours</span></h2>
-<p class="section-dek"><span lang="en">Eleven parts, from the first packet to the tools that keep the whole system honest. Chapters you have opened are marked.</span><span lang="fr">Onze parties, du premier paquet aux outils qui gardent tout le système honnête. Les chapitres déjà ouverts sont marqués.</span></p>
+<h2 class="section-title"><span lang="en">The route</span><span lang="fr">Le parcours</span><span lang="zh-TW">學習路線</span></h2>
+<p class="section-dek"><span lang="en">Eleven parts, from the first packet to the tools that keep the whole system honest. Chapters you have opened are marked.</span><span lang="fr">Onze parties, du premier paquet aux outils qui gardent tout le système honnête. Les chapitres déjà ouverts sont marqués.</span><span lang="zh-TW">十一個部分，從第一個封包，到讓整個系統保持誠實的工具。你打開過的章節會被標示出來。</span></p>
 <ol class="route" id="mq-route"></ol>
 </section>
 
 <section class="home-section">
-<h2 class="section-title"><span lang="en">A few numbers from the journey</span><span lang="fr">Quelques chiffres du parcours</span></h2>
+<h2 class="section-title"><span lang="en">A few numbers from the journey</span><span lang="fr">Quelques chiffres du parcours</span><span lang="zh-TW">一路走來的幾個數字</span></h2>
 <div lang="en">
 <div class="stats">
 <div class="stat"><div class="v">25<small>Hz</small></div><div class="k">world tick, 40 ms budget, held at 800 players on one map</div></div>
@@ -191,15 +224,22 @@
 <div class="stat"><div class="v">19</div><div class="k">bancs de charge numérotés, tous consignés</div></div>
 </div>
 </div>
+<div lang="zh-TW">
+<div class="stats">
+<div class="stat"><div class="v">25<small>Hz</small></div><div class="k">世界 tick，40 ms 預算，在單一地圖 800 名玩家下守住</div></div>
+<div class="stat"><div class="v">÷7.7</div><div class="k">「裸船體」之後的物理形狀數（16,688 → 2,156）</div></div>
+<div class="stat"><div class="v">×44.6</div><div class="k">100 位觀察者時，每個物件只序列化一次的效益</div></div>
+<div class="stat"><div class="v">19</div><div class="k">編號的負載測試台，全部有文字紀錄</div></div>
+</div></div>
 </section>
 
 <section class="home-section">
-<h2 class="section-title"><span lang="en">Reference</span><span lang="fr">Références</span></h2>
+<h2 class="section-title"><span lang="en">Reference</span><span lang="fr">Références</span><span lang="zh-TW">參考資料</span></h2>
 <div class="cards">
-<a class="card" href="topics.html"><div class="card-top"><span class="card-num"><span lang="en">Browse</span><span lang="fr">Parcourir</span></span></div><h3><span lang="en">Topics</span><span lang="fr">Thèmes</span></h3><p><span lang="en">Every chapter, filtered by subject (networking, security, performance…) and by level.</span><span lang="fr">Tous les chapitres, filtrés par sujet (réseau, sécurité, performance…) et par niveau.</span></p></a>
-<a class="card" href="glossary.html"><div class="card-top"><span class="card-num"><span lang="en">Look up</span><span lang="fr">Chercher</span></span></div><h3><span lang="en">Glossary</span><span lang="fr">Glossaire</span></h3><p><span lang="en">The vocabulary of game networking and server design, each term linked to the chapters that use it.</span><span lang="fr">Le vocabulaire du réseau de jeu et de la conception serveur, chaque terme relié aux chapitres qui l'emploient.</span></p></a>
-<a class="card" href="lessons.html"><div class="card-top"><span class="card-num"><span lang="en">Remember</span><span lang="fr">Retenir</span></span></div><h3><span lang="en">Rules of thumb</span><span lang="fr">Règles d'or</span></h3><p><span lang="en">Every rule stated in the chapters, on one page, each with a link back to the story that produced it.</span><span lang="fr">Toutes les règles énoncées dans les chapitres, sur une page, chacune avec un lien vers l'histoire qui l'a produite.</span></p></a>
-<a class="card" href="takeaways.html"><div class="card-top"><span class="card-num"><span lang="en">Revise</span><span lang="fr">Réviser</span></span></div><h3><span lang="en">Key takeaways</span><span lang="fr">À retenir</span></h3><p><span lang="en">The closing summary of every chapter, in reading order: the whole site in one scroll.</span><span lang="fr">Le résumé final de chaque chapitre, dans l'ordre de lecture : tout le site en un seul défilement.</span></p></a>
+<a class="card" href="topics.html"><div class="card-top"><span class="card-num"><span lang="en">Browse</span><span lang="fr">Parcourir</span><span lang="zh-TW">瀏覽</span></span></div><h3><span lang="en">Topics</span><span lang="fr">Thèmes</span><span lang="zh-TW">主題</span></h3><p><span lang="en">Every chapter, filtered by subject (networking, security, performance…) and by level.</span><span lang="fr">Tous les chapitres, filtrés par sujet (réseau, sécurité, performance…) et par niveau.</span><span lang="zh-TW">所有章節，可依主題（網路、資安、效能…）與程度篩選。</span></p></a>
+<a class="card" href="glossary.html"><div class="card-top"><span class="card-num"><span lang="en">Look up</span><span lang="fr">Chercher</span><span lang="zh-TW">查詢</span></span></div><h3><span lang="en">Glossary</span><span lang="fr">Glossaire</span><span lang="zh-TW">詞彙表</span></h3><p><span lang="en">The vocabulary of game networking and server design, each term linked to the chapters that use it.</span><span lang="fr">Le vocabulaire du réseau de jeu et de la conception serveur, chaque terme relié aux chapitres qui l'emploient.</span><span lang="zh-TW">遊戲網路與伺服器設計的詞彙，每個術語都連結到使用它的章節。</span></p></a>
+<a class="card" href="lessons.html"><div class="card-top"><span class="card-num"><span lang="en">Remember</span><span lang="fr">Retenir</span><span lang="zh-TW">記住</span></span></div><h3><span lang="en">Rules of thumb</span><span lang="fr">Règles d'or</span><span lang="zh-TW">經驗法則</span></h3><p><span lang="en">Every rule stated in the chapters, on one page, each with a link back to the story that produced it.</span><span lang="fr">Toutes les règles énoncées dans les chapitres, sur une page, chacune avec un lien vers l'histoire qui l'a produite.</span><span lang="zh-TW">各章提出的每一條規則，集中在一頁，每條都附上連回產生它的那段故事的連結。</span></p></a>
+<a class="card" href="takeaways.html"><div class="card-top"><span class="card-num"><span lang="en">Revise</span><span lang="fr">Réviser</span><span lang="zh-TW">複習</span></span></div><h3><span lang="en">Key takeaways</span><span lang="fr">À retenir</span><span lang="zh-TW">重點整理</span></h3><p><span lang="en">The closing summary of every chapter, in reading order: the whole site in one scroll.</span><span lang="fr">Le résumé final de chaque chapitre, dans l'ordre de lecture : tout le site en un seul défilement.</span><span lang="zh-TW">每一章的結尾摘要，依閱讀順序排列：整個網站，一次捲完。</span></p></a>
 </div>
 </section>
 
@@ -208,6 +248,7 @@
 <footer class="site-footer" id="mq-footer"></footer>
 <script src="assets/js/site-data.js" defer></script>
 <script src="assets/js/glossary-data.js" defer></script>
+<script src="assets/js/ui-zh.js" defer></script>
 <script src="assets/js/app.js" defer></script>
 <script src="assets/js/widgets.js" defer></script>
 </body>

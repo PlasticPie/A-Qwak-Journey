@@ -7,12 +7,12 @@
 <meta name="description" content="What may live in memory until later, what must be written now, and the one rule that tells them apart.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Chakra+Petch:wght@500;600&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Chakra+Petch:wght@500;600&family=JetBrains+Mono:wght@400;500;600&family=Noto+Sans+TC:wght@400;700&display=swap">
 <link rel="stylesheet" href="assets/css/site.css">
-<script>(function(){var r=document.documentElement,l,t;try{l=localStorage.getItem("mq-lang");t=localStorage.getItem("mq-theme");}catch(e){}if(l!=="en"&&l!=="fr"){l=(navigator.language||"").toLowerCase().indexOf("fr")===0?"fr":"en";}r.setAttribute("data-lang",l);r.setAttribute("lang",l);if(t==="light"||t==="dark")r.setAttribute("data-theme",t);})();</script>
+<script>(function(){var r=document.documentElement,l,t,n;try{l=localStorage.getItem("mq-lang");t=localStorage.getItem("mq-theme");}catch(e){}if(l!=="en"&&l!=="fr"&&l!=="zh"){n=(navigator.language||"").toLowerCase();l=n.indexOf("fr")===0?"fr":n.indexOf("zh")===0?"zh":"en";}r.setAttribute("data-lang",l);r.setAttribute("lang",l==="zh"?"zh-TW":l);if(t==="light"||t==="dark")r.setAttribute("data-theme",t);})();</script>
 </head>
 <body data-page="persistence">
-<a class="skip-link" href="#main"><span lang="en">Skip to content</span><span lang="fr">Aller au contenu</span></a>
+<a class="skip-link" href="#main"><span lang="en">Skip to content</span><span lang="fr">Aller au contenu</span><span lang="zh-TW">跳到主要內容</span></a>
 <header class="site-header" id="mq-header"></header>
 <div class="layout">
 <aside class="sidebar" id="mq-sidebar"></aside>
@@ -20,8 +20,8 @@
 <article>
 <header class="chapter-head">
   <div class="eyebrow" data-auto></div>
-  <h1><span lang="en">RAM is the authority</span><span lang="fr">La RAM fait autorité</span></h1>
-  <p class="dek"><span lang="en">What may live in memory until later, what must be written now, and the one rule that tells them apart.</span><span lang="fr">Ce qui peut vivre en mémoire jusqu'à plus tard, ce qui doit être écrit tout de suite, et la règle qui les sépare.</span></p>
+  <h1><span lang="en">RAM is the authority</span><span lang="fr">La RAM fait autorité</span><span lang="zh-TW">RAM 是權威</span></h1>
+  <p class="dek"><span lang="en">What may live in memory until later, what must be written now, and the one rule that tells them apart.</span><span lang="fr">Ce qui peut vivre en mémoire jusqu'à plus tard, ce qui doit être écrit tout de suite, et la règle qui les sépare.</span><span lang="zh-TW">什麼可以先留在記憶體晚點再寫、什麼必須立刻寫入，以及區分兩者的那一條規則。</span></p>
   <div class="meta-row" data-auto></div>
 </header>
 
@@ -38,6 +38,10 @@
 <p>Le chapitre <a href="no-db-in-tick.html">3.4</a> a sorti la base du tick. Cela règle <em>où</em> se font les écritures, pas <em>quand</em>. À un moment, j'ai relu toutes les écritures du serveur de jeu, 113 appels qui valident en base, un par un, avec une seule question : lesquelles pourraient attendre, en mémoire, jusqu'à la déconnexion du joueur, en acceptant qu'un plantage du serveur les perde ?</p>
 <p>La réponse n'a pas été une liste de points chauds de performance. C'était une règle, et une fois écrite, elle expliquait tout le tableau.</p>
 </div>
+<div lang="zh-TW">
+<h2>哪些寫入可以等？</h2>
+<p>第 <a href="no-db-in-tick.html">3.4</a> 章把資料庫從 tick 中拿了出來。那解決的是寫入發生在<em>哪裡</em>，而不是<em>何時</em>。有一次，我把遊戲伺服器中的每一個寫入——113 個提交到資料庫的呼叫——逐一重讀，只問一個問題：其中哪些可以留在記憶體中，等到玩家斷線時再寫，並接受伺服器當機會讓它們遺失？</p>
+<p>答案不是一份效能熱點清單。而是一條規則，一旦寫下來，它就解釋了整張表。</p></div>
 </section>
 
 <section class="sec" id="rule">
@@ -53,6 +57,11 @@
 <p>Les écritures sur le chemin d'un échange (échanges directs, marché, courrier, fabrication, transferts de cargaison, règlement d'un réaménagement) restent donc où elles sont, immédiates et transactionnelles, et le chapitre <a href="transactions.html">6.2</a> traite de la façon de bien les faire. Tout ce qui n'appartient qu'à un seul joueur est gardé en mémoire et écrit par lots, à des paliers, ou à la fin.</p>
 <p>Le cas limite intéressant est le largage de cargaison. Rien ne change de mains, mais la destruction est irréversible et le joueur vient de la confirmer. L'écrire tout de suite coûte une transaction sur un geste rare, et évite de rendre au prochain login des unités que quelqu'un a délibérément jetées pour faire de la place.</p>
 </div>
+<div lang="zh-TW">
+<h2>規則：我自己的可以等，易手的不行</h2>
+<div class="note rule"><p class="note-label">規則</p><p>只屬於我的東西，可以留在 RAM 中直到我斷線。已經易手的東西，要立刻寫入。</p><p>損失並不對稱。遺失我的位置、經驗值階層的尾端或我的彈藥欠帳，會讓我倒退五分鐘：我回到原本的地方，而且不關其他人的事。遺失一筆交易的一半，會讓一位玩家拿著貨物，另一位付了錢，而後者可能已經離線、在另一台伺服器上，或者單純記得的是另一個版本的故事。這無法重來：它會造成複製或毀滅。</p></div>
+<p>所以位於交換路徑上的寫入（交易、市場、郵件、製作、貨物轉移、結算改裝）都維持原樣，立即且具交易性，而第 <a href="transactions.html">6.2</a> 章談的就是如何把它們做對。屬於單一玩家的一切，都保存在記憶體中，以批次、在門檻處或在最後寫入。</p>
+<p>有趣的邊緣案例是拋棄貨物。沒有任何東西易手，但這個毀滅是不可逆的，而且玩家剛剛確認過。立即寫入，只是在一個罕見的動作上多花一筆交易，卻能避免在下次登入時，把某人為了騰出空間而刻意丟掉的貨物還給他。</p></div>
 </section>
 
 <section class="sec" id="patterns">
@@ -80,6 +89,17 @@
 </tbody></table></div>
 <p>La dernière ligne est le filet des autres : un plantage du serveur perd au plus une minute de la situation d'un joueur (chapitre <a href="no-db-in-tick.html#patterns">3.4</a>). Avant le point de sauvegarde, seule la déconnexion écrivait la session, et un plantage renvoyait tout le monde là où il était à sa connexion.</p>
 </div>
+<div lang="zh-TW">
+<h2>把東西留在記憶體中的四種方式</h2>
+<div class="table-wrap"><table>
+<thead><tr><th>狀態</th><th>模式</th><th>寫入時機</th></tr></thead>
+<tbody>
+<tr><td>經驗值</td><td>保存在 RAM 中，越過階層時寫入，斷線時清空</td><td>每個連線階段幾次</td></tr>
+<tr><td>陣營帳本（誰在哪裡做了什麼）</td><td>事實的無鎖佇列，在 tick 之外批次清空</td><td>約每 5,000 筆事實寫入一次</td></tr>
+<tr><td>彈藥</td><td>RAM 中的一個熱池，以及在連線階段或船艦結束時寫入的欠帳</td><td>斷線或換船時</td></tr>
+<tr><td>位置、姿態、生命值、氧氣、船體損傷</td><td>在 tick 上記下，在背景寫入</td><td>每分鐘一次（檢查點）以及斷線時</td></tr>
+</tbody></table></div>
+<p>最後一列是其他各列的安全網：伺服器當機最多損失玩家一分鐘的狀況（第 <a href="no-db-in-tick.html#patterns">3.4</a> 章）。在檢查點出現之前，只有斷線會寫入連線階段，一次當機就會把所有人送回他們連線時所在的地方。</p></div>
 </section>
 
 <section class="sec" id="direction">
@@ -103,12 +123,23 @@
 </ul>
 <div class="note pitfall"><p class="note-label">Piège rencontré</p><p>Le règlement de la dette en fin de session cherchait « le vaisseau courant du joueur », et le code de transition de carte avait déjà effacé cette référence. La dette partait à la poubelle, les lignes gardaient leurs quantités d'avant le vol, et le joueur retrouvait des magasins pleins de l'autre côté d'une frontière (chapitre <a href="handover.html#two-halves">2.3</a>). Une écriture différée n'est sûre que si chaque chemin qui met fin à la chose qu'elle concerne la règle.</p></div>
 </div>
+<div lang="zh-TW">
+<h2>選擇錯誤的方向</h2>
+<p>彈藥是安全地處理熱計數器的最佳範例。一把槍每秒會射好幾發，而庫存是位於角色層級鎖後面的資料庫資料列；每發射一次就遞減一列，會把一次資料庫往返放進開火的路徑中。所以船艦在整個連線階段中把彈藥保存在記憶體中，最後再一次寫回消耗量。飛行期間，資料列刻意保持過時：庫存畫面顯示的是你出港時帶的量。有三個決定讓這種不一致不會變成它看起來像的那類 bug：</p>
+<ul>
+<li><strong>錯誤只往一個方向。</strong>池子只會減少，所以資料列永遠是<em>高</em>估的。沒有任何東西能被花兩次，而當機遺失的是<em>消耗</em>，而不是存量。當機是一份禮物，永遠不會是複製。</li>
+<li><strong>增加會讓它失效，而不是合併。</strong>任何為船艦增加彈藥的事（轉入、拾取），都會把池子標記為過時，並從資料列重新載入。重新載入很便宜，而且永遠正確；合併同一個數字的兩種視圖，正是它們漸行漸遠的方式。</li>
+<li><strong>兩個字典，而不是一個有號的對照表。</strong>「可用」在每次扣扳機時回答「我可以開火嗎？」；「已花費」在清空時回答一次「我欠資料庫多少？」。單一有號的對照表，會讓每個呼叫端都得重新推導它想要的是哪一種意義，而在這個系統中，正負號搞反會創造物品而不是摧毀物品。清空本身只做減法：這就是它的安全特性。</li>
+</ul>
+<div class="note pitfall"><p class="note-label">我踩過的坑</p><p>連線階段結束時的欠帳結算會去找「玩家目前的船艦」，而地圖切換的程式碼早已清除了這個參考。欠帳被丟掉，資料列保持出發前的數量，玩家在邊界另一頭發現彈匣是滿的（第 <a href="handover.html#two-halves">2.3</a> 章）。只有在每一條結束其所屬事物的路徑都會結算它時，延後寫入才是安全的。</p></div></div>
 <div lang="en">
 <div class="note rule"><p class="note-label">Rule</p><p>When state must disagree with the database for a while, arrange for the database to be wrong in the player's favour, never in the direction that creates value.</p><p>A crash that refunds a few shots is a small gift. A crash that lets someone spend the same thing twice is an economy leak that spreads before anyone notices.</p></div>
 </div>
 <div lang="fr">
 <div class="note rule"><p class="note-label">Règle</p><p>Quand un état doit être en désaccord avec la base pendant un temps, faire en sorte que la base se trompe en faveur du joueur, jamais dans le sens qui crée de la valeur.</p><p>Un plantage qui rembourse quelques tirs est un petit cadeau. Un plantage qui permet de dépenser deux fois la même chose est une fuite dans l'économie qui se répand avant que quiconque ne la remarque.</p></div>
 </div>
+<div lang="zh-TW">
+<div class="note rule"><p class="note-label">規則</p><p>當狀態必須與資料庫不一致一段時間時，要安排成資料庫錯在對玩家有利的方向，絕不能錯在會創造價值的方向。</p><p>一次退還幾發子彈的當機是一份小禮物。一次讓某人能把同一樣東西花兩次的當機，則是一個在任何人察覺之前就已擴散的經濟漏洞。</p></div></div>
 </section>
 
 <section class="sec" id="readers">
@@ -124,6 +155,11 @@
 <p>La forme juste n'est pas « vider à la déconnexion » mais un <strong>cache à écriture différée</strong> : la mémoire devient la vérité pour <em>tous</em> les lecteurs, et le vidage a lieu périodiquement, à la déconnexion, et avant toute transaction qui a besoin de durabilité. Cela transforme un service d'inventaire sans état en cache par personnage, un chantier à part entière plutôt qu'une retouche, et c'est noté comme tel.</p>
 <div class="note measured"><p class="note-label">Mesuré</p><p>L'audit a trouvé un chemin vraiment chaud pour rien. Ranger chaque unité récoltée rafraîchissait aussi la réserve de munitions du vaisseau, ce qui ouvre un contexte de base et relit toutes les soutes de la coque, alors que du minerai ne peut jamais alimenter une arme. Le rafraîchissement est maintenant conditionné au fait que l'objet soit vraiment une munition des armes montées : aucun changement de comportement, la moitié des allers-retours de la récolte.</p></div>
 </div>
+<div lang="zh-TW">
+<h2>為什麼不把一切都留在記憶體中？</h2>
+<p>剩下最大的寫入是採集：每一單位被收進貨艙的礦石，就是一筆小小的交易。把它移到記憶體中、等到斷線再寫，看起來是理所當然的收穫，但這不是搬一行程式碼的事，因為貨物資料列有很多讀取端：庫存畫面、用它們支付改裝費用的工坊、在貨艙不空時拒絕改裝的檢查、市場與郵件的託管、彈藥池。如果剛開採的礦石只存在於記憶體中，它們全都會讀到過時的資料列：你採了 200 單位，打開庫存卻什麼都沒顯示；工坊拒絕使用它們；市場無法賣出它們。</p>
+<p>正確的形式不是「斷線時清空」，而是一個<strong>回寫快取</strong>：記憶體成為<em>每一個</em>讀取端的真相，清空則定期發生、在斷線時發生，也在任何需要持久性的交易之前發生。這會把一個無狀態的庫存服務變成一個以角色為單位的快取，本身就是一整批工作，而不只是一個微調，它也被如此記錄了下來。</p>
+<div class="note measured"><p class="note-label">實測</p><p>這次稽核找到了一條真正白白發熱的路徑。儲存每一單位採集物時，也會重新整理船艦的彈藥池，而這會開啟一個資料庫內容並重新讀取船體的每一個貨艙，雖然礦石永遠不可能拿來餵武器。現在只有在物品確實是所裝備武器的彈藥時才會重新整理：行為沒有改變，採集的往返次數減半。</p></div></div>
 </section>
 
 <section class="sec" id="recovery">
@@ -137,6 +173,10 @@
 <p>Toute conception qui garde un état optimiste en mémoire a besoin d'une règle pour ce qui se passe après un plantage, et la règle doit être énoncée avant la conception, pas découverte après. Pour les biens, elle n'est pas négociable : <strong>à la reconnexion, la base est relue et tout état optimiste en mémoire est jeté</strong>. Sans elle, un verrou en mémoire protège du double clic mais pas du plantage, et un plantage au mauvais moment duplique un objet. Dans un MMO, la duplication est le seul bug qui ne se répare pas : il se répand dans l'économie avant que quiconque ne le remarque.</p>
 <p>Restaurer une session pose la question symétrique : qu'a-t-on le droit de gagner en <em>quittant</em> le monde ? La réponse de MoonQwak est que ça ne doit jamais être un coup jouable. Deux règles symétriques en découlent. Une coque touchée récemment reste dans le monde vingt secondes après la déconnexion de son pilote (chapitre <a href="handover.html#disconnects">2.3</a>), pour que débrancher le câble ne permette pas de fuir un combat. Et le vide continue de mordre hors ligne : un personnage qui s'est déconnecté à la dérive dans l'espace voit le temps passé dehors prélevé sur sa réserve d'air à son retour, puis sur sa santé une fois l'air épuisé, pour que se déconnecter ne soit pas un moyen d'arrêter l'horloge.</p>
 </div>
+<div lang="zh-TW">
+<h2>復原規則與離開世界</h2>
+<p>任何在記憶體中保留樂觀狀態的設計，都需要一條當機後該怎麼辦的規則，而這條規則必須在設計之前就說清楚，而不是事後才發現。對物品來說，這是不容妥協的：<strong>重新連線時，重新讀取資料庫，並丟掉任何樂觀的記憶體狀態</strong>。沒有它，記憶體中的鎖能防止雙擊，卻防不了當機，而在錯誤時機發生的當機會複製出一個物件。在 MMO 中，複製是唯一一種無法修復的 bug：它會在任何人察覺之前擴散到整個經濟體系中。</p>
+<p>恢復連線階段引出了對稱的問題：<em>離開</em>世界應該被允許做什麼？MoonQwak 的答案是，它絕不能成為一種可以利用的操作。由此產生兩條對稱的規則。一個最近被擊中的船體，在駕駛員斷線後會在世界中多停留二十秒（第 <a href="handover.html#disconnects">2.3</a> 章），所以拔網路線無法逃離戰鬥。而真空在離線時仍然會咬人：一個在太空中漂流時斷線的角色，回來時會從他的空氣供應中扣掉離開的時間，空氣用完之後就扣生命值，所以下線不是讓時鐘停止的方法。</p></div>
 </section>
 
 <section class="sec" id="takeaways">
@@ -155,6 +195,13 @@
 <li>Avant de garder une valeur en mémoire, lister ses lecteurs ; une valeur aux nombreux lecteurs demande un cache à écriture différée, pas un vidage retardé.</li>
 <li>Énoncer la règle de reprise après plantage avant la conception, et s'assurer que quitter le monde n'est jamais un coup gagnant.</li>
 </ul></div>
+<div lang="zh-TW"><h2>重點整理</h2><ul>
+<li>把屬於單一玩家的東西留在記憶體中、晚點再寫；任何易手的東西都立刻寫入。</li>
+<li>依狀態的種類挑選批次模式：門檻、排入佇列的事實、帶欠帳的熱池、定期檢查點。</li>
+<li>安排任何暫時的不一致都錯在對玩家有利的方向，絕不錯在會創造價值的方向。</li>
+<li>在把一個值快取到記憶體之前，先列出它的讀取端；有很多讀取端的值，需要的是回寫快取，而不是延後清空。</li>
+<li>在設計之前就說清楚當機復原規則，並確保離開世界永遠不是一個能獲勝的操作。</li>
+</ul></div>
 </div>
 </section>
 
@@ -167,6 +214,7 @@
 <footer class="site-footer" id="mq-footer"></footer>
 <script src="assets/js/site-data.js" defer></script>
 <script src="assets/js/glossary-data.js" defer></script>
+<script src="assets/js/ui-zh.js" defer></script>
 <script src="assets/js/app.js" defer></script>
 <script src="assets/js/widgets.js" defer></script>
 </body>

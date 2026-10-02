@@ -7,12 +7,12 @@
 <meta name="description" content="Bots that are real clients, a bench that doesn't fabricate its own failures, and measuring the server rather than the machine.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Chakra+Petch:wght@500;600&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Chakra+Petch:wght@500;600&family=JetBrains+Mono:wght@400;500;600&family=Noto+Sans+TC:wght@400;700&display=swap">
 <link rel="stylesheet" href="assets/css/site.css">
-<script>(function(){var r=document.documentElement,l,t;try{l=localStorage.getItem("mq-lang");t=localStorage.getItem("mq-theme");}catch(e){}if(l!=="en"&&l!=="fr"){l=(navigator.language||"").toLowerCase().indexOf("fr")===0?"fr":"en";}r.setAttribute("data-lang",l);r.setAttribute("lang",l);if(t==="light"||t==="dark")r.setAttribute("data-theme",t);})();</script>
+<script>(function(){var r=document.documentElement,l,t,n;try{l=localStorage.getItem("mq-lang");t=localStorage.getItem("mq-theme");}catch(e){}if(l!=="en"&&l!=="fr"&&l!=="zh"){n=(navigator.language||"").toLowerCase();l=n.indexOf("fr")===0?"fr":n.indexOf("zh")===0?"zh":"en";}r.setAttribute("data-lang",l);r.setAttribute("lang",l==="zh"?"zh-TW":l);if(t==="light"||t==="dark")r.setAttribute("data-theme",t);})();</script>
 </head>
 <body data-page="load-testing">
-<a class="skip-link" href="#main"><span lang="en">Skip to content</span><span lang="fr">Aller au contenu</span></a>
+<a class="skip-link" href="#main"><span lang="en">Skip to content</span><span lang="fr">Aller au contenu</span><span lang="zh-TW">跳到主要內容</span></a>
 <header class="site-header" id="mq-header"></header>
 <div class="layout">
 <aside class="sidebar" id="mq-sidebar"></aside>
@@ -20,8 +20,8 @@
 <article>
 <header class="chapter-head">
   <div class="eyebrow" data-auto></div>
-  <h1><span lang="en">Load testing an MMO</span><span lang="fr">Tester la charge d'un MMO</span></h1>
-  <p class="dek"><span lang="en">Bots that are real clients, a bench that doesn't fabricate its own failures, and measuring the server rather than the machine.</span><span lang="fr">Des bots qui sont de vrais clients, un banc qui ne fabrique pas ses propres pannes, et mesurer le serveur plutôt que la machine.</span></p>
+  <h1><span lang="en">Load testing an MMO</span><span lang="fr">Tester la charge d'un MMO</span><span lang="zh-TW">MMO 負載測試</span></h1>
+  <p class="dek"><span lang="en">Bots that are real clients, a bench that doesn't fabricate its own failures, and measuring the server rather than the machine.</span><span lang="fr">Des bots qui sont de vrais clients, un banc qui ne fabrique pas ses propres pannes, et mesurer le serveur plutôt que la machine.</span><span lang="zh-TW">本身就是真實用戶端的機器人、不會自己製造故障的測試台，以及量測伺服器而不是量測機器。</span></p>
   <div class="meta-row" data-auto></div>
 </header>
 
@@ -38,34 +38,38 @@
 <p>Le premier outil de stress du projet faisait apparaître une centaine de PNJ sur une carte. Il chargeait la physique et l'IA, et il a beaucoup appris (chapitre <a href="bench-journal.html">10.4</a>), mais il ne touchait à rien de ce qui coûte <em>par joueur</em> : sérialiser un snapshot pour chaque spectateur, interroger la grille d'intérêt pour chaque pair, les octets qui sortent. Cent PNJ, c'est un seul pair connecté. Ce qui décide de la taille d'un serveur de MMO, c'est la seconde liste : le vrai outil de charge devait donc être fait de <strong>vrais clients</strong>.</p>
 <p>Chaque bot déroule une session complète, dans le même ordre que le client de jeu : par la gateway, s'inscrire, se connecter, lister ou créer un personnage, le sélectionner et recevoir l'adresse du serveur de jeu et un jeton pour s'y connecter ; puis sur le serveur de jeu, entrer en jeu, recevoir la description de la carte, répondre qu'il est prêt, et envoyer des entrées à 20 Hz, pour toujours. Même protocole, même chiffrement, mêmes poignées de main (chapitres <a href="login-flow.html">2.2</a> et <a href="handover.html">2.3</a>).</p>
 </div>
+<div lang="zh-TW">
+<h2>負載測試必須加載什麼</h2>
+<p>專案的第一個壓力工具是在一張地圖上產生一百個 NPC。它加載了物理與 AI，也教會了我很多（第 <a href="bench-journal.html">10.4</a> 章），但它完全沒碰到<em>以每位玩家計</em>的成本：為每位觀察者序列化一份快照、為每個端點查詢興趣網格、送出去的位元組。一百個 NPC 只是一個已連線的端點。決定一台 MMO 伺服器規模的是第二份清單，所以真正的負載工具必須由<strong>真實的用戶端</strong>組成。</p>
+<p>每個機器人都執行一個完整的連線階段，順序與遊戲用戶端相同：經過閘道註冊、登入、列出或建立角色、選擇它，並收到遊戲伺服器的位址與一個給它用的權杖；然後在遊戲伺服器上進入遊戲、收到地圖描述、回覆已準備好，並以 20 Hz 送出輸入，永不停止。同樣的協定、同樣的加密、同樣的交握（第 <a href="login-flow.html">2.2</a> 與 <a href="handover.html">2.3</a> 章）。</p></div>
 <figure class="fig fig-scroll">
 <svg viewBox="0 0 760 170" role="img" aria-label="A bot's session: at the gateway, register, login, character list, select, receive address and token; at the game server, enter game, map init, map ready, then inputs at 20 Hz">
   <defs><marker id="lt-arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="currentColor" opacity="0.7"/></marker></defs>
-  <text class="dg-label" x="20" y="22">Gateway</text>
+  <text class="dg-label" x="20" y="22"><tspan lang="en">Gateway</tspan><tspan lang="fr">Gateway</tspan><tspan lang="zh-TW">閘道</tspan></text>
   <g class="dg-small">
     <rect x="20" y="32" width="92" height="30" rx="6" class="dg-box"/><text x="66" y="51" text-anchor="middle">Register</text>
     <rect x="128" y="32" width="80" height="30" rx="6" class="dg-box"/><text x="168" y="51" text-anchor="middle">Login</text>
-    <rect x="224" y="32" width="112" height="30" rx="6" class="dg-box"/><text x="280" y="51" text-anchor="middle"><tspan lang="en">characters</tspan><tspan lang="fr">personnages</tspan></text>
-    <rect x="352" y="32" width="90" height="30" rx="6" class="dg-box"/><text x="397" y="51" text-anchor="middle"><tspan lang="en">select</tspan><tspan lang="fr">choisir</tspan></text>
-    <rect x="458" y="32" width="160" height="30" rx="6" class="dg-hot"/><text x="538" y="51" text-anchor="middle"><tspan lang="en">address + game token</tspan><tspan lang="fr">adresse + jeton de jeu</tspan></text>
+    <rect x="224" y="32" width="112" height="30" rx="6" class="dg-box"/><text x="280" y="51" text-anchor="middle"><tspan lang="en">characters</tspan><tspan lang="fr">personnages</tspan><tspan lang="zh-TW">角色</tspan></text>
+    <rect x="352" y="32" width="90" height="30" rx="6" class="dg-box"/><text x="397" y="51" text-anchor="middle"><tspan lang="en">select</tspan><tspan lang="fr">choisir</tspan><tspan lang="zh-TW">選擇</tspan></text>
+    <rect x="458" y="32" width="160" height="30" rx="6" class="dg-hot"/><text x="538" y="51" text-anchor="middle"><tspan lang="en">address + game token</tspan><tspan lang="fr">adresse + jeton de jeu</tspan><tspan lang="zh-TW">位址 + 遊戲權杖</tspan></text>
   </g>
   <g class="dg-line">
     <line x1="112" y1="47" x2="124" y2="47" marker-end="url(#lt-arr)"/><line x1="208" y1="47" x2="220" y2="47" marker-end="url(#lt-arr)"/><line x1="336" y1="47" x2="348" y2="47" marker-end="url(#lt-arr)"/><line x1="442" y1="47" x2="454" y2="47" marker-end="url(#lt-arr)"/>
   </g>
   <path d="M 538 62 V 84 H 75 V 106" class="dg-line" marker-end="url(#lt-arr)"/>
-  <text class="dg-label" x="740" y="100" text-anchor="end"><tspan lang="en">Game server</tspan><tspan lang="fr">Serveur de jeu</tspan></text>
+  <text class="dg-label" x="740" y="100" text-anchor="end"><tspan lang="en">Game server</tspan><tspan lang="fr">Serveur de jeu</tspan><tspan lang="zh-TW">遊戲伺服器</tspan></text>
   <g class="dg-small">
     <rect x="20" y="110" width="110" height="30" rx="6" class="dg-box"/><text x="75" y="129" text-anchor="middle">EnterGame</text>
     <rect x="146" y="110" width="96" height="30" rx="6" class="dg-box"/><text x="194" y="129" text-anchor="middle">MapInit</text>
     <rect x="258" y="110" width="100" height="30" rx="6" class="dg-box"/><text x="308" y="129" text-anchor="middle">MapReady</text>
-    <rect x="374" y="110" width="170" height="30" rx="6" class="dg-hot"/><text x="459" y="129" text-anchor="middle"><tspan lang="en">inputs at 20 Hz, forever</tspan><tspan lang="fr">entrées à 20 Hz, toujours</tspan></text>
+    <rect x="374" y="110" width="170" height="30" rx="6" class="dg-hot"/><text x="459" y="129" text-anchor="middle"><tspan lang="en">inputs at 20 Hz, forever</tspan><tspan lang="fr">entrées à 20 Hz, toujours</tspan><tspan lang="zh-TW">以 20 Hz 送出輸入，永不停止</tspan></text>
   </g>
   <g class="dg-line">
     <line x1="130" y1="125" x2="142" y2="125" marker-end="url(#lt-arr)"/><line x1="242" y1="125" x2="254" y2="125" marker-end="url(#lt-arr)"/><line x1="358" y1="125" x2="370" y2="125" marker-end="url(#lt-arr)"/>
   </g>
-  <text class="dg-small" x="459" y="160" text-anchor="middle"><tspan lang="en">snapshots received, never decoded</tspan><tspan lang="fr">snapshots reçus, jamais décodés</tspan></text>
+  <text class="dg-small" x="459" y="160" text-anchor="middle"><tspan lang="en">snapshots received, never decoded</tspan><tspan lang="fr">snapshots reçus, jamais décodés</tspan><tspan lang="zh-TW">收到快照，從不解碼</tspan></text>
 </svg>
-<figcaption><span lang="en"><strong>A bot is a full session without the game.</strong> Every step the real client takes, in the same order, over the same protocol.</span><span lang="fr"><strong>Un bot est une session complète, sans le jeu.</strong> Chaque étape que fait le vrai client, dans le même ordre, par le même protocole.</span></figcaption>
+<figcaption><span lang="en"><strong>A bot is a full session without the game.</strong> Every step the real client takes, in the same order, over the same protocol.</span><span lang="fr"><strong>Un bot est une session complète, sans le jeu.</strong> Chaque étape que fait le vrai client, dans le même ordre, par le même protocole.</span><span lang="zh-TW"><strong>機器人是一個沒有遊戲的完整連線階段。</strong>真實用戶端走的每一步，順序相同，協定相同。</span></figcaption>
 </figure>
 <div lang="en">
 <p>Two decisions in how bots are built are worth borrowing:</p>
@@ -81,6 +85,12 @@
 <li><strong>Les bots ne décodent pas les snapshots.</strong> Ils les reçoivent et les jettent. Aucun modèle du monde, aucun état. Le banc tourne sur la machine qui héberge les serveurs qu'il mesure, et analyser des centaines de flux de snapshots prendrait le CPU de la chose même qu'on mesure. Un outil de charge doit rester assez léger pour ne pas devenir la charge.</li>
 </ul>
 </div>
+<div lang="zh-TW">
+<p>機器人的打造方式中，有兩個決定值得借鏡：</p>
+<ul>
+<li><strong>帳號透過閘道建立，而不是直接寫進資料庫。</strong>測試台被允許寫入資料庫（這些是測試帳號），但密碼雜湊屬於閘道。在測試台中重新實作它，會產生第二個真相，在演算法第一次改變時就會分歧，而這只為了省下一個帳號一生中一次的註冊往返。測試台<em>確實</em>會寫入的是純資料：一個戰鬥用船體，以及管理員與無敵旗標。管理員旗標永遠不能從遊戲內部授予（「一個遊戲能授予的權限，就是一個漏洞能授予自己的權限」）；它是在資料庫中手動設定的，而負載工具就是那隻手。伺服器端沒有任何東西因此獲得提升自己權限的能力。</li>
+<li><strong>機器人不解碼快照。</strong>它們收下快照，然後丟掉。沒有世界模型、沒有狀態。測試台在託管它所量測之伺服器的同一台機器上執行，而解析數百條快照串流，會吃掉被量測對象本身的 CPU。負載工具必須保持夠輕，才不會自己變成負載。</li>
+</ul></div>
 </section>
 
 <section class="sec" id="plateau">
@@ -108,6 +118,17 @@
 <p>Ce dernier point a changé ce à quoi le banc pouvait répondre. Un serveur paie deux choses, et aucune ne dépend de l'intelligence des bots : les <strong>cartes</strong> (chaque carte vivante est un monde physique complet, avec une limite dure d'environ 120 par processus) et les <strong>voisinages</strong> (un snapshot coûte en proportion de ce qui est en vue ; dix joueurs qui se voient, ce sont cent relations). Un banc qui disperse ne mesure que le premier : « combien de mondes vides un processus peut-il tenir », jamais « combien de joueurs une bataille peut-elle tenir », qui est la question qui dimensionne un serveur. Les bots volent donc maintenant vers quelques <strong>pôles</strong>, s'y attardent, puis repartent vers un autre : une marche aléatoire avec dérive. Peu de pôles font des foules ; beaucoup de pôles font de la dispersion. Les joueurs par carte ont cessé d'être un accident pour devenir un cadran.</p>
 <div class="note pitfall"><p class="note-label">Piège rencontré</p><p>La première version des pôles semait les bots <em>sur</em> les pôles : mille bots sur trois cartes. Une carte vit sur exactement un serveur (chapitre <a href="map-hosting.html">7.1</a>) : le parc ne pouvait pas répartir cette charge. Deux serveurs de renfort ont démarré, n'ont reçu aucune carte, et sont restés vides. Les bots sont maintenant semés dans un rayon autour des pôles, et le banc prévient quand il existe moins de dix cartes de départ, parce que le parc ne peut pas découper la charge en plus de morceaux qu'on ne lui en donne.</p></div>
 </div>
+<div lang="zh-TW">
+<h2>量測平台期，而不是抵達風暴</h2>
+<p>負載測試中讀到的數字，只有在讀取時負載是<em>穩定</em>的情況下才有意義。有好幾項設定的存在，只是為了讓這件事成立：</p>
+<ul>
+<li><strong>爬升。</strong>機器人預設每 250 ms 連線一個。一百個用戶端同時連線，量到的是抵達風暴（登入、角色載入、第一份快照），而不是穩定狀態。兩者都很有趣，但不能同時量。</li>
+<li><strong>無敵的機器人。</strong>二十個武裝機器人遇上 NPC，幾分鐘內就會死光，在停靠狀態下重生，再也不出來：人口在量測期間融化，報告描述的是一張正在自己清空的地圖。機器人預設無法受傷，所以端點數量、興趣集合與快照大小都保持不變。第二種模式則執行完整的傷害路徑（船體損失、碎片、殘骸、死亡），並知道負載會逐漸衰退。</li>
+<li><strong>封閉。</strong>一個伺服器開關會關閉地圖的邊界。沒有它，機器人會直直往前飛，幾秒內就越過邊界、分散到鄰近的地圖上，測試台量到的就是地圖切換，而不是密度。</li>
+<li><strong>目的地，而不是漫遊。</strong>第一批機器人每隔幾秒就隨機改變航向，也就是隨機漫步，而隨機漫步會擴散：這就是它的定義。有一次測試台結束時，700 個機器人分布在 373 張有人的地圖上，每張地圖 1.6 位玩家。</li>
+</ul>
+<p>最後這一項改變了測試台能回答的問題。伺服器要為兩件事付費，而兩者都與機器人有多聰明無關：<strong>地圖</strong>（每張存活的地圖都是一個完整的物理世界，每個程序有約 120 張的硬性上限）與<strong>鄰里</strong>（一份快照的成本與視野內的東西成正比；十位彼此看得見的玩家就是一百組關係）。一個會分散的測試台只能量到前者：「一個程序能容納多少個空世界」，而永遠量不到「一場戰鬥能容納多少位玩家」，而後者才是決定伺服器規模的問題。所以機器人現在會飛向少數幾個<strong>集結點</strong>，停留一會兒，再前往另一個：一個帶有漂移的隨機漫步。集結點少就形成人潮；集結點多就造成分散。每張地圖的玩家數不再是意外，而變成了一個旋鈕。</p>
+<div class="note pitfall"><p class="note-label">我踩過的坑</p><p>集結點的第一版把機器人直接產生<em>在</em>集結點上：一千個機器人在三張地圖上。一張地圖恰好存在於一台伺服器上（第 <a href="map-hosting.html">7.1</a> 章），所以叢集無法分散這個負載：啟動了兩台支援伺服器，收到零張地圖，一直保持空的。現在機器人會被產生在集結點周圍一定半徑內，而當起始地圖少於十張時，測試台會發出警告，因為叢集無法把負載切成比它拿到的還多的塊。</p></div></div>
 </section>
 
 <section class="sec" id="self-inflicted">
@@ -119,16 +140,20 @@
 <h2>Un banc qui fabrique ses propres pannes</h2>
 <p>La leçon la plus dure des tests de charge est que le banc tourne sur une vraie machine, souvent la même que le serveur, et qu'il peut échouer de façons qui ressemblent exactement à une panne du serveur. Chacun des cas suivants a d'abord été rapporté comme un problème de serveur :</p>
 </div>
+<div lang="zh-TW">
+<h2>自己製造故障的測試台</h2>
+<p>負載測試最難的一課是：測試台在一台真實的機器上執行，往往就是伺服器所在的那一台，而它可能以看起來和伺服器故障一模一樣的方式失敗。以下每一項，一開始都被當成伺服器的問題回報：</p></div>
 <ol class="timeline">
-<li><span class="tl-tag"><span lang="en">priority</span><span lang="fr">priorité</span></span><div><h3><span lang="en">Bots stealing the server's CPU</span><span lang="fr">Des bots qui volent le CPU du serveur</span></h3><p><span lang="en">400 bots are 400 to 800 network threads waking up constantly. At equal priority they take scheduler quanta from the tick thread, and the monitor headlined "worst tick 239 ms" for 28 ms of actual work. The bench now runs below normal priority by default: the server goes first, since it is what is being measured. Normal priority remains available, to measure behaviour under contention, which is a different question.</span><span lang="fr">400 bots, ce sont 400 à 800 threads réseau qui se réveillent sans arrêt. À priorité égale, ils prennent des quanta d'ordonnancement au thread de tick, et le moniteur titrait « pire tick 239 ms » pour 28 ms de travail réel. Le banc tourne maintenant en priorité sous la normale par défaut : le serveur passe d'abord, puisque c'est lui qu'on mesure. La priorité normale reste disponible, pour mesurer la tenue sous contention, qui est une autre question.</span></p></div></li>
-<li><span class="tl-tag"><span lang="en">threads</span><span lang="fr">threads</span></span><div><h3><span lang="en">1,400 threads to read 700 bots</span><span lang="fr">1 400 threads pour lire 700 bots</span></h3><p><span lang="en">Each connection had its own polling thread, two per bot: 1,400 threads, each woken every 15 ms. The scheduler could not keep up, bots were disconnected for not being read in time, and the report said "640 × GameServer: Timeout", as if the server had given up. A few pump threads (a quarter of the cores, at least two) now read all sockets in slices, and each connection is read hundreds of times per second.</span><span lang="fr">Chaque connexion avait son propre thread d'écoute, deux par bot : 1 400 threads, chacun réveillé toutes les 15 ms. L'ordonnanceur ne suivait pas, les bots étaient déconnectés faute d'être lus à temps, et le rapport affichait « 640 × GameServer : Timeout », comme si le serveur avait lâché. Quelques threads de pompe (un quart des cœurs, au moins deux) lisent maintenant toutes les sockets par tranches, et chaque connexion est lue des centaines de fois par seconde.</span></p></div></li>
-<li><span class="tl-tag"><span lang="en">fairness</span><span lang="fr">équité</span></span><div><h3><span lang="en">One busy socket starving 279 others</span><span lang="fr">Une socket occupée qui affame les 279 autres</span></h3><p><span lang="en">With shared pumps, the transport library's default let one poll swallow 256 packets in a row. A bot that had just changed maps received a discovery burst and a 15 KB first snapshot; its queue was the only full one, and it ate the turn of the 279 others, which fell behind in turn. Measured: 47,000 pump passes per second at rest, 318 at the first map change, zero three seconds later, without a single exception. A cap of eight packets per poll and per connection loses nothing (what is not read this turn is read on the next) and ends the cascade.</span><span lang="fr">Avec des pompes partagées, le défaut de la bibliothèque de transport laissait un seul relevé avaler 256 paquets d'affilée. Un bot qui venait de changer de carte recevait une rafale de découverte et un premier snapshot de 15 Ko ; sa file était la seule pleine, et elle mangeait le tour des 279 autres, qui prenaient du retard à leur tour. Mesuré : 47 000 passes de pompe par seconde au repos, 318 au premier changement de carte, zéro trois secondes plus tard, sans une seule exception. Un plafond de huit paquets par relevé et par connexion ne perd rien (ce qui n'est pas lu à ce tour l'est au suivant) et met fin à la cascade.</span></p></div></li>
-<li><span class="tl-tag"><span lang="en">patience</span><span lang="fr">patience</span></span><div><h3><span lang="en">A bench more impatient than the client</span><span lang="fr">Un banc plus impatient que le client</span></h3><p><span lang="en">On a map change, the game server drops the old connection 300 ms after announcing the transition, betting that the new one is already up. The bet can lose when the destination map must first be loaded somewhere. The real client knows this and concludes nothing for two seconds; the bench concluded within a millisecond, and reported 136 desertions that never happened. It now waits the same two seconds. A bench more impatient than the client it simulates measures its own impatience.</span><span lang="fr">Lors d'un changement de carte, le serveur de jeu coupe l'ancienne connexion 300 ms après avoir annoncé la transition, en pariant que la nouvelle est déjà établie. Le pari peut se perdre quand la carte de destination doit d'abord être chargée quelque part. Le vrai client le sait et ne conclut rien pendant deux secondes ; le banc concluait en une milliseconde, et rapportait 136 désertions qui n'avaient jamais eu lieu. Il attend maintenant les mêmes deux secondes. Un banc plus impatient que le client qu'il simule mesure sa propre impatience.</span></p></div></li>
-<li><span class="tl-tag"><span lang="en">accounts</span><span lang="fr">comptes</span></span><div><h3><span lang="en">Two benches kicking each other</span><span lang="fr">Deux bancs qui s'éjectent l'un l'autre</span></h3><p><span lang="en">The server ends the previous session whenever an account logs in again (chapter <a href="login-flow.html">2.2</a>). Two people running the bench with the same account prefix drive the <em>same</em> accounts, kick each other in a loop, and the population never holds, which looks exactly like a server that cannot cope. The launcher script now asks each person for a unique prefix.</span><span lang="fr">Le serveur met fin à la session précédente chaque fois qu'un compte se reconnecte (chapitre <a href="login-flow.html">2.2</a>). Deux personnes qui lancent le banc avec le même préfixe de comptes pilotent les <em>mêmes</em> comptes, s'éjectent l'une l'autre en boucle, et la population ne tient jamais, ce qui ressemble exactement à un serveur qui ne suit pas. Le script de lancement demande maintenant à chacun un préfixe unique.</span></p></div></li>
-<li><span class="tl-tag"><span lang="en">database</span><span lang="fr">base</span></span><div><h3><span lang="en">Setup written into the wrong database</span><span lang="fr">Une préparation écrite dans la mauvaise base</span></h3><p><span lang="en">Before connecting, the bench writes to the database named in its own configuration: account flags, the combat hull, the hubs. Against a remote server, that can be a different database. The writes then <em>succeed</em>, in the wrong place, and the bots arrive mortal and unarmed without a line saying so. The bench cannot check that the two databases are the same, so it says so out loud when the target is remote.</span><span lang="fr">Avant de se connecter, le banc écrit dans la base nommée par sa propre configuration : drapeaux des comptes, coque de combat, pôles. Contre un serveur distant, ce peut être une autre base. Les écritures <em>réussissent</em> alors, au mauvais endroit, et les bots arrivent mortels et désarmés sans qu'une ligne le dise. Le banc ne peut pas vérifier que les deux bases sont la même : il le dit à voix haute quand la cible est distante.</span></p></div></li>
+<li><span class="tl-tag"><span lang="en">priority</span><span lang="fr">priorité</span><span lang="zh-TW">優先權</span></span><div><h3><span lang="en">Bots stealing the server's CPU</span><span lang="fr">Des bots qui volent le CPU du serveur</span><span lang="zh-TW">機器人偷走伺服器的 CPU</span></h3><p><span lang="en">400 bots are 400 to 800 network threads waking up constantly. At equal priority they take scheduler quanta from the tick thread, and the monitor headlined "worst tick 239 ms" for 28 ms of actual work. The bench now runs below normal priority by default: the server goes first, since it is what is being measured. Normal priority remains available, to measure behaviour under contention, which is a different question.</span><span lang="fr">400 bots, ce sont 400 à 800 threads réseau qui se réveillent sans arrêt. À priorité égale, ils prennent des quanta d'ordonnancement au thread de tick, et le moniteur titrait « pire tick 239 ms » pour 28 ms de travail réel. Le banc tourne maintenant en priorité sous la normale par défaut : le serveur passe d'abord, puisque c'est lui qu'on mesure. La priorité normale reste disponible, pour mesurer la tenue sous contention, qui est une autre question.</span><span lang="zh-TW">400 個機器人就是 400 到 800 條不斷被喚醒的網路執行緒。在同等優先權下，它們會從 tick 執行緒手上搶走排程時間片，而監控器的標題寫著「最差 tick 239 ms」，實際工作卻只有 28 ms。現在測試台預設以低於一般的優先權執行：伺服器先走，因為它才是被量測的對象。一般優先權仍然可用，用來量測競爭下的行為，那是另一個問題。</span></p></div></li>
+<li><span class="tl-tag"><span lang="en">threads</span><span lang="fr">threads</span><span lang="zh-TW">執行緒</span></span><div><h3><span lang="en">1,400 threads to read 700 bots</span><span lang="fr">1 400 threads pour lire 700 bots</span><span lang="zh-TW">用 1,400 條執行緒讀 700 個機器人</span></h3><p><span lang="en">Each connection had its own polling thread, two per bot: 1,400 threads, each woken every 15 ms. The scheduler could not keep up, bots were disconnected for not being read in time, and the report said "640 × GameServer: Timeout", as if the server had given up. A few pump threads (a quarter of the cores, at least two) now read all sockets in slices, and each connection is read hundreds of times per second.</span><span lang="fr">Chaque connexion avait son propre thread d'écoute, deux par bot : 1 400 threads, chacun réveillé toutes les 15 ms. L'ordonnanceur ne suivait pas, les bots étaient déconnectés faute d'être lus à temps, et le rapport affichait « 640 × GameServer : Timeout », comme si le serveur avait lâché. Quelques threads de pompe (un quart des cœurs, au moins deux) lisent maintenant toutes les sockets par tranches, et chaque connexion est lue des centaines de fois par seconde.</span><span lang="zh-TW">每條連線都有自己的輪詢執行緒，每個機器人兩條：1,400 條執行緒，每一條每 15 ms 被喚醒一次。排程器跟不上，機器人因為沒有及時被讀取而斷線，而報告寫著「640 × GameServer: Timeout」，彷彿是伺服器放棄了。現在由少數幾條泵執行緒（核心數的四分之一，至少兩條）分片讀取所有 socket，每條連線每秒被讀取數百次。</span></p></div></li>
+<li><span class="tl-tag"><span lang="en">fairness</span><span lang="fr">équité</span><span lang="zh-TW">公平性</span></span><div><h3><span lang="en">One busy socket starving 279 others</span><span lang="fr">Une socket occupée qui affame les 279 autres</span><span lang="zh-TW">一個忙碌的 socket 餓死其他 279 個</span></h3><p><span lang="en">With shared pumps, the transport library's default let one poll swallow 256 packets in a row. A bot that had just changed maps received a discovery burst and a 15 KB first snapshot; its queue was the only full one, and it ate the turn of the 279 others, which fell behind in turn. Measured: 47,000 pump passes per second at rest, 318 at the first map change, zero three seconds later, without a single exception. A cap of eight packets per poll and per connection loses nothing (what is not read this turn is read on the next) and ends the cascade.</span><span lang="fr">Avec des pompes partagées, le défaut de la bibliothèque de transport laissait un seul relevé avaler 256 paquets d'affilée. Un bot qui venait de changer de carte recevait une rafale de découverte et un premier snapshot de 15 Ko ; sa file était la seule pleine, et elle mangeait le tour des 279 autres, qui prenaient du retard à leur tour. Mesuré : 47 000 passes de pompe par seconde au repos, 318 au premier changement de carte, zéro trois secondes plus tard, sans une seule exception. Un plafond de huit paquets par relevé et par connexion ne perd rien (ce qui n'est pas lu à ce tour l'est au suivant) et met fin à la cascade.</span><span lang="zh-TW">使用共用的泵之後，傳輸函式庫的預設值允許一次輪詢連續吞下 256 個封包。一個剛換了地圖的機器人收到一波探索封包與一份 15 KB 的第一份快照；它的佇列是唯一滿的，它吃掉了其他 279 個的回合，而那些又輪流落後。實測：閒置時每秒 47,000 輪泵，第一次換地圖時 318 輪，三秒後歸零，而且沒有任何一個例外。每次輪詢、每條連線上限八個封包，不會遺失任何東西（這一輪沒讀到的，下一輪會讀），並終結了這場連鎖反應。</span></p></div></li>
+<li><span class="tl-tag"><span lang="en">patience</span><span lang="fr">patience</span><span lang="zh-TW">耐心</span></span><div><h3><span lang="en">A bench more impatient than the client</span><span lang="fr">Un banc plus impatient que le client</span><span lang="zh-TW">一個比用戶端更沒耐心的測試台</span></h3><p><span lang="en">On a map change, the game server drops the old connection 300 ms after announcing the transition, betting that the new one is already up. The bet can lose when the destination map must first be loaded somewhere. The real client knows this and concludes nothing for two seconds; the bench concluded within a millisecond, and reported 136 desertions that never happened. It now waits the same two seconds. A bench more impatient than the client it simulates measures its own impatience.</span><span lang="fr">Lors d'un changement de carte, le serveur de jeu coupe l'ancienne connexion 300 ms après avoir annoncé la transition, en pariant que la nouvelle est déjà établie. Le pari peut se perdre quand la carte de destination doit d'abord être chargée quelque part. Le vrai client le sait et ne conclut rien pendant deux secondes ; le banc concluait en une milliseconde, et rapportait 136 désertions qui n'avaient jamais eu lieu. Il attend maintenant les mêmes deux secondes. Un banc plus impatient que le client qu'il simule mesure sa propre impatience.</span><span lang="zh-TW">換地圖時，遊戲伺服器在宣告切換 300 ms 後就丟掉舊的連線，賭新的連線已經建立好了。當目的地地圖必須先在某處載入時，這個賭注可能會輸。真正的用戶端知道這一點，兩秒內不做任何結論；測試台卻在一毫秒內就下了結論，回報了 136 次從未發生的脫隊。現在它也等同樣的兩秒。一個比它所模擬的用戶端更沒耐心的測試台，量到的是它自己的不耐煩。</span></p></div></li>
+<li><span class="tl-tag"><span lang="en">accounts</span><span lang="fr">comptes</span><span lang="zh-TW">帳號</span></span><div><h3><span lang="en">Two benches kicking each other</span><span lang="fr">Deux bancs qui s'éjectent l'un l'autre</span><span lang="zh-TW">兩個互踢的測試台</span></h3><p><span lang="en">The server ends the previous session whenever an account logs in again (chapter <a href="login-flow.html">2.2</a>). Two people running the bench with the same account prefix drive the <em>same</em> accounts, kick each other in a loop, and the population never holds, which looks exactly like a server that cannot cope. The launcher script now asks each person for a unique prefix.</span><span lang="fr">Le serveur met fin à la session précédente chaque fois qu'un compte se reconnecte (chapitre <a href="login-flow.html">2.2</a>). Deux personnes qui lancent le banc avec le même préfixe de comptes pilotent les <em>mêmes</em> comptes, s'éjectent l'une l'autre en boucle, et la population ne tient jamais, ce qui ressemble exactement à un serveur qui ne suit pas. Le script de lancement demande maintenant à chacun un préfixe unique.</span><span lang="zh-TW">只要一個帳號再次登入，伺服器就會結束先前的連線階段（第 <a href="login-flow.html">2.2</a> 章）。兩個人用同樣的帳號前綴執行測試台，驅動的是<em>同樣的</em>帳號，在迴圈中互踢，人口永遠撐不住，看起來就和一台應付不了的伺服器一模一樣。現在啟動指令碼會要求每個人提供一個獨一無二的前綴。</span></p></div></li>
+<li><span class="tl-tag"><span lang="en">database</span><span lang="fr">base</span><span lang="zh-TW">資料庫</span></span><div><h3><span lang="en">Setup written into the wrong database</span><span lang="fr">Une préparation écrite dans la mauvaise base</span><span lang="zh-TW">設定寫進了錯誤的資料庫</span></h3><p><span lang="en">Before connecting, the bench writes to the database named in its own configuration: account flags, the combat hull, the hubs. Against a remote server, that can be a different database. The writes then <em>succeed</em>, in the wrong place, and the bots arrive mortal and unarmed without a line saying so. The bench cannot check that the two databases are the same, so it says so out loud when the target is remote.</span><span lang="fr">Avant de se connecter, le banc écrit dans la base nommée par sa propre configuration : drapeaux des comptes, coque de combat, pôles. Contre un serveur distant, ce peut être une autre base. Les écritures <em>réussissent</em> alors, au mauvais endroit, et les bots arrivent mortels et désarmés sans qu'une ligne le dise. Le banc ne peut pas vérifier que les deux bases sont la même : il le dit à voix haute quand la cible est distante.</span><span lang="zh-TW">在連線之前，測試台會寫入它自己設定中所指定的資料庫：帳號旗標、戰鬥用船體、集結點。對著遠端伺服器時，那可能是另一個資料庫。寫入於是<em>成功了</em>，卻寫在錯誤的地方，機器人到達時會死、沒有武器，卻沒有任何一行說明。測試台無法檢查兩個資料庫是否相同，所以當目標是遠端時，它會大聲說出來。</span></p></div></li>
 </ol>
 <div lang="en"><div class="note rule"><p class="note-label">Rule</p><p>Before blaming the server, prove the bench is not the bottleneck: its priority, its threads, its fairness, its patience and its setup.</p></div></div>
 <div lang="fr"><div class="note rule"><p class="note-label">Règle</p><p>Avant d'accuser le serveur, prouver que le banc n'est pas le goulot : sa priorité, ses threads, son équité, sa patience et sa préparation.</p></div></div>
+<div lang="zh-TW"><div class="note rule"><p class="note-label">規則</p><p>在怪罪伺服器之前，先證明測試台不是瓶頸：它的優先權、它的執行緒、它的公平性、它的耐心，以及它的設定。</p></div></div>
 </section>
 
 <section class="sec" id="bench-instruments">
@@ -164,6 +189,21 @@
 <p>Avant que le compteur de pompe existe, les deux premières lignes se ressemblaient trait pour trait : des bots qui meurent de délais dépassés et des snapshots qui s'effondrent. Elles appellent des corrections opposées, et sans le compteur le choix était une devinette. On a deviné trois fois.</p>
 <div class="note measured"><p class="note-label">Mesuré</p><p>Le verdict d'un test de charge n'est pas dans la sortie du banc. Les chiffres qui comptent (travail du tick, construction des snapshots, octets sortants, pairs connectés, pauses du GC) sont mesurés sur le serveur et lus dans le moniteur (chapitre <a href="observability.html">10.1</a>). Le banc n'a qu'à prouver que la charge qu'il annonce est bien celle que le serveur a reçue.</p></div>
 </div>
+<div lang="zh-TW">
+<h2>給測試台本身的量測工具</h2>
+<p>測試台需要自己的量測工具，正是為了區分它自己的失敗與伺服器的失敗。負載工具每秒印出一行狀態，刻意保持簡短：有多少機器人在世界中、正在連線或失敗，以及原因；每秒收到的快照數；以及三個關於它自己、能釐清模稜兩可情況的數字：</p>
+<div class="table-wrap"><table>
+<thead><tr><th>讀數</th><th>意義</th><th>去看</th></tr></thead>
+<tbody>
+<tr><td>泵輪數很高，收到的快照接近零</td><td>測試台在讀取它的 socket，而它們是空的</td><td>伺服器，或網路</td></tr>
+<tr><td>泵輪數崩落</td><td>測試台自己的執行緒沒有被排程</td><td>同一行上的執行緒數量</td></tr>
+<tr><td>最差輪詢以毫秒計</td><td>某一個用戶端吃掉了泵的回合</td><td>它的索引，就印在旁邊</td></tr>
+<tr><td>頻率崩落時最差輪詢以微秒計</td><td>工作平均分散；機器已經飽和</td><td>排程與優先權</td></tr>
+<tr><td>程序執行緒數以千計</td><td>傳輸函式庫為每個連線管理器建立自己的執行緒：700 個機器人、每個兩條連線，就是 1,400 個管理器</td><td>測試台製造了它怪罪伺服器的那種飢餓</td></tr>
+<tr><td>每秒丟棄的輸入</td><td>機器人沒有遊戲連線的時間</td><td>換地圖時幾十個是正常的；閒置時持續不斷，代表連線階段從未重新開啟</td></tr>
+</tbody></table></div>
+<p>在泵計數器存在之前，前兩列看起來一模一樣：機器人因逾時而死，快照崩落。它們需要完全相反的修正，而沒有計數器時，選擇只能靠猜。猜了三次。</p>
+<div class="note measured"><p class="note-label">實測</p><p>負載測試的判定不在測試台的輸出中。重要的數字（tick 工作量、快照建構、出站位元組、已連線端點、GC 暫停）是在伺服器上量測、在監控器中讀取的（第 <a href="observability.html">10.1</a> 章）。測試台只需要證明，它所宣稱的負載就是伺服器收到的負載。</p></div></div>
 </section>
 
 <section class="sec" id="transitions">
@@ -187,6 +227,15 @@
 <li><span class="tl-tag win">4</span><div><h3>Une latence avec un plancher</h3><p>L'intervalle vise le budget de 200 ms pour toute la file, mais ne descend jamais sous 10 ms : au plus 100 déménagements par seconde, quoi qu'il arrive à la file. Sous ce plancher, le banc mesurerait l'ordonnanceur.</p></div></li>
 </ol>
 </div>
+<div lang="zh-TW">
+<h2>換地圖：是延遲，而不是頻率</h2>
+<p>把一個機器人移到另一張地圖，意味著關閉一條連線並開啟另一條：匯合傳輸函式庫的內部執行緒、繫結一個 socket、一次交握。把這件事做對花了三次測試台，而這段故事是關於節流的好教訓。</p>
+<ol class="timeline">
+<li><span class="tl-tag">1</span><div><h3>直接在泵上執行</h3><p>移動在同時還要讀取另外 140 個機器人的泵執行緒上執行。一波換地圖同時凍結了 140 個 socket，包括那些正在等待自己重新連線訊息的機器人：「連線中」計數器一路攀升，再也沒有下降。現在移動在一條專屬的執行緒上執行。</p></div></li>
+<li><span class="tl-tag">2</span><div><h3>固定的間隔</h3><p>以每秒 40 次移動的速度進行，每 25 ms 一次。佇列裡有三個時完美，有二十七個時致命：最後一個等了 675 ms，而伺服器在宣告移動 300 ms 後就會丟掉舊的連線。本來要保護伺服器的節流，讓佇列的一半被判了死刑。</p></div></li>
+<li><span class="tl-tag">3</span><div><h3>無限制縮短的間隔</h3><p>現在規則變成了一個延遲：佇列中的最後一個必須在 200 ms 內離開（伺服器的 300 ms，減去移動本身的成本）。有 67 個待處理時，間隔降到 3 ms，每秒約 300 次連線拆除與重建，每一次都要匯合並重建一條執行緒。伺服器印出一個 1,111.8 ms 的慢 tick，其中 1,108.8 ms 在準備快照，而 CPU 是 0.0 ms：它被餓死了執行緒，而不是忙碌。更糟的是，它形成了迴圈：風暴讓伺服器凍結，凍結讓佇列變長，佇列讓間隔變短，間隔又餵養了風暴。</p></div></li>
+<li><span class="tl-tag win">4</span><div><h3>有下限的延遲</h3><p>間隔以整個佇列 200 ms 的預算為目標，但絕不低於 10 ms：無論佇列發生什麼事，每秒最多 100 次移動。低於這個下限，測試台量到的就是排程器了。</p></div></li>
+</ol></div>
 <div class="code"><div class="code-head"><span class="file">Qwak.LoadTest/Program.cs · the transition gap</span></div><pre><code data-lang="cs">const int TransitionBudgetMs = 200;  // the server's 300 ms grace, minus the move itself
 const int TransitionFloorMs  = 10;   // never more than 100 moves per second
 
@@ -203,6 +252,9 @@ var gap = pending &gt; 1
 <p>Une observation de plus a rendu tout le problème plus petit : 700 bots qui changent de carte à la même seconde, ça n'existe pas. Ils partent tous de la même zone d'apparition et atteignent les bords par vagues, un artefact du banc, pas une charge que produit une vraie population. Les étaler, c'est mesurer le bon régime. La cadence peut toujours être montée exprès pour tester une vraie rafale (une flotte entière qui saute ensemble, ça existe), mais c'est une autre expérience.</p>
 <div class="note rule"><p class="note-label">Règle</p><p>Un limiteur qui protège une échéance doit s'exprimer en latence, et être borné par un plancher.</p><p>Un débit fixe rate l'échéance sous rafale ; une cible de latence sans borne transforme une rafale en tempête. Une correction qui s'auto-alimente est pire que le défaut qu'elle remplace, parce qu'elle n'a pas de point d'équilibre.</p></div>
 </div>
+<div lang="zh-TW">
+<p>還有一個觀察讓整個問題變小了：700 個機器人在同一秒換地圖，這種事不存在。它們全都從同一個出生區域出發，成波地抵達邊界，這是測試台的人為現象，而不是真實人口會產生的負載。把它們分散開來，才能量到正確的情況。仍然可以刻意調高頻率來測試真正的突發（整支艦隊一起跳躍確實存在），但那是另一個實驗。</p>
+<div class="note rule"><p class="note-label">規則</p><p>保護一個截止期限的節流，必須以延遲來表達，並以一個下限為界。</p><p>固定的頻率在突發時會錯過截止期限；沒有界限的延遲目標會把突發變成風暴。一個會自我餵養的修正比它所取代的缺陷更糟，因為它沒有平衡點。</p></div></div>
 </section>
 
 <section class="sec" id="remote">
@@ -214,6 +266,9 @@ var gap = pending &gt; 1
 <h2>Tester depuis ailleurs</h2>
 <p>Un banc local ne peut pas mesurer le réseau : chaque paquet passe par l'interface de bouclage, sans latence, sans perte et sans limite de débit montant. Le banc peut donc aussi tourner depuis une autre machine, contre l'adresse publique des serveurs, et le lanceur est un petit script fait pour être confié à un ami. Il est écrit de façon défensive, parce que son utilisateur n'aura pas le code : aucun caractère accentué dans le fichier (un script réenregistré dans le mauvais encodage casse à la première ligne accentuée, avec un message qui ne dit pas pourquoi), des affectations entre guillemets (sinon une espace en fin de ligne ferait partie de l'adresse, et une adresse avec une espace invisible au bout ne se résout pas), un préfixe de comptes unique, et « commencer petit, puis monter par paliers ». La cible se donne sur la ligne de commande plutôt que dans le fichier de configuration partagé, parce qu'un essai ponctuel contre une autre machine doit mourir avec sa fenêtre au lieu de traîner dans un fichier que trois autres processus lisent.</p>
 </div>
+<div lang="zh-TW">
+<h2>從別的地方進行測試</h2>
+<p>本機的測試台無法量測網路：每個封包都經過迴路介面，沒有延遲、沒有遺失、沒有上傳限制。所以測試台也可以從另一台機器、對著伺服器的公開位址執行，而啟動器是一個小小的指令碼，用來交給朋友。它以防禦性的方式撰寫，因為它的使用者不會有程式碼：檔案中沒有帶重音的字元（一個被以錯誤編碼重新儲存的指令碼，會在第一個帶重音的那一行壞掉，而錯誤訊息不會說明原因）、指派加上引號（否則尾隨的空格會成為位址的一部分，而一個結尾帶著看不見之空格的位址無法解析）、獨一無二的帳號前綴，以及「從小規模開始，再一步步往上加」。目標是在命令列上給定的，而不是寫在共用的設定檔中，因為一次對另一台機器的一次性測試，應該隨著它的視窗一起消失，而不是逗留在一個另外三個程序都會讀取的檔案裡。</p></div>
 </section>
 
 <section class="sec" id="takeaways">
@@ -236,6 +291,15 @@ var gap = pending &gt; 1
 <li>Être exactement aussi patient que le vrai client, et utiliser des préfixes de comptes uniques par banc.</li>
 <li>Exprimer les limiteurs en latences avec un plancher ; une correction qui s'auto-alimente n'a pas d'équilibre.</li>
 </ul></div>
+<div lang="zh-TW"><h2>重點整理</h2><ul>
+<li>加載以每位玩家計的成本：機器人必須是透過真實協定執行完整連線階段的真實用戶端。</li>
+<li>透過真正的進入點建立帳號；只直接寫入純資料，而且絕不從遊戲內部授予權限。</li>
+<li>讓機器人保持輕量：收下快照，從不解碼，否則測試台就會變成負載。</li>
+<li>量測平台期：爬升式連線、讓人口存活、封閉或集中它，並讓每張地圖的玩家數成為一項設定。</li>
+<li>降低測試台的優先權、共用少數幾條泵執行緒、限制每次輪詢的工作量，並注意測試台自己的執行緒數。</li>
+<li>和真實的用戶端完全一樣有耐心，並為每個測試台使用獨一無二的帳號前綴。</li>
+<li>以帶有下限的延遲來表達節流；一個會自我餵養的修正沒有平衡點。</li>
+</ul></div>
 </div>
 </section>
 
@@ -248,6 +312,7 @@ var gap = pending &gt; 1
 <footer class="site-footer" id="mq-footer"></footer>
 <script src="assets/js/site-data.js" defer></script>
 <script src="assets/js/glossary-data.js" defer></script>
+<script src="assets/js/ui-zh.js" defer></script>
 <script src="assets/js/app.js" defer></script>
 <script src="assets/js/widgets.js" defer></script>
 </body>

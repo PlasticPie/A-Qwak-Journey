@@ -7,12 +7,12 @@
 <meta name="description" content="Why a separate front door, what it owns, how game servers prove who they are, and why it carries the social layer.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Chakra+Petch:wght@500;600&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Chakra+Petch:wght@500;600&family=JetBrains+Mono:wght@400;500;600&family=Noto+Sans+TC:wght@400;700&display=swap">
 <link rel="stylesheet" href="assets/css/site.css">
-<script>(function(){var r=document.documentElement,l,t;try{l=localStorage.getItem("mq-lang");t=localStorage.getItem("mq-theme");}catch(e){}if(l!=="en"&&l!=="fr"){l=(navigator.language||"").toLowerCase().indexOf("fr")===0?"fr":"en";}r.setAttribute("data-lang",l);r.setAttribute("lang",l);if(t==="light"||t==="dark")r.setAttribute("data-theme",t);})();</script>
+<script>(function(){var r=document.documentElement,l,t,n;try{l=localStorage.getItem("mq-lang");t=localStorage.getItem("mq-theme");}catch(e){}if(l!=="en"&&l!=="fr"&&l!=="zh"){n=(navigator.language||"").toLowerCase();l=n.indexOf("fr")===0?"fr":n.indexOf("zh")===0?"zh":"en";}r.setAttribute("data-lang",l);r.setAttribute("lang",l==="zh"?"zh-TW":l);if(t==="light"||t==="dark")r.setAttribute("data-theme",t);})();</script>
 </head>
 <body data-page="gateway">
-<a class="skip-link" href="#main"><span lang="en">Skip to content</span><span lang="fr">Aller au contenu</span></a>
+<a class="skip-link" href="#main"><span lang="en">Skip to content</span><span lang="fr">Aller au contenu</span><span lang="zh-TW">跳到主要內容</span></a>
 <header class="site-header" id="mq-header"></header>
 <div class="layout">
 <aside class="sidebar" id="mq-sidebar"></aside>
@@ -20,8 +20,8 @@
 <article>
 <header class="chapter-head">
   <div class="eyebrow" data-auto></div>
-  <h1><span lang="en">The gateway</span><span lang="fr">La gateway</span></h1>
-  <p class="dek"><span lang="en">Why a separate front door, what it owns, how game servers prove who they are, and why it carries the social layer.</span><span lang="fr">Pourquoi une porte d'entrée séparée, ce qu'elle possède, comment les serveurs de jeu prouvent qui ils sont, et pourquoi elle porte le social.</span></p>
+  <h1><span lang="en">The gateway</span><span lang="fr">La gateway</span><span lang="zh-TW">閘道</span></h1>
+  <p class="dek"><span lang="en">Why a separate front door, what it owns, how game servers prove who they are, and why it carries the social layer.</span><span lang="fr">Pourquoi une porte d'entrée séparée, ce qu'elle possède, comment les serveurs de jeu prouvent qui ils sont, et pourquoi elle porte le social.</span><span lang="zh-TW">為什麼要獨立的大門、它負責什麼、遊戲伺服器如何證明身分，以及為什麼社交功能由它承擔。</span></p>
   <div class="meta-row" data-auto></div>
 </header>
 
@@ -38,12 +38,18 @@
 <p>La première version de tout jeu en ligne a un serveur qui fait tout. Dès que le monde est réparti sur plusieurs serveurs de jeu, une question apparaît à laquelle aucun d'eux ne peut répondre seul : <em>à quel serveur ce joueur doit-il parler ?</em> Y répondre demande de connaître chaque serveur, chaque carte qu'il héberge et chaque joueur en ligne. Cette connaissance doit vivre à un seul endroit, et dans MoonQwak cet endroit est la <a class="term" data-term="gateway">gateway</a>.</p>
 <p>La gateway est volontairement ennuyeuse. Elle ne simule rien et ne porte aucune physique. Elle possède les comptes et les personnages (en base), les sessions et la présence (en mémoire), les fonctions sociales qui traversent les cartes, la décision de quel serveur héberge quelle carte, et le nombre de serveurs dont chaque monde a besoin. Comme elle ne simule pas, elle peut rester debout pendant que les serveurs de jeu démarrent, plantent et se retirent autour d'elle.</p>
 </div>
+<div lang="zh-TW">
+<h2>為什麼需要一扇大門</h2>
+<p>任何線上遊戲的第一版，都是一台伺服器包辦一切。一旦世界被拆到好幾台遊戲伺服器上，就會出現一個沒有任何一台能獨自回答的問題：<em>這位玩家應該和哪台伺服器溝通？</em>要回答它，就得知道每一台伺服器、它們託管的每一張地圖，以及每一位在線的玩家。這份知識應該放在同一個地方，而在 MoonQwak 中，那個地方就是<a class="term" data-term="gateway">閘道</a>。</p>
+<p>閘道刻意設計得很無聊。它不模擬任何東西，也沒有物理。它擁有帳號與角色（在資料庫中）、連線階段與上線狀態（在記憶體中）、跨越地圖的社交功能、哪台伺服器託管哪張地圖的決定，以及每個世界需要幾台伺服器。正因為它不做模擬，所以能在周圍的遊戲伺服器啟動、當機、退役時持續運作。</p></div>
 <div lang="en">
 <div class="note tradeoff"><p class="note-label">Trade-off</p><p>A single gateway is a single point of failure, and it holds live state that is lost when it restarts: every session, every group, the map-to-server table. Game servers reconnect and re-authenticate on their own, but players must log in again. The right fix is a resynchronization (servers re-announcing the sessions they carry) rather than persisting groups and sessions; it has not been built or tested yet, and it is on the <a href="open-problems.html">open problems</a> list.</p></div>
 </div>
 <div lang="fr">
 <div class="note tradeoff"><p class="note-label">Compromis</p><p>Une gateway unique est un point de défaillance unique, et elle tient un état vivant perdu à son redémarrage : chaque session, chaque groupe, la table cartes-serveurs. Les serveurs de jeu se reconnectent et se réauthentifient seuls, mais les joueurs doivent se reconnecter. La bonne correction est une resynchronisation (les serveurs réannonçant les sessions qu'ils portent) plutôt que de persister groupes et sessions ; elle n'est ni écrite ni testée, et figure dans les <a href="open-problems.html">problèmes ouverts</a>.</p></div>
 </div>
+<div lang="zh-TW">
+<div class="note tradeoff"><p class="note-label">取捨</p><p>單一閘道就是單一故障點，而且它持有重新啟動時會遺失的即時狀態：每個連線階段、每個隊伍、地圖對伺服器的對照表。遊戲伺服器會自行重新連線並重新認證，但玩家必須重新登入。正確的修正方式是重新同步（由伺服器重新宣告它們所承載的連線階段），而不是把隊伍與連線階段持久化；這還沒有實作也沒有測試，列在<a href="open-problems.html">待解問題</a>清單上。</p></div></div>
 </section>
 
 <section class="sec" id="two-ports">
@@ -57,6 +63,10 @@
 <p>La gateway ouvre deux écoutes sur deux ports : un pour les joueurs, un pour les serveurs de jeu. Chaque écoute n'enregistre que les gestionnaires que son public a le droit d'appeler. Un joueur ne peut pas envoyer un résultat d'assignation de carte, parce que le port client ne connaît pas ce paquet ; un serveur de jeu ne peut pas envoyer un login. Il n'y a pas de test <code>if (l'expéditeur est un serveur)</code> à oublier, parce que la question ne se pose jamais.</p>
 <p>Sur le port client, l'authentification découle du type du paquet. Les paquets qui exigent une session dérivent d'<code>AuthenticatedPacket</code>, et l'utilitaire d'enregistrement vérifie automatiquement le jeton pour exactement ces types, avant le gestionnaire :</p>
 </div>
+<div lang="zh-TW">
+<h2>兩扇門，兩群對象</h2>
+<p>閘道在兩個埠上開啟兩個監聽器：一個給玩家，一個給遊戲伺服器。每個監聽器只註冊它的對象可以呼叫的處理常式。玩家無法送出地圖指派結果，因為用戶端的埠根本不認得那個封包；遊戲伺服器也無法送出登入請求。沒有任何 <code>if (sender is a server)</code> 的檢查會被遺忘，因為這個問題根本不會出現。</p>
+<p>在用戶端的埠上，認證由封包類型推導而來。需要連線階段的封包衍生自 <code>AuthenticatedPacket</code>，而註冊輔助函式會在處理常式執行之前，自動為恰好這些類型檢查權杖：</p></div>
 <div class="code"><div class="code-head"><span class="file">Gateway/ClientGateway.cs</span></div><pre><code data-lang="cs">private void Register&lt;T&gt;(ushort type, Func&lt;int, T, Server, bool&gt; handler) where T : BasePacket, new()
 {
     // Decided once, from the type: a new authenticated packet is protected the day it is added.
@@ -80,6 +90,8 @@
 <div lang="fr">
 <p>Remarquez le second argument de <code>Validate</code> : un jeton n'est accepté que depuis la connexion qui s'est authentifiée. Un jeton copié sur une autre connexion n'y sert à rien.</p>
 </div>
+<div lang="zh-TW">
+<p>注意 <code>Validate</code> 的第二個參數：權杖只有從登入的那條連線送來時才會被接受。被複製到另一條連線的權杖，在那裡毫無用處。</p></div>
 </section>
 
 <section class="sec" id="server-trust">
@@ -93,6 +105,10 @@
 <p>Les serveurs de jeu se connectent à la gateway comme n'importe quel pair, sur le même transport chiffré. Ensuite, ils doivent prouver qu'ils font partie du parc, parce qu'un serveur enregistré reçoit beaucoup de confiance : on lui dit quelles cartes héberger et on lui envoie des joueurs.</p>
 <p>Chaque machine autorisée à faire tourner des serveurs de jeu a une paire de clés RSA. La clé privée reste sur la machine ; la clé publique est un fichier sur la gateway, nommé d'après la machine. Au démarrage, un serveur annonce son identité, son adresse, son port et un horodatage, et signe cette annonce avec la clé privée de la machine. La gateway retrouve la clé publique par le nom de machine et vérifie la signature. Une clé fausse ou absente, et le serveur est refusé.</p>
 </div>
+<div lang="zh-TW">
+<h2>遊戲伺服器如何證明自己的身分</h2>
+<p>遊戲伺服器像其他端點一樣，透過同樣的加密傳輸連上閘道。接著它們必須證明自己是叢集的一員，因為已註冊的伺服器會被賦予很多信任：它會被告知要託管哪些地圖，並接收玩家。</p>
+<p>每台可以執行遊戲伺服器的機器都有一組 RSA 金鑰對。私密金鑰留在機器上；公開金鑰則是閘道上一個以機器名稱命名的檔案。伺服器啟動時，會宣告自己的身分、位址、埠與時間戳記，並用機器的私密金鑰為這份宣告簽章。閘道依機器名稱查出公開金鑰並驗證簽章。金鑰錯誤或缺少，伺服器就會被拒絕。</p></div>
 <div class="code"><div class="code-head"><span class="file">Gateway/GameServerGateway.cs · the GameServerAuth handler, simplified</span></div><pre><code data-lang="cs">// Servers are started on demand as "MACHINE#index": the key belongs to the MACHINE.
 var hash = auth.ServerId.IndexOf('#');
 var machine = hash > 0 ? auth.ServerId.Substring(0, hash) : auth.ServerId;
@@ -116,6 +132,9 @@ RetryPendingAssigns();  // maps that were waiting for a host get a second chance
 <p>La clé appartient à la machine, pas au processus serveur, et c'est la conception du parc qui l'a imposé. Les serveurs de jeu sont désormais lancés à la demande par un agent de machine (chapitre <a href="node-agents.html">7.3</a>) : l'identité d'un serveur n'existe pas avant son lancement, il n'aurait jamais été possible de distribuer une clé par serveur. L'invariant qui comptait survit : une ligne dans une table ne suffit pas pour entrer dans le parc. Seule la possession de la clé privée de la machine le permet.</p>
 <p>La dernière ligne du gestionnaire compte pour la montée en charge : quand un nouveau serveur s'annonce, la gateway rejoue immédiatement chaque carte qui attendait un hôte. Le chapitre <a href="map-hosting.html">7.1</a> explique cette salle d'attente.</p>
 </div>
+<div lang="zh-TW">
+<p>金鑰屬於機器，而不屬於伺服器程序，這是叢集設計所逼出來的。遊戲伺服器現在是由節點代理程式按需啟動的（第 <a href="node-agents.html">7.3</a> 章），所以伺服器的身分在它啟動之前並不存在：本來就不可能為每台伺服器發一把金鑰。真正重要的不變條件仍然保留：資料庫表中的一列資料不足以加入叢集。只有持有機器的私密金鑰才行。</p>
+<p>處理常式的最後一行對擴展很重要：當一台新伺服器宣告自己時，閘道會立刻重新處理每一張正在等待主機的地圖。第 <a href="map-hosting.html">7.1</a> 章會解釋這個候位區。</p></div>
 </section>
 
 <section class="sec" id="social">
@@ -141,12 +160,24 @@ RetryPendingAssigns();  // maps that were waiting for a host get a second chance
 <li><strong>Reconstruire, jamais transférer.</strong> Un paquet relayé est parsé sur le serveur de jeu et un nouveau est construit pour le client. Un paquet parsé est en mode lecture, et lui demander de se resérialiser lève une exception (chapitre <a href="packet-format.html#build-parse">1.2</a>).</li>
 </ul>
 </div>
+<div lang="zh-TW">
+<h2>為什麼社交層放在這裡</h2>
+<p>一個公會的成員分散在許多地圖上，由同樣多的程序服務。一則私訊從一台伺服器上的玩家送到另一台伺服器上的玩家。一個隊伍必須知道成員何時下線，而不是只是換了地圖。這些都不能由遊戲伺服器決定，因為它只看得到自己的地圖。所以閘道是一切社交事務的權威：上線狀態、聊天路由、隊伍、好友、公會。</p>
+<p>遊戲伺服器變成了中繼站。玩家的公會指令到達他所在的遊戲伺服器，由它轉送給閘道；閘道做出決定，答覆再經由每位相關成員各自所在的伺服器，傳回給每一位成員。遊戲伺服器只對少數需要世界資訊的動作保有權威，例如在創立某樣東西之前，檢查玩家是否站在正確的位置。</p>
+<p>有三個習慣讓這一層保持簡單：</p>
+<ul>
+<li><strong>訊息路徑上只用索引，從不掃描。</strong>上線狀態在連線階段建立時，就依角色 ID 與名稱建立索引。路由一則密語是一次字典查詢，而不是在所有在線者之間跑迴圈。</li>
+<li><strong>完整狀態，具冪等性。</strong>公會狀態封包永遠攜帶完整的名冊，而「公會 ID 0」代表「沒有公會」。缺席是一種狀態，而不是沉默，所以用戶端可以從任何一則訊息重設自己的副本。</li>
+<li><strong>重新建立，絕不轉送。</strong>被中繼的封包在遊戲伺服器上解析，再為用戶端建立一個新的。解析過的封包處於讀取模式，要求它再序列化一次會拋出例外（第 <a href="packet-format.html#build-parse">1.2</a> 章）。</li>
+</ul></div>
 <div lang="en">
 <div class="note rule"><p class="note-label">Rule</p><p>The authority for a feature is the process that can see all of it.</p><p>A guild spans servers, so only the gateway can decide about it. A docking bay is in one map, so only that map's server can. When the data a decision needs is spread over several processes, move the decision, not the data.</p></div>
 </div>
 <div lang="fr">
 <div class="note rule"><p class="note-label">Règle</p><p>L'autorité sur une fonctionnalité est le processus qui peut la voir en entier.</p><p>Une guilde s'étend sur plusieurs serveurs, donc seule la gateway peut en décider. Une baie d'amarrage est dans une carte, donc seul le serveur de cette carte le peut. Quand les données dont une décision a besoin sont réparties sur plusieurs processus, déplacer la décision, pas les données.</p></div>
 </div>
+<div lang="zh-TW">
+<div class="note rule"><p class="note-label">規則</p><p>一項功能的權威，是能看見它全貌的那個程序。</p><p>公會跨越多台伺服器，所以只有閘道能為它做決定。停靠艙位於單一地圖中，所以只有那張地圖的伺服器能做決定。當一項決定所需的資料分散在好幾個程序中時，移動的是決定，而不是資料。</p></div></div>
 </section>
 
 <section class="sec" id="memory">
@@ -176,6 +207,18 @@ RetryPendingAssigns();  // maps that were waiting for a host get a second chance
 </tbody></table></div>
 <p>Tout est reconstruit de zéro au démarrage. C'est un choix : une session est un fait sur une connexion vivante, et une connexion ne survit pas à un redémarrage de toute façon. La persister reviendrait à garder deux copies d'une chose dont la seule vraie copie est la socket.</p>
 </div>
+<div lang="zh-TW">
+<h2>只存在閘道記憶體中的東西</h2>
+<div class="table-wrap"><table>
+<thead><tr><th>資料表</th><th>索引鍵</th><th>用途</th></tr></thead>
+<tbody>
+<tr><td>登入連線階段</td><td>連線 → 權杖，權杖 → 連線階段</td><td>誰已登入、在哪條連線上</td></tr>
+<tr><td>遊戲連線階段</td><td>遊戲權杖 → 角色、伺服器</td><td>哪個角色在哪裡玩；聊天與隊伍的路由依據</td></tr>
+<tr><td>上線狀態</td><td>角色 ID、角色名稱</td><td>誰在線上；以查詢找到，從不掃描</td></tr>
+<tr><td>遊戲伺服器</td><td>伺服器連線 → 身分、位址、託管的地圖、玩家</td><td>每張地圖在哪裡，以及每台伺服器的負載</td></tr>
+<tr><td>待處理的地圖指派</td><td>地圖 ID → 等待中的呼叫者</td><td>每張地圖同時恰好只有一個指派在進行中（第 <a href="map-hosting.html">7.1</a> 章）</td></tr>
+</tbody></table></div>
+<p>這些全部在啟動時從頭重建。這是有意識的選擇：連線階段是一條執行中連線的事實，而連線反正不會在重新啟動後存活。把它持久化，等於為一個唯一真實副本就是 socket 本身的東西，保留兩份副本。</p></div>
 </section>
 
 <section class="sec" id="logging">
@@ -189,6 +232,10 @@ RetryPendingAssigns();  // maps that were waiting for a host get a second chance
 <div class="note pitfall"><p class="note-label">Piège rencontré</p><p>La gateway écrivait une quinzaine de lignes de journal pour chaque joueur qui se connectait, en synchrone, depuis son thread réseau : le même thread qui répond aux vérifications de session des serveurs de jeu et relaie les transitions de carte. Avec cinq cents robots qui arrivaient, ça faisait sept mille appels noyau sur le chemin critique de l'authentification, chacun tenant un verrou global au processus. Une console qui défile, un gros historique, ou quelqu'un qui sélectionne du texte à la souris dans la fenêtre (ce qui suspend les écritures jusqu'au clic suivant sous Windows), et l'authentification s'arrêtait pour tout le monde.</p></div>
 <p>La correction, partagée par tous les processus serveur : la sortie standard est remplacée dès le début de <code>Main</code> par un writer qui met la ligne en file et rend la main. Un thread de faible priorité écrit sur la vraie console. La file est bornée, garde l'ordre, compte ce qu'elle a dû jeter et le dit, et se vide à l'arrêt du processus pour ne pas perdre les dernières lignes avant un plantage. Les préfixes bavards par joueur peuvent être rendus muets par configuration. Le chapitre <a href="observability.html">10.1</a> donne les détails.</p>
 </div>
+<div lang="zh-TW">
+<h2>緩慢的主控台就是一次停機</h2>
+<div class="note pitfall"><p class="note-label">我踩過的坑</p><p>閘道會為每一位連線的玩家寫大約十五行日誌，而且是從它的網路執行緒同步寫入：正是這條執行緒負責回應遊戲伺服器的連線階段檢查，並中繼地圖切換。五百個機器人同時抵達時，就是在認證的關鍵路徑上進行七千次核心呼叫，每一次都持有一個程序層級的鎖。只要主控台在捲動、捲動緩衝區很大，或有人在主控台視窗中用滑鼠選取文字（在 Windows 上這會暫停寫入，直到下一次點擊），所有人的認證就都停住了。</p></div>
+<p>所有伺服器程序共用的修正：在 <code>Main</code> 一開始，就把標準輸出換成一個把那一行排入佇列後立即返回的寫入器。一條低優先權的執行緒負責寫到真正的主控台。佇列有上限、保持順序、計算它不得不丟棄的數量並說出來，而且在程序結束時會被清空，所以當機前的最後幾行不會遺失。吵雜的每位玩家前綴可以透過設定關閉。第 <a href="observability.html">10.1</a> 章有詳細說明。</p></div>
 </section>
 
 <section class="sec" id="takeaways">
@@ -207,6 +254,13 @@ RetryPendingAssigns();  // maps that were waiting for a host get a second chance
 <li>Les serveurs entrent dans le parc en signant leur annonce avec la clé privée de leur machine.</li>
 <li>L'autorité sur une fonctionnalité est le processus qui la voit en entier ; pour le social, c'est la gateway.</li>
 </ul></div>
+<div lang="zh-TW"><h2>重點整理</h2><ul>
+<li>閘道的存在，是為了回答「這位玩家該去哪裡？」，這是任何一台遊戲伺服器都無法單獨回答的。</li>
+<li>為玩家與伺服器分別設置監聽器，讓一整類的權限檢查變得不必要。</li>
+<li>由封包類型推導認證，並把連線階段權杖綁定在登入的那條連線上。</li>
+<li>伺服器以所在機器的私密金鑰為宣告簽章，藉此加入叢集。</li>
+<li>一項功能的權威，是能看見它全貌的那個程序；對社交功能來說，那就是閘道。</li>
+</ul></div>
 </div>
 </section>
 
@@ -219,6 +273,7 @@ RetryPendingAssigns();  // maps that were waiting for a host get a second chance
 <footer class="site-footer" id="mq-footer"></footer>
 <script src="assets/js/site-data.js" defer></script>
 <script src="assets/js/glossary-data.js" defer></script>
+<script src="assets/js/ui-zh.js" defer></script>
 <script src="assets/js/app.js" defer></script>
 <script src="assets/js/widgets.js" defer></script>
 </body>

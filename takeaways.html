@@ -7,23 +7,24 @@
 <meta name="description" content="The key takeaways of every chapter of the MoonQwak field notes, on one page, in reading order.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Chakra+Petch:wght@500;600&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Chakra+Petch:wght@500;600&family=JetBrains+Mono:wght@400;500;600&family=Noto+Sans+TC:wght@400;700&display=swap">
 <link rel="stylesheet" href="assets/css/site.css">
-<script>(function(){var r=document.documentElement,l,t;try{l=localStorage.getItem("mq-lang");t=localStorage.getItem("mq-theme");}catch(e){}if(l!=="en"&&l!=="fr"){l=(navigator.language||"").toLowerCase().indexOf("fr")===0?"fr":"en";}r.setAttribute("data-lang",l);r.setAttribute("lang",l);if(t==="light"||t==="dark")r.setAttribute("data-theme",t);})();</script>
+<script>(function(){var r=document.documentElement,l,t,n;try{l=localStorage.getItem("mq-lang");t=localStorage.getItem("mq-theme");}catch(e){}if(l!=="en"&&l!=="fr"&&l!=="zh"){n=(navigator.language||"").toLowerCase();l=n.indexOf("fr")===0?"fr":n.indexOf("zh")===0?"zh":"en";}r.setAttribute("data-lang",l);r.setAttribute("lang",l==="zh"?"zh-TW":l);if(t==="light"||t==="dark")r.setAttribute("data-theme",t);})();</script>
 </head>
 <body data-page="takeaways">
-<a class="skip-link" href="#main"><span lang="en">Skip to content</span><span lang="fr">Aller au contenu</span></a>
+<a class="skip-link" href="#main"><span lang="en">Skip to content</span><span lang="fr">Aller au contenu</span><span lang="zh-TW">跳到主要內容</span></a>
 <header class="site-header" id="mq-header"></header>
 <div class="layout no-rail">
 <aside class="sidebar" id="mq-sidebar"></aside>
 <main class="content" id="main">
 <header class="chapter-head">
-  <h1><span lang="en">Key takeaways</span><span lang="fr">À retenir</span></h1>
-  <p class="dek"><span lang="en">The closing summary of every chapter, gathered on one page in reading order. The whole site in one scroll.</span><span lang="fr">Le résumé final de chaque chapitre, réuni sur une page dans l'ordre de lecture. Tout le site en un seul défilement.</span></p>
+  <h1><span lang="en">Key takeaways</span><span lang="fr">À retenir</span><span lang="zh-TW">重點整理</span></h1>
+  <p class="dek"><span lang="en">The closing summary of every chapter, gathered on one page in reading order. The whole site in one scroll.</span><span lang="fr">Le résumé final de chaque chapitre, réuni sur une page dans l'ordre de lecture. Tout le site en un seul défilement.</span><span lang="zh-TW">每一章結尾的摘要，依閱讀順序集中在一頁。整個網站，一次捲完。</span></p>
 </header>
 <div class="prose" style="margin-bottom:1.5rem">
 <div lang="en"><p>Read it as a revision sheet after the chapters, or as a map before them: each block links to the chapter it summarizes. Where the Rules of thumb page keeps the one-sentence rules, this page keeps the practical checklist of each chapter.</p></div>
 <div lang="fr"><p>À lire comme une fiche de révision après les chapitres, ou comme une carte avant : chaque bloc renvoie au chapitre qu'il résume. Là où la page des règles d'or garde les règles en une phrase, celle-ci garde la liste pratique de chaque chapitre.</p></div>
+<div lang="zh-TW"><p>讀完各章後可以當成複習講義，讀之前則可以當成地圖：每一區都連結到它所摘要的章節。「經驗法則」頁收錄的是一句話的規則，這一頁收錄的則是每章實用的檢查清單。</p></div>
 </div>
 <div id="mq-takeaways"></div>
 </main>
@@ -31,6 +32,7 @@
 <footer class="site-footer" id="mq-footer"></footer>
 <script src="assets/js/site-data.js" defer></script>
 <script src="assets/js/glossary-data.js" defer></script>
+<script src="assets/js/ui-zh.js" defer></script>
 <script src="assets/js/app.js" defer></script>
 <script src="assets/js/widgets.js" defer></script>
 </body>

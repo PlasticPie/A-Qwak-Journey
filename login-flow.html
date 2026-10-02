@@ -7,12 +7,12 @@
 <meta name="description" content="Password hashing, session tokens, game tokens, and an arrival phase that finally defines what 'arrived' means.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Chakra+Petch:wght@500;600&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Chakra+Petch:wght@500;600&family=JetBrains+Mono:wght@400;500;600&family=Noto+Sans+TC:wght@400;700&display=swap">
 <link rel="stylesheet" href="assets/css/site.css">
-<script>(function(){var r=document.documentElement,l,t;try{l=localStorage.getItem("mq-lang");t=localStorage.getItem("mq-theme");}catch(e){}if(l!=="en"&&l!=="fr"){l=(navigator.language||"").toLowerCase().indexOf("fr")===0?"fr":"en";}r.setAttribute("data-lang",l);r.setAttribute("lang",l);if(t==="light"||t==="dark")r.setAttribute("data-theme",t);})();</script>
+<script>(function(){var r=document.documentElement,l,t,n;try{l=localStorage.getItem("mq-lang");t=localStorage.getItem("mq-theme");}catch(e){}if(l!=="en"&&l!=="fr"&&l!=="zh"){n=(navigator.language||"").toLowerCase();l=n.indexOf("fr")===0?"fr":n.indexOf("zh")===0?"zh":"en";}r.setAttribute("data-lang",l);r.setAttribute("lang",l==="zh"?"zh-TW":l);if(t==="light"||t==="dark")r.setAttribute("data-theme",t);})();</script>
 </head>
 <body data-page="login-flow">
-<a class="skip-link" href="#main"><span lang="en">Skip to content</span><span lang="fr">Aller au contenu</span></a>
+<a class="skip-link" href="#main"><span lang="en">Skip to content</span><span lang="fr">Aller au contenu</span><span lang="zh-TW">跳到主要內容</span></a>
 <header class="site-header" id="mq-header"></header>
 <div class="layout">
 <aside class="sidebar" id="mq-sidebar"></aside>
@@ -20,8 +20,8 @@
 <article>
 <header class="chapter-head">
   <div class="eyebrow" data-auto></div>
-  <h1><span lang="en">From login to first snapshot</span><span lang="fr">Du login au premier snapshot</span></h1>
-  <p class="dek"><span lang="en">Password hashing, session tokens, game tokens, and an arrival phase that finally defines what "arrived" means.</span><span lang="fr">Hachage des mots de passe, jetons de session, jetons de jeu, et une phase d'arrivée qui définit enfin ce que veut dire « arrivé ».</span></p>
+  <h1><span lang="en">From login to first snapshot</span><span lang="fr">Du login au premier snapshot</span><span lang="zh-TW">從登入到第一份快照</span></h1>
+  <p class="dek"><span lang="en">Password hashing, session tokens, game tokens, and an arrival phase that finally defines what "arrived" means.</span><span lang="fr">Hachage des mots de passe, jetons de session, jetons de jeu, et une phase d'arrivée qui définit enfin ce que veut dire « arrivé ».</span><span lang="zh-TW">密碼雜湊、連線階段權杖、遊戲權杖，以及終於定義清楚「抵達」意義的抵達階段。</span></p>
   <div class="meta-row" data-auto></div>
 </header>
 
@@ -36,6 +36,9 @@
 <h2>Les mots de passe sont stockés en hachages lents</h2>
 <p>Une base de jeu fuira un jour : elle ne doit donc jamais contenir de mots de passe. Elle contient un hachage salé et volontairement lent de chacun : PBKDF2 avec SHA-256, 100 000 itérations, un sel aléatoire de 16 octets par compte, stocké en <code>sel:hachage</code> en base64. Vérifier un mot de passe, c'est recalculer le hachage avec le sel stocké et comparer en temps constant, pour que la comparaison elle-même ne révèle pas combien d'octets de tête correspondaient.</p>
 </div>
+<div lang="zh-TW">
+<h2>密碼以緩慢的雜湊儲存</h2>
+<p>遊戲資料庫總有一天會外洩，所以它絕不能包含密碼。它包含的是每個密碼加鹽、刻意放慢的雜湊：PBKDF2 搭配 SHA-256、100,000 次迭代、每個帳號一個隨機的 16 位元組鹽值，以 base64 編碼成 <code>salt:hash</code> 儲存。驗證密碼，就是用儲存的鹽值重新計算雜湊，並以常數時間比對，讓比對本身不會洩漏開頭有幾個位元組相符。</p></div>
 <div class="code"><div class="code-head"><span class="file">Qwak.Data/Services/PasswordHasher.cs</span></div><pre><code data-lang="cs">public static string Hash(string password)
 {
     var salt = new byte[16];
@@ -58,6 +61,8 @@ public static bool Verify(string password, string stored)
 <div lang="fr">
 <p>La lenteur est tout l'intérêt du hachage, et un coût pour le serveur : chaque vérification brûle plusieurs millisecondes de CPU. C'est pour ça que la version du protocole est vérifiée avant (chapitre <a href="protocol-testing.html#version-gate">1.6</a>) : un vieux client qui réessaie en boucle ne doit pas pouvoir faire calculer cent mille itérations à la gateway à chaque tentative.</p>
 </div>
+<div lang="zh-TW">
+<p>緩慢是這種雜湊的重點，也是伺服器的成本：每次驗證都會燒掉好幾毫秒的 CPU。這就是為什麼協定版本要在它之前檢查（第 <a href="protocol-testing.html#version-gate">1.6</a> 章）：一個不斷重試的過時用戶端，絕不能讓閘道每次嘗試都計算十萬次迭代。</p></div>
 </section>
 
 <section class="sec" id="tokens">
@@ -73,6 +78,11 @@ public static bool Verify(string password, string stored)
 <p>Choisir un personnage crée un second jeton, le <strong>jeton de jeu</strong>, lié à ce personnage. La gateway l'envoie au client avec l'adresse du serveur de jeu qui héberge la carte du personnage. Le client ouvre une nouvelle connexion vers ce serveur et présente le jeton de jeu. Le serveur de jeu ne peut pas le vérifier (il ne l'a jamais vu) : il le demande à la gateway, qui répond avec l'identifiant du personnage et note que cette session vit désormais sur ce serveur.</p>
 <p>Les deux jetons séparent deux questions : « cette personne est-elle connectée ? » trouve sa réponse à la gateway, sur sa propre connexion, et « cette connexion peut-elle jouer ce personnage ici ? » trouve la sienne pour le serveur de jeu, qui ne voit jamais un mot de passe. Le jeton de jeu reste valable jusqu'à ce que le serveur de jeu annonce la fermeture de la session ; le consommer à la première utilisation serait un petit durcissement.</p>
 </div>
+<div lang="zh-TW">
+<h2>兩種權杖，兩種範圍</h2>
+<p>成功登入會建立一個<strong>連線階段權杖</strong>：一個隨機識別碼，保存在閘道的記憶體中，綁定在登入的那條連線上。它授權的是角色畫面：列出、建立、刪除與選擇角色。</p>
+<p>選擇角色會建立第二個權杖，也就是綁定該角色的<strong>遊戲權杖</strong>。閘道把它連同託管該角色地圖的遊戲伺服器位址一起送給用戶端。用戶端開啟一條連到那台伺服器的新連線，並出示遊戲權杖。遊戲伺服器無法檢查它（它從沒看過這個權杖），所以會詢問閘道，閘道回覆角色 ID，並記下這個連線階段現在位於這台伺服器上。</p>
+<p>兩種權杖把兩個問題分開：「這個人登入了嗎？」由閘道在自己的連線上回答，而「這條連線可以在這裡玩這個角色嗎？」則是替遊戲伺服器回答，遊戲伺服器從頭到尾不會看到密碼。遊戲權杖在遊戲伺服器回報連線階段結束之前都有效；在第一次使用時就讓它失效，會是一個小小的強化步驟。</p></div>
 </section>
 
 <section class="sec" id="select">
@@ -94,6 +104,14 @@ public static bool Verify(string password, string stored)
 <li><strong>Trouver un hôte.</strong> La gateway cherche quel serveur héberge cette carte, et si aucun ne le fait, demande à l'un d'eux de la charger et attend la réponse (chapitre <a href="map-hosting.html">7.1</a>). Alors seulement, elle crée le jeton de jeu et répond.</li>
 </ol>
 </div>
+<div lang="zh-TW">
+<h2>選擇角色</h2>
+<p>選擇角色會依序做三件事。</p>
+<ol>
+<li><strong>接管。</strong>如果這個角色在某處已經有一個活躍的連線階段（當掉的用戶端、第二台電腦），那個連線階段會被踢掉。最新的連線永遠獲勝。若以「已經登入」拒絕，任何一次當機都會把玩家鎖在自己的角色之外，還會讓兩個用戶端搶同一艘船。</li>
+<li><strong>在哪裡醒來。</strong>角色會在他所使用中的船艦所在的地圖上醒來；如果沒有船，就在某個太空站醒來。閘道與遊戲伺服器必須得到相同的答案，所以兩者呼叫同一個共用查詢，而不是各自寫一份自己版本的規則。</li>
+<li><strong>找一台主機。</strong>閘道查詢哪台伺服器託管那張地圖；如果沒有，就請一台伺服器載入它並等待回覆（第 <a href="map-hosting.html">7.1</a> 章）。直到這時，它才建立遊戲權杖並回覆。</li>
+</ol></div>
 </section>
 
 <section class="sec" id="arrival">
@@ -107,35 +125,39 @@ public static bool Verify(string password, string stored)
 <p>Longtemps, arriver sur une carte a été une dispersion de messages indépendants : le champ de gravité de la carte ici, le résultat du spawn là, chacun en course avec le chargement de scène du client. Pire, le vaisseau était ajouté à la carte à l'instant où la session était validée : les premiers snapshots atteignaient un client qui n'avait pas fini de charger. Il affichait ce qu'il avait sous la main (une coque périmée pendant une image, une carte sans son champ) puis se corrigeait sous les yeux du joueur. Chacun de ces artefacts a été traqué séparément. C'était un seul bug : rien ne définissait ce que voulait dire « arrivé ».</p>
 <p>L'arrivée est maintenant une phase avec un début et une fin, possédée par le serveur :</p>
 </div>
+<div lang="zh-TW">
+<h2>「抵達」需要一個定義</h2>
+<p>有很長一段時間，抵達一張地圖是一堆彼此獨立的訊息：這裡是地圖的重力場，那裡是出生結果，每一則都在和用戶端載入場景賽跑。更糟的是，船艦在連線階段通過驗證的那一刻就被加入地圖，所以最初的幾份快照送到了一個還沒載入完成的用戶端。它會顯示手邊有的任何東西（某一影格出現過時的船體、一張缺了力場的地圖），然後在玩家面前自我修正。這些瑕疵一個一個被分頭追查。其實它們是同一個 bug：沒有任何東西定義「抵達」是什麼意思。</p>
+<p>現在，抵達是一個有開始、有結束、由伺服器負責的階段：</p></div>
 <div class="lab" data-stepper>
-<div class="lab-head"><span class="lab-title"><span lang="en">The arrival phase</span><span lang="fr">La phase d'arrivée</span></span><span class="lab-sub"><span lang="en">Nothing enters the world before the client says it is ready</span><span lang="fr">Rien n'entre dans le monde avant que le client se dise prêt</span></span></div>
+<div class="lab-head"><span class="lab-title"><span lang="en">The arrival phase</span><span lang="fr">La phase d'arrivée</span><span lang="zh-TW">抵達階段</span></span><span class="lab-sub"><span lang="en">Nothing enters the world before the client says it is ready</span><span lang="fr">Rien n'entre dans le monde avant que le client se dise prêt</span><span lang="zh-TW">在用戶端表示準備好之前，沒有任何東西進入世界</span></span></div>
 <div class="lab-body">
 <div class="fig-scroll">
 <svg viewBox="0 0 760 330" role="img" aria-label="Arrival sequence between the client and the game server: EnterGame, validation, loading state, EnterGameResult, catalog sync, MapInit, MapReady, then the ship enters the map and snapshots start">
   <defs><marker id="lf-arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs>
-  <rect x="60" y="12" width="160" height="34" rx="6" class="dg-hot"/><text x="140" y="34" text-anchor="middle" class="dg-text" font-weight="700"><tspan lang="en">Client</tspan><tspan lang="fr">Client</tspan></text>
-  <rect x="540" y="12" width="160" height="34" rx="6" class="dg-box-2"/><text x="620" y="34" text-anchor="middle" class="dg-text" font-weight="700"><tspan lang="en">Game server</tspan><tspan lang="fr">Serveur de jeu</tspan></text>
+  <rect x="60" y="12" width="160" height="34" rx="6" class="dg-hot"/><text x="140" y="34" text-anchor="middle" class="dg-text" font-weight="700"><tspan lang="en">Client</tspan><tspan lang="fr">Client</tspan><tspan lang="zh-TW">用戶端</tspan></text>
+  <rect x="540" y="12" width="160" height="34" rx="6" class="dg-box-2"/><text x="620" y="34" text-anchor="middle" class="dg-text" font-weight="700"><tspan lang="en">Game server</tspan><tspan lang="fr">Serveur de jeu</tspan><tspan lang="zh-TW">遊戲伺服器</tspan></text>
   <g class="dg-line dg-dash"><line x1="140" y1="46" x2="140" y2="320"/><line x1="620" y1="46" x2="620" y2="320"/></g>
   <g data-step="1"><line class="dg-line seq-msg" x1="140" y1="70" x2="616" y2="70" marker-end="url(#lf-arr)"/><text class="dg-small" x="380" y="64" text-anchor="middle">EnterGame(game token)</text>
-    <rect x="632" y="78" width="118" height="26" rx="5" class="dg-box"/><text class="dg-small" x="691" y="95" text-anchor="middle"><tspan lang="en">ask gateway</tspan><tspan lang="fr">demander à la gateway</tspan></text></g>
-  <g data-step="2"><rect x="632" y="112" width="118" height="40" rx="5" class="dg-hot"/><text class="dg-small" x="691" y="128" text-anchor="middle"><tspan lang="en">ship built,</tspan><tspan lang="fr">vaisseau construit,</tspan></text><text class="dg-small" x="691" y="143" text-anchor="middle"><tspan lang="en">NOT in the map</tspan><tspan lang="fr">PAS dans la carte</tspan></text></g>
-  <g data-step="3"><line class="dg-line seq-msg" x1="620" y1="170" x2="144" y2="170" marker-end="url(#lf-arr)"/><text class="dg-small" x="380" y="164" text-anchor="middle"><tspan lang="en">EnterGameResult: which map</tspan><tspan lang="fr">EnterGameResult : quelle carte</tspan></text></g>
-  <g data-step="4"><line class="dg-line seq-msg" x1="620" y1="200" x2="144" y2="200" marker-end="url(#lf-arr)"/><text class="dg-small" x="380" y="194" text-anchor="middle"><tspan lang="en">CatalogSync: game data that differs from the client's DLL</tspan><tspan lang="fr">CatalogSync : données qui diffèrent de la DLL du client</tspan></text></g>
-  <g data-step="5"><line class="dg-line seq-msg" x1="620" y1="230" x2="144" y2="230" marker-end="url(#lf-arr)"/><text class="dg-small" x="380" y="224" text-anchor="middle"><tspan lang="en">MapInit: what this map is (fields, known maps)</tspan><tspan lang="fr">MapInit : ce qu'est cette carte (champs, cartes connues)</tspan></text>
-    <rect x="10" y="238" width="118" height="26" rx="5" class="dg-box"/><text class="dg-small" x="69" y="255" text-anchor="middle"><tspan lang="en">loading screen</tspan><tspan lang="fr">écran de chargement</tspan></text></g>
-  <g data-step="6"><line class="dg-line seq-msg" x1="140" y1="276" x2="616" y2="276" marker-end="url(#lf-arr)"/><text class="dg-small" x="380" y="270" text-anchor="middle"><tspan lang="en">MapReady (always sent, in a finally)</tspan><tspan lang="fr">MapReady (toujours envoyé, dans un finally)</tspan></text></g>
-  <g data-step="7"><rect x="632" y="284" width="118" height="26" rx="5" class="dg-hot"/><text class="dg-small" x="691" y="301" text-anchor="middle"><tspan lang="en">add to map · Seated</tspan><tspan lang="fr">ajout carte · Assis</tspan></text>
-    <line class="dg-line seq-msg" x1="620" y1="312" x2="144" y2="312" marker-end="url(#lf-arr)"/><text class="dg-small" x="380" y="306" text-anchor="middle"><tspan lang="en">first snapshot</tspan><tspan lang="fr">premier snapshot</tspan></text></g>
+    <rect x="632" y="78" width="118" height="26" rx="5" class="dg-box"/><text class="dg-small" x="691" y="95" text-anchor="middle"><tspan lang="en">ask gateway</tspan><tspan lang="fr">demander à la gateway</tspan><tspan lang="zh-TW">詢問閘道</tspan></text></g>
+  <g data-step="2"><rect x="632" y="112" width="118" height="40" rx="5" class="dg-hot"/><text class="dg-small" x="691" y="128" text-anchor="middle"><tspan lang="en">ship built,</tspan><tspan lang="fr">vaisseau construit,</tspan><tspan lang="zh-TW">船艦已建立，</tspan></text><text class="dg-small" x="691" y="143" text-anchor="middle"><tspan lang="en">NOT in the map</tspan><tspan lang="fr">PAS dans la carte</tspan><tspan lang="zh-TW">「不」在地圖中</tspan></text></g>
+  <g data-step="3"><line class="dg-line seq-msg" x1="620" y1="170" x2="144" y2="170" marker-end="url(#lf-arr)"/><text class="dg-small" x="380" y="164" text-anchor="middle"><tspan lang="en">EnterGameResult: which map</tspan><tspan lang="fr">EnterGameResult : quelle carte</tspan><tspan lang="zh-TW">EnterGameResult：哪張地圖</tspan></text></g>
+  <g data-step="4"><line class="dg-line seq-msg" x1="620" y1="200" x2="144" y2="200" marker-end="url(#lf-arr)"/><text class="dg-small" x="380" y="194" text-anchor="middle"><tspan lang="en">CatalogSync: game data that differs from the client's DLL</tspan><tspan lang="fr">CatalogSync : données qui diffèrent de la DLL du client</tspan><tspan lang="zh-TW">CatalogSync：與用戶端 DLL 不同的遊戲資料</tspan></text></g>
+  <g data-step="5"><line class="dg-line seq-msg" x1="620" y1="230" x2="144" y2="230" marker-end="url(#lf-arr)"/><text class="dg-small" x="380" y="224" text-anchor="middle"><tspan lang="en">MapInit: what this map is (fields, known maps)</tspan><tspan lang="fr">MapInit : ce qu'est cette carte (champs, cartes connues)</tspan><tspan lang="zh-TW">MapInit：這張地圖是什麼（力場、已知地圖）</tspan></text>
+    <rect x="10" y="238" width="118" height="26" rx="5" class="dg-box"/><text class="dg-small" x="69" y="255" text-anchor="middle"><tspan lang="en">loading screen</tspan><tspan lang="fr">écran de chargement</tspan><tspan lang="zh-TW">載入畫面</tspan></text></g>
+  <g data-step="6"><line class="dg-line seq-msg" x1="140" y1="276" x2="616" y2="276" marker-end="url(#lf-arr)"/><text class="dg-small" x="380" y="270" text-anchor="middle"><tspan lang="en">MapReady (always sent, in a finally)</tspan><tspan lang="fr">MapReady (toujours envoyé, dans un finally)</tspan><tspan lang="zh-TW">MapReady（一定會送出，在 finally 中）</tspan></text></g>
+  <g data-step="7"><rect x="632" y="284" width="118" height="26" rx="5" class="dg-hot"/><text class="dg-small" x="691" y="301" text-anchor="middle"><tspan lang="en">add to map · Seated</tspan><tspan lang="fr">ajout carte · Assis</tspan><tspan lang="zh-TW">加入地圖 · Seated</tspan></text>
+    <line class="dg-line seq-msg" x1="620" y1="312" x2="144" y2="312" marker-end="url(#lf-arr)"/><text class="dg-small" x="380" y="306" text-anchor="middle"><tspan lang="en">first snapshot</tspan><tspan lang="fr">premier snapshot</tspan><tspan lang="zh-TW">第一份快照</tspan></text></g>
 </svg>
 </div>
 <ol class="steps">
-<li><span lang="en">The client presents its game token. The server asks the gateway whether it is valid; the answer comes back on the gateway link.</span><span lang="fr">Le client présente son jeton de jeu. Le serveur demande à la gateway s'il est valide ; la réponse revient par le lien gateway.</span></li>
-<li><span lang="en">The server loads the character and builds the ship, but does <strong>not</strong> add it to the map. The player is in the <code>Loading</code> state: every input handler already refuses input in that state, and the snapshot builder skips the player explicitly. <code>Loading</code> is the first value of the enum, so a player cannot exist "already arrived" by default.</span><span lang="fr">Le serveur charge le personnage et construit le vaisseau, mais ne l'ajoute <strong>pas</strong> à la carte. Le joueur est dans l'état <code>Loading</code> : chaque gestionnaire d'entrée refuse déjà les entrées dans cet état, et le constructeur de snapshots saute explicitement ce joueur. <code>Loading</code> est la première valeur de l'énumération : un joueur ne peut pas exister « déjà arrivé » par défaut.</span></li>
-<li><span lang="en"><code>EnterGameResult</code> says which map: the client needs it to load the right scene.</span><span lang="fr"><code>EnterGameResult</code> dit quelle carte : le client en a besoin pour charger la bonne scène.</span></li>
-<li><span lang="en">If the server's game data has been edited since the client was built, the changed catalogs are sent now, compressed, so the client reads its own hull with the right numbers. See <a href="data-and-catalogs.html">6.3</a>.</span><span lang="fr">Si les données de jeu du serveur ont été modifiées depuis la compilation du client, les catalogues changés partent maintenant, compressés, pour que le client lise sa propre coque avec les bons chiffres. Voir <a href="data-and-catalogs.html">6.3</a>.</span></li>
-<li><span lang="en"><code>MapInit</code> says what the map is: its field sources and the maps this character already knows. It is the one place to add any future arrival data, without reopening the question of when to send it. The client keeps its loading screen until everything is applied.</span><span lang="fr"><code>MapInit</code> dit ce qu'est la carte : ses sources de champ et les cartes que ce personnage connaît déjà. C'est l'endroit unique où ajouter toute future donnée d'arrivée, sans rouvrir la question du moment de l'envoi. Le client garde son écran de chargement jusqu'à tout avoir appliqué.</span></li>
-<li><span lang="en">The client sends <code>MapReady</code> from a <code>finally</code> block: even if applying one piece fails, the message goes out. A missing gravity well is a bug; a player stuck forever on a loading screen is worse.</span><span lang="fr">Le client envoie <code>MapReady</code> depuis un bloc <code>finally</code> : même si l'application d'un morceau échoue, le message part. Un puits gravitationnel manquant est un bug ; un joueur bloqué pour toujours sur un écran de chargement est pire.</span></li>
-<li><span lang="en">Only now does the server add the ship to the map and switch the player to <code>Seated</code>. The first snapshot describes a world the client is ready to draw.</span><span lang="fr">Maintenant seulement, le serveur ajoute le vaisseau à la carte et passe le joueur en <code>Seated</code>. Le premier snapshot décrit un monde que le client est prêt à dessiner.</span></li>
+<li><span lang="en">The client presents its game token. The server asks the gateway whether it is valid; the answer comes back on the gateway link.</span><span lang="fr">Le client présente son jeton de jeu. Le serveur demande à la gateway s'il est valide ; la réponse revient par le lien gateway.</span><span lang="zh-TW">用戶端出示它的遊戲權杖。伺服器詢問閘道它是否有效；答覆經由閘道連線傳回。</span></li>
+<li><span lang="en">The server loads the character and builds the ship, but does <strong>not</strong> add it to the map. The player is in the <code>Loading</code> state: every input handler already refuses input in that state, and the snapshot builder skips the player explicitly. <code>Loading</code> is the first value of the enum, so a player cannot exist "already arrived" by default.</span><span lang="fr">Le serveur charge le personnage et construit le vaisseau, mais ne l'ajoute <strong>pas</strong> à la carte. Le joueur est dans l'état <code>Loading</code> : chaque gestionnaire d'entrée refuse déjà les entrées dans cet état, et le constructeur de snapshots saute explicitement ce joueur. <code>Loading</code> est la première valeur de l'énumération : un joueur ne peut pas exister « déjà arrivé » par défaut.</span><span lang="zh-TW">伺服器載入角色並建立船艦，但<strong>不</strong>把它加入地圖。玩家處於 <code>Loading</code> 狀態：每個輸入處理常式本來就會在這個狀態下拒絕輸入，而快照建構器也會明確地跳過這位玩家。<code>Loading</code> 是這個列舉的第一個值，所以玩家不可能預設就處於「已抵達」的狀態。</span></li>
+<li><span lang="en"><code>EnterGameResult</code> says which map: the client needs it to load the right scene.</span><span lang="fr"><code>EnterGameResult</code> dit quelle carte : le client en a besoin pour charger la bonne scène.</span><span lang="zh-TW"><code>EnterGameResult</code> 說明是哪張地圖：用戶端需要它來載入正確的場景。</span></li>
+<li><span lang="en">If the server's game data has been edited since the client was built, the changed catalogs are sent now, compressed, so the client reads its own hull with the right numbers. See <a href="data-and-catalogs.html">6.3</a>.</span><span lang="fr">Si les données de jeu du serveur ont été modifiées depuis la compilation du client, les catalogues changés partent maintenant, compressés, pour que le client lise sa propre coque avec les bons chiffres. Voir <a href="data-and-catalogs.html">6.3</a>.</span><span lang="zh-TW">如果伺服器的遊戲資料在用戶端建置之後被編輯過，變更過的目錄會在此時壓縮後送出，讓用戶端以正確的數字讀取自己的船體。見 <a href="data-and-catalogs.html">6.3</a>。</span></li>
+<li><span lang="en"><code>MapInit</code> says what the map is: its field sources and the maps this character already knows. It is the one place to add any future arrival data, without reopening the question of when to send it. The client keeps its loading screen until everything is applied.</span><span lang="fr"><code>MapInit</code> dit ce qu'est la carte : ses sources de champ et les cartes que ce personnage connaît déjà. C'est l'endroit unique où ajouter toute future donnée d'arrivée, sans rouvrir la question du moment de l'envoi. Le client garde son écran de chargement jusqu'à tout avoir appliqué.</span><span lang="zh-TW"><code>MapInit</code> 說明這張地圖是什麼：它的力場來源，以及這個角色已經知道的地圖。這是未來任何抵達資料唯一要加入的地方，不必再重新討論何時送出。用戶端會保持載入畫面，直到一切都套用完畢。</span></li>
+<li><span lang="en">The client sends <code>MapReady</code> from a <code>finally</code> block: even if applying one piece fails, the message goes out. A missing gravity well is a bug; a player stuck forever on a loading screen is worse.</span><span lang="fr">Le client envoie <code>MapReady</code> depuis un bloc <code>finally</code> : même si l'application d'un morceau échoue, le message part. Un puits gravitationnel manquant est un bug ; un joueur bloqué pour toujours sur un écran de chargement est pire.</span><span lang="zh-TW">用戶端在 <code>finally</code> 區塊中送出 <code>MapReady</code>：即使套用某一部分失敗，訊息仍然會送出。少了一口重力井是個 bug；玩家永遠卡在載入畫面則更糟。</span></li>
+<li><span lang="en">Only now does the server add the ship to the map and switch the player to <code>Seated</code>. The first snapshot describes a world the client is ready to draw.</span><span lang="fr">Maintenant seulement, le serveur ajoute le vaisseau à la carte et passe le joueur en <code>Seated</code>. Le premier snapshot décrit un monde que le client est prêt à dessiner.</span><span lang="zh-TW">直到這時，伺服器才把船艦加入地圖，並把玩家切換到 <code>Seated</code>。第一份快照描述的，是一個用戶端已經準備好繪製的世界。</span></li>
 </ol>
 </div>
 </div>
@@ -147,6 +169,9 @@ public static bool Verify(string password, string stored)
 <div class="note tradeoff"><p class="note-label">Compromis</p><p>Il n'y a pas de délai d'expiration sur <code>MapReady</code>, délibérément. Un client qui ne l'envoie jamais reste invisible, et sa connexion finit par mourir par le chemin normal de déconnexion. Une apparition partielle et silencieuse (dans la carte mais pas prête) serait pire qu'un blocage visible, et bien plus dure à diagnostiquer.</p></div>
 <div class="note rule"><p class="note-label">Règle</p><p>Quand plusieurs bugs partagent un moment (« à l'arrivée », « à la reconnexion »), donner à ce moment un nom, un propriétaire et une fin explicite.</p><p>Une phase non définie produit une famille de courses qui ont l'air sans rapport. Un état nommé que les gestionnaires respectent déjà supprime toute la famille d'un coup.</p></div>
 </div>
+<div lang="zh-TW">
+<div class="note tradeoff"><p class="note-label">取捨</p><p><code>MapReady</code> 刻意沒有逾時。一個永遠不送出它的用戶端會一直保持隱形，它的連線最終會經由正常的斷線路徑結束。一個不完整又無聲的出生（在地圖中卻沒準備好），會比看得見的卡住更糟，也更難診斷。</p></div>
+<div class="note rule"><p class="note-label">規則</p><p>當好幾個 bug 共享同一個時刻（「抵達時」、「重新連線時」），就給那個時刻一個名稱、一個負責者，以及一個明確的結束。</p><p>未定義的階段會產生一整個家族、看似無關的競爭條件。一個處理常式早已遵守的具名狀態，能一次消除整個家族。</p></div></div>
 </section>
 
 <section class="sec" id="redundancy">
@@ -160,12 +185,18 @@ public static bool Verify(string password, string stored)
 <p><code>MapInit</code> renvoie à chaque fois la liste des cartes que ce personnage a visitées, chacune avec la faction qui la contrôlait à ce moment et l'âge de ce renseignement. Strictement, le client n'en a besoin qu'une fois par session. L'envoyer à chaque arrivée fait qu'un client qui se reconnecte, qui a planté ou qui est fraîchement installé converge vers la vérité à chaque fois, et rien côté serveur n'a à se souvenir de ce qu'il a déjà dit à qui. Quelques dizaines d'octets sur un écran que le joueur traverse de toute façon ne valent pas d'être optimisés contre la justesse.</p>
 <p>Les âges partent en heures écoulées, pas en dates. Le client n'a aucune horloge à synchroniser avec le serveur, rien ne peut dériver, et la valeur est plafonnée par le constructeur du message lui-même, ce qui la garde sur un octet même pour une carte visitée il y a six mois.</p>
 </div>
+<div lang="zh-TW">
+<h2>刻意買下的冗餘</h2>
+<p><code>MapInit</code> 每次都會重新送出這個角色造訪過的地圖清單，每一張都附上當時控制它的陣營，以及這項資訊的新舊程度。嚴格來說，用戶端每個連線階段只需要一次。每次抵達都送，代表一個重新連線、當機或剛安裝的用戶端，每次都會收斂到真相，而伺服器上沒有任何東西需要記得自己已經告訴過誰什麼。在一個玩家反正都要經過的畫面上多花幾十個位元組，不值得犧牲正確性去最佳化。</p>
+<p>新舊程度以經過的小時數送出，而不是日期。用戶端沒有需要與伺服器同步的時鐘，所以什麼都不會漂移，而這個值由訊息本身的建構函式設定上限，即使是六個月前造訪的地圖，也只佔一個位元組。</p></div>
 <div lang="en">
 <div class="note rule"><p class="note-label">Rule</p><p>Send durations, not timestamps.</p><p>"Expires in 3,600 s" needs no clock agreement and lets the client count down on its own. A date forces both ends to agree on time and time zone, and the day they disagree the bug looks like a logic error.</p></div>
 </div>
 <div lang="fr">
 <div class="note rule"><p class="note-label">Règle</p><p>Envoyer des durées, pas des horodatages.</p><p>« Expire dans 3 600 s » ne demande aucun accord d'horloge et laisse le client décompter seul. Une date oblige les deux bouts à s'accorder sur l'heure et le fuseau, et le jour où ils ne s'accordent pas, le bug ressemble à une erreur de logique.</p></div>
 </div>
+<div lang="zh-TW">
+<div class="note rule"><p class="note-label">規則</p><p>送時間長度，不送時間戳記。</p><p>「3,600 秒後到期」不需要時鐘一致，還能讓用戶端自己倒數。日期則強迫兩端對時間與時區達成一致，而它們不一致的那一天，bug 看起來會像是邏輯錯誤。</p></div></div>
 </section>
 
 <section class="sec" id="off-tick">
@@ -179,6 +210,10 @@ public static bool Verify(string password, string stored)
 <p>Tout ce qui précède tourne sur le thread réseau et les threads de fond, jamais dans le tick du monde de 40 ms. Lire le personnage, le vaisseau et ses pièces en base prend des millisecondes, parfois bien plus. Seule la dernière étape, la création du corps physique du vaisseau quand il entre dans la carte, tourne sur le thread du tick, et elle y est mise en file plutôt que faite immédiatement (chapitre <a href="no-db-in-tick.html">3.4</a>).</p>
 <div class="note measured"><p class="note-label">Mesuré</p><p>Dans un banc à 2 500 robots, le chargement des cartes lisait encore la base depuis le tick : sept allers-retours par carte. Cinquante cartes ont été créées en quatre-vingt-dix secondes et la cadence est tombée à 3,6 ticks par seconde, avec le CPU à 25 %. Il attendait, il ne calculait pas. Séparer « lire le contenu » (hors tick, un seul contexte de base) de « poser les corps » (sur le tick, avec un budget de temps) a supprimé le blocage.</p></div>
 </div>
+<div lang="zh-TW">
+<h2>載入發生在 tick 之外</h2>
+<p>以上一切都在網路執行緒與背景執行緒上執行，從不在 40 ms 的世界 tick 之內。從資料庫讀取角色、船艦及其零件要花好幾毫秒，有時遠不只如此。只有最後一步，也就是船艦進入地圖時建立它的物理剛體，才在 tick 執行緒上執行，而且是排入那裡的佇列，而不是立即執行（第 <a href="no-db-in-tick.html">3.4</a> 章）。</p>
+<div class="note measured"><p class="note-label">實測</p><p>在一個 2,500 個機器人的測試台中，地圖載入仍然在 tick 之內讀取資料庫：每張地圖七次往返。九十秒內建立了五十張地圖，tick 頻率崩落到每秒 3.6 次，而 CPU 只有 25%。它在等待，而不是在運算。把「讀取內容」（在 tick 之外，使用一個資料庫內容）與「放置剛體」（在 tick 之內，有時間預算）拆開，就消除了這次停頓。</p></div></div>
 </section>
 
 <section class="sec" id="takeaways">
@@ -197,6 +232,13 @@ public static bool Verify(string password, string stored)
 <li>Définir l'arrivée comme une phase : construire, décrire, attendre le client, puis ajouter au monde.</li>
 <li>Préférer des messages d'initialisation redondants et auto-réparateurs, et des durées plutôt que des dates.</li>
 </ul></div>
+<div lang="zh-TW"><h2>重點整理</h2><ul>
+<li>儲存緩慢、加鹽的密碼雜湊，以常數時間比對，並在昂貴的雜湊之前先檢查便宜的東西（協定版本）。</li>
+<li>閘道使用登入權杖，遊戲伺服器使用另一個遊戲權杖；遊戲伺服器向閘道詢問，而不是看到帳密。</li>
+<li>一個已經在線的角色再次登入時，最新的連線獲勝。</li>
+<li>把抵達定義為一個階段：建立、描述、等待用戶端，然後才加入世界。</li>
+<li>偏好冗餘、能自我修復的初始化訊息，以及時間長度而非日期。</li>
+</ul></div>
 </div>
 </section>
 
@@ -209,6 +251,7 @@ public static bool Verify(string password, string stored)
 <footer class="site-footer" id="mq-footer"></footer>
 <script src="assets/js/site-data.js" defer></script>
 <script src="assets/js/glossary-data.js" defer></script>
+<script src="assets/js/ui-zh.js" defer></script>
 <script src="assets/js/app.js" defer></script>
 <script src="assets/js/widgets.js" defer></script>
 </body>

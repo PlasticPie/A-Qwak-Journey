@@ -7,12 +7,12 @@
 <meta name="description" content="How objects join a map, tick, get a network id, and act through composable behaviours.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Chakra+Petch:wght@500;600&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Chakra+Petch:wght@500;600&family=JetBrains+Mono:wght@400;500;600&family=Noto+Sans+TC:wght@400;700&display=swap">
 <link rel="stylesheet" href="assets/css/site.css">
-<script>(function(){var r=document.documentElement,l,t;try{l=localStorage.getItem("mq-lang");t=localStorage.getItem("mq-theme");}catch(e){}if(l!=="en"&&l!=="fr"){l=(navigator.language||"").toLowerCase().indexOf("fr")===0?"fr":"en";}r.setAttribute("data-lang",l);r.setAttribute("lang",l);if(t==="light"||t==="dark")r.setAttribute("data-theme",t);})();</script>
+<script>(function(){var r=document.documentElement,l,t,n;try{l=localStorage.getItem("mq-lang");t=localStorage.getItem("mq-theme");}catch(e){}if(l!=="en"&&l!=="fr"&&l!=="zh"){n=(navigator.language||"").toLowerCase();l=n.indexOf("fr")===0?"fr":n.indexOf("zh")===0?"zh":"en";}r.setAttribute("data-lang",l);r.setAttribute("lang",l==="zh"?"zh-TW":l);if(t==="light"||t==="dark")r.setAttribute("data-theme",t);})();</script>
 </head>
 <body data-page="entities">
-<a class="skip-link" href="#main"><span lang="en">Skip to content</span><span lang="fr">Aller au contenu</span></a>
+<a class="skip-link" href="#main"><span lang="en">Skip to content</span><span lang="fr">Aller au contenu</span><span lang="zh-TW">跳到主要內容</span></a>
 <header class="site-header" id="mq-header"></header>
 <div class="layout">
 <aside class="sidebar" id="mq-sidebar"></aside>
@@ -20,8 +20,8 @@
 <article>
 <header class="chapter-head">
   <div class="eyebrow" data-auto></div>
-  <h1><span lang="en">Entities, ids and membership</span><span lang="fr">Entités, identifiants et appartenance</span></h1>
-  <p class="dek"><span lang="en">How objects join a map, tick, get a network id, and act through composable behaviours.</span><span lang="fr">Comment les objets rejoignent une carte, tickent, reçoivent un identifiant réseau et agissent par comportements composables.</span></p>
+  <h1><span lang="en">Entities, ids and membership</span><span lang="fr">Entités, identifiants et appartenance</span><span lang="zh-TW">實體、ID 與歸屬</span></h1>
+  <p class="dek"><span lang="en">How objects join a map, tick, get a network id, and act through composable behaviours.</span><span lang="fr">Comment les objets rejoignent une carte, tickent, reçoivent un identifiant réseau et agissent par comportements composables.</span><span lang="zh-TW">物件如何加入地圖、執行 tick、取得網路 ID，並透過可組合的行為來行動。</span></p>
   <div class="meta-row" data-auto></div>
 </header>
 
@@ -36,14 +36,17 @@
 <h2>Ce qu'est une entité ici</h2>
 <p>Tout ce qui existe sur une carte implémente une petite interface : un identifiant, une position, une rotation, et un moyen d'être libéré. Par-dessus, chaque sorte d'objet ne prend que les capacités dont elle a besoin : un corps dans le monde physique, un tick à elle, une description envoyée une fois aux clients, ou un état compact envoyé à chaque tick. MoonQwak n'utilise pas de système entité-composant généraliste côté serveur ; il utilise une hiérarchie peu profonde (une classe de base de coque, puis vaisseaux de joueurs, vaisseaux PNJ et stations) découpée en fichiers partiels par préoccupation (énergie, physique, boucliers, sérialisation), et la composition pour les comportements. Ce qui compte plus que le style, c'est que chaque sorte réponde explicitement aux mêmes quelques questions :</p>
 </div>
+<div lang="zh-TW">
+<h2>在這裡，實體是什麼</h2>
+<p>地圖上存在的一切都實作同一個小介面：一個 ID、一個位置、一個旋轉，以及一種被釋放的方式。在這之上，每一種物件只挑選自己需要的能力：物理世界中的剛體、自己的 tick、只送給用戶端一次的描述，或每個 tick 送出的精簡狀態。MoonQwak 的伺服器並沒有使用通用的實體元件系統；它用的是一個淺層的繼承階層（一個船體基底類別，接著是玩家船艦、NPC 船艦與太空站），依關注點拆成多個 partial 檔案（電力、物理、護盾、序列化），行為則以組合的方式處理。比風格更重要的是，每一種物件都明確地回答同樣幾個問題：</p></div>
 <div class="table-wrap"><table>
-<thead><tr><th><span lang="en">Object</span><span lang="fr">Objet</span></th><th><span lang="en">Physics body</span><span lang="fr">Corps physique</span></th><th><span lang="en">Description on first sight</span><span lang="fr">Description à la première vue</span></th><th><span lang="en">Why</span><span lang="fr">Pourquoi</span></th></tr></thead>
+<thead><tr><th><span lang="en">Object</span><span lang="fr">Objet</span><span lang="zh-TW">物件</span></th><th><span lang="en">Physics body</span><span lang="fr">Corps physique</span><span lang="zh-TW">物理剛體</span></th><th><span lang="en">Description on first sight</span><span lang="fr">Description à la première vue</span><span lang="zh-TW">初次看見時的描述</span></th><th><span lang="en">Why</span><span lang="fr">Pourquoi</span><span lang="zh-TW">原因</span></th></tr></thead>
 <tbody>
-<tr><td><span lang="en">Ship, station</span><span lang="fr">Vaisseau, station</span></td><td><span lang="en">Dynamic / static</span><span lang="fr">Dynamique / statique</span></td><td><span lang="en">Yes, asked for by the client</span><span lang="fr">Oui, demandée par le client</span></td><td><span lang="en">A hull's layout is large and rarely changes; send it once, then only movement and state.</span><span lang="fr">La disposition d'une coque est grosse et change rarement ; l'envoyer une fois, puis seulement le mouvement et l'état.</span></td></tr>
-<tr><td><span lang="en">Character</span><span lang="fr">Personnage</span></td><td><span lang="en">Yes</span><span lang="fr">Oui</span></td><td><span lang="en">Yes</span><span lang="fr">Oui</span></td><td><span lang="en">Same reasoning: appearance once, position every tick.</span><span lang="fr">Même raisonnement : l'apparence une fois, la position à chaque tick.</span></td></tr>
-<tr><td><span lang="en">Bullet</span><span lang="fr">Balle</span></td><td><span lang="en">No</span><span lang="fr">Non</span></td><td><span lang="en">No</span><span lang="fr">Non</span></td><td><span lang="en">A spawn and a hit are enough: the client flies it from its launch state (chapter <a href="deltas.html">4.4</a>).</span><span lang="fr">Une apparition et un impact suffisent : le client la fait voler depuis son état de départ (chapitre <a href="deltas.html">4.4</a>).</span></td></tr>
-<tr><td><span lang="en">Missile</span><span lang="fr">Missile</span></td><td><span lang="en">Kinematic, only to be shootable</span><span lang="fr">Cinématique, seulement pour être abattable</span></td><td><span lang="en">No</span><span lang="fr">Non</span></td><td><span lang="en">Rare enough to afford a full state every tick, and a guided path cannot be predicted.</span><span lang="fr">Assez rare pour s'offrir un état complet à chaque tick, et une trajectoire guidée ne se prédit pas.</span></td></tr>
-<tr><td><span lang="en">Asteroid, debris, portal, jump wake</span><span lang="fr">Astéroïde, débris, portail, sillage de saut</span></td><td><span lang="en">Asteroid only</span><span lang="fr">Astéroïde seulement</span></td><td><span lang="en">No</span><span lang="fr">Non</span></td><td><span lang="en">Their state carries a catalog id, and the client resolves the rest from shared game data.</span><span lang="fr">Leur état porte un identifiant de catalogue, et le client résout le reste depuis les données de jeu partagées.</span></td></tr>
+<tr><td><span lang="en">Ship, station</span><span lang="fr">Vaisseau, station</span><span lang="zh-TW">船艦、太空站</span></td><td><span lang="en">Dynamic / static</span><span lang="fr">Dynamique / statique</span><span lang="zh-TW">動態／靜態</span></td><td><span lang="en">Yes, asked for by the client</span><span lang="fr">Oui, demandée par le client</span><span lang="zh-TW">有，由用戶端索取</span></td><td><span lang="en">A hull's layout is large and rarely changes; send it once, then only movement and state.</span><span lang="fr">La disposition d'une coque est grosse et change rarement ; l'envoyer une fois, puis seulement le mouvement et l'état.</span><span lang="zh-TW">船體的配置很大而且很少改變；送一次，之後只送移動與狀態。</span></td></tr>
+<tr><td><span lang="en">Character</span><span lang="fr">Personnage</span><span lang="zh-TW">角色</span></td><td><span lang="en">Yes</span><span lang="fr">Oui</span><span lang="zh-TW">有</span></td><td><span lang="en">Yes</span><span lang="fr">Oui</span><span lang="zh-TW">有</span></td><td><span lang="en">Same reasoning: appearance once, position every tick.</span><span lang="fr">Même raisonnement : l'apparence une fois, la position à chaque tick.</span><span lang="zh-TW">同樣的道理：外觀送一次，位置每個 tick 送。</span></td></tr>
+<tr><td><span lang="en">Bullet</span><span lang="fr">Balle</span><span lang="zh-TW">子彈</span></td><td><span lang="en">No</span><span lang="fr">Non</span><span lang="zh-TW">無</span></td><td><span lang="en">No</span><span lang="fr">Non</span><span lang="zh-TW">無</span></td><td><span lang="en">A spawn and a hit are enough: the client flies it from its launch state (chapter <a href="deltas.html">4.4</a>).</span><span lang="fr">Une apparition et un impact suffisent : le client la fait voler depuis son état de départ (chapitre <a href="deltas.html">4.4</a>).</span><span lang="zh-TW">一次產生與一次命中就夠了：用戶端從它的發射狀態開始讓它飛行（第 <a href="deltas.html">4.4</a> 章）。</span></td></tr>
+<tr><td><span lang="en">Missile</span><span lang="fr">Missile</span><span lang="zh-TW">飛彈</span></td><td><span lang="en">Kinematic, only to be shootable</span><span lang="fr">Cinématique, seulement pour être abattable</span><span lang="zh-TW">運動學剛體，只為了能被擊中</span></td><td><span lang="en">No</span><span lang="fr">Non</span><span lang="zh-TW">無</span></td><td><span lang="en">Rare enough to afford a full state every tick, and a guided path cannot be predicted.</span><span lang="fr">Assez rare pour s'offrir un état complet à chaque tick, et une trajectoire guidée ne se prédit pas.</span><span lang="zh-TW">數量夠少，負擔得起每個 tick 送完整狀態，而且導引的路徑無法預測。</span></td></tr>
+<tr><td><span lang="en">Asteroid, debris, portal, jump wake</span><span lang="fr">Astéroïde, débris, portail, sillage de saut</span><span lang="zh-TW">小行星、碎片、傳送門、跳躍尾跡</span></td><td><span lang="en">Asteroid only</span><span lang="fr">Astéroïde seulement</span><span lang="zh-TW">只有小行星</span></td><td><span lang="en">No</span><span lang="fr">Non</span><span lang="zh-TW">無</span></td><td><span lang="en">Their state carries a catalog id, and the client resolves the rest from shared game data.</span><span lang="fr">Leur état porte un identifiant de catalogue, et le client résout le reste depuis les données de jeu partagées.</span><span lang="zh-TW">它們的狀態攜帶一個目錄 ID，其餘的由用戶端從共用的遊戲資料中解析。</span></td></tr>
 </tbody></table></div>
 </section>
 
@@ -58,6 +61,10 @@
 <p>Un objet entre dans une carte par une méthode et en sort par une méthode, et les deux sont <em>différées</em> : elles mettent le travail en file pour la phase « appliquer l'attente » du tick (chapitre <a href="threading.html">3.3</a>), parce qu'elles sont en général appelées depuis le thread réseau (une connexion, une demande d'amarrage, une déconnexion) et ne doivent pas toucher directement au monde physique.</p>
 <p>Dans la carte, l'unique méthode d'enregistrement fait tout dans une seule branche : elle ajoute l'objet à la table des identifiants, à la liste des objets qui tickent s'il a un tick, et aux listes typées des coques ou des personnages. Rien d'autre n'a à penser à s'enregistrer. L'unique méthode de retrait est son miroir, et c'est aussi le seul endroit qui annonce le départ aux clients. Toute raison qu'a un objet de partir (mort, amarrage, saut, déconnexion, PNJ qui expire) passe par elle, donc l'annonce « parti » ne peut être oubliée pour aucune.</p>
 </div>
+<div lang="zh-TW">
+<h2>一道入口，一道出口</h2>
+<p>物件經由一個方法進入地圖，經由一個方法離開，而且兩者都是<em>延後的</em>：它們把工作排入 tick 的「套用待處理項目」階段（第 <a href="threading.html">3.3</a> 章），因為它們通常是從網路執行緒呼叫的（一條連線、一個停靠請求、一次斷線），不能直接碰物理世界。</p>
+<p>在地圖內部，唯一的註冊方法在一個分支中完成所有事：把物件加入 ID 表，如果它有 tick 就加入可 tick 清單，並加入船體或角色的型別清單。沒有任何其他東西需要記得去註冊。唯一的移除方法是它的鏡像，也是唯一向用戶端宣告離開的地方。物件離開的任何原因（死亡、停靠、跳躍、斷線、NPC 到期）都經過它，所以不可能有哪一種原因忘了宣告「已離開」。</p></div>
 <div class="code"><div class="code-head"><span class="file">GameServer/Maps/MapInstance.cs · simplified</span></div><pre><code data-lang="cs">public void Update(IMetaObject obj)                 // tick thread, from "apply pending"
 {
     if (!Objects.TryAdd(obj.Id, obj)) return;       // first insertion only
@@ -89,6 +96,9 @@ public void Remove(ulong id)
 <div class="note pitfall"><p class="note-label">Piège rencontré</p><p>Le vaisseau d'un joueur déconnecté réapparaissait parfois en fantôme. Box2D peut signaler un mouvement pour un corps dans le pas même où il est détruit, et le code qui tenait la grille d'intérêt à jour réinsérait tout objet qui bougeait, y compris celui qu'on venait de retirer. La première correction gardait la réinsertion. La vraie correction a supprimé toute la famille de bugs : la grille est reconstruite depuis la table des objets à chaque tick, donc elle ne peut pas contenir un objet que la table ne contient pas.</p></div>
 <div class="note rule"><p class="note-label">Règle</p><p>Dériver les structures secondaires de la structure principale plutôt que de les tenir en parallèle.</p><p>Chaque chemin de comptabilité supplémentaire qui doit « rester synchronisé » est un endroit où, un jour, il ne le sera plus. Un index reconstruit à partir de ce qui existe ne peut pas contenir ce qui n'existe pas.</p></div>
 </div>
+<div lang="zh-TW">
+<div class="note pitfall"><p class="note-label">我踩過的坑</p><p>斷線玩家的船有時會以幽靈的形式再次出現。Box2D 可能在剛體被摧毀的同一個步驟中回報它的移動事件，而負責維護興趣網格的程式碼，會把任何移動過的物件重新插入，包括一個剛被移除的物件。第一個修正為重新插入加了防護。真正的修正則消除了整類 bug：網格每個 tick 都從物件表重建，所以它不可能包含物件表裡沒有的物件。</p></div>
+<div class="note rule"><p class="note-label">規則</p><p>從主要結構推導出次要結構，而不是平行地維護它們。</p><p>每一條必須「保持同步」的額外簿記路徑，都是一個總有一天會不同步的地方。從現存之物重建的索引，不可能包含不存在之物。</p></div></div>
 </section>
 
 <section class="sec" id="ticking">
@@ -104,6 +114,11 @@ public void Remove(ulong id)
 <p>La carte fait ticker ses objets depuis une copie : sous le verrou, elle copie les objets à ticker dans un tampon réutilisé, puis les fait ticker hors du verrou, parce que le tick d'un objet a le droit de tout faire, y compris ajouter ou retirer des objets. La queue inutilisée du tampon est effacée à chaque tick pour que la carte ne garde pas des coques mortes en vie par une référence périmée.</p>
 <p>Les listes typées existent pour une raison qui ne se voit qu'en combat. La table des identifiants contient tout : coques, personnages, et chaque balle, missile et débris. Presque toutes les questions que pose le jeu sont étroites (« le vaisseau de joueur le plus proche », « les personnages dans l'explosion »), et y répondre en parcourant tout fait grandir leur coût avec le combat lui-même : trois cents balles en vol rendent la recherche de quatre vaisseaux cent fois plus chère, précisément quand elle ne doit pas l'être. Les listes sont deux simples champs plutôt qu'un dictionnaire indexé par type, parce qu'une station <em>est</em> un vaisseau et que presque tous les appelants veulent dire « n'importe quelle coque, stations comprises ».</p>
 </div>
+<div lang="zh-TW">
+<h2>Tick 跟著歸屬走</h2>
+<p>需要自己每個 tick 邏輯的物件（消化輸入的駕駛中船艦、執行行為的 NPC），實作單一的 <code>WorldTick(dt)</code> 方法。它被呼叫，是因為物件在地圖上，而在它離開的那一刻就停止。這取代了一個靜態的「世界 tick」事件：每個物件都訂閱它，而且理應手動取消訂閱。這套紀律漏了兩次：NPC 船艦在地圖卸載後仍讓死掉的處理常式活著，持續 tick 著沒人看得見的物件。</p>
+<p>地圖從一份副本 tick 它的物件：在鎖內把可 tick 的物件複製到一個可重複使用的緩衝區，然後在鎖外 tick，因為物件的 tick 被允許做任何事，包括新增或移除物件。緩衝區未使用的尾端每個 tick 都會被清空，讓地圖不會透過一個過時的參考讓死掉的船體繼續存活。</p>
+<p>型別清單存在的理由，只有在戰鬥中才會顯現。ID 表包含一切：船體、角色，以及每一顆子彈、飛彈與碎片。遊戲提出的問題幾乎都很窄（「最近的玩家船艦」、「爆炸範圍內的角色」），而透過掃描全部來回答，會讓成本隨著戰鬥本身增長：三百顆飛行中的子彈，會讓找四艘船的成本變成一百倍，而且偏偏在最不能這樣的時候。這些清單是兩個普通的欄位，而不是以型別為鍵的字典，因為太空站<em>就是</em>一艘船，而幾乎每個呼叫端指的都是「任何船體，包括太空站」。</p></div>
 </section>
 
 <section class="sec" id="ids">
@@ -119,27 +134,32 @@ public void Remove(ulong id)
 <div class="note measured"><p class="note-label">Mesuré</p><p>Environ 140 octets d'identifiants de balles par snapshot, 7 % du paquet entier, dépensés à numéroter des objets que le client oublie deux secondes plus tard.</p></div>
 <p>Les identifiants suivent donc deux régimes. Les objets <strong>durables</strong> (coques, personnages, stations, missiles, débris) puisent dans un compteur monotone de 64 bits et ne sont jamais réutilisés : sur un serveur qui tourne des jours, un compteur de 32 bits finirait par déborder. Les <strong>balles</strong> louent leurs identifiants dans une bande réservée, de 8 192 à 16 382, où chaque identifiant tient sur deux octets, et les rendent à leur mort. Le compteur durable saute par-dessus la bande : une balle et un vaisseau ne peuvent jamais porter le même numéro, ni maintenant ni dans dix heures.</p>
 </div>
+<div lang="zh-TW">
+<h2>網路 ID：兩種生命週期，兩種制度</h2>
+<p>每個物件都需要一個用戶端能拿來當鍵的 ID。天真的答案——一個全域計數器——會與第 <a href="encoding.html">1.3</a> 章的編碼衝突：ID 是可變長度整數，16,382 以內兩個位元組，之後四個位元組，沒有三位元組的長度。子彈只活約一秒，而每秒發射數百顆，所以在全域計數器上，它們的 ID 幾分鐘內就超過了 16,383，之後每份快照中的每個子彈 ID 都要花四個位元組。</p>
+<div class="note measured"><p class="note-label">實測</p><p>每份快照約有 140 位元組的子彈 ID，佔整個封包的 7 %，花在為用戶端兩秒後就會忘記的物件編號上。</p></div>
+<p>所以 ID 遵循兩種制度。<strong>持久</strong>的物件（船體、角色、太空站、飛彈、碎片）從一個單調遞增的 64 位元計數器取號，永不重複使用：在一台連續運作好幾天的伺服器上，32 位元的計數器總有一天會溢位。<strong>子彈</strong>則從一段保留區段 8,192 到 16,382 租用 ID，這裡的每個 ID 都放得進兩個位元組，並在子彈死亡時歸還。持久計數器會跳過這個區段，所以子彈與船艦永遠不可能共用同一個號碼，不論是現在還是十個小時後。</p></div>
 <figure class="fig fig-scroll">
 <svg viewBox="0 0 760 170" role="img" aria-label="The id space: durable ids from 1 to 8191 and from 16383 upward come from a counter that skips the band; the band from 8192 to 16382 is rented by bullets, always two bytes, returned after a 10 second quarantine">
   <defs><marker id="id-arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="currentColor" opacity="0.7"/></marker></defs>
   <path d="M 300 66 C 360 18, 520 18, 584 66" class="dg-line" style="fill:none" marker-end="url(#id-arr)"/>
-  <text class="dg-small" x="442" y="30" text-anchor="middle"><tspan lang="en">the durable counter jumps over the band</tspan><tspan lang="fr">le compteur durable saute la bande</tspan></text>
+  <text class="dg-small" x="442" y="30" text-anchor="middle"><tspan lang="en">the durable counter jumps over the band</tspan><tspan lang="fr">le compteur durable saute la bande</tspan><tspan lang="zh-TW">持久計數器跳過這個區段</tspan></text>
   <rect x="40" y="70" width="68" height="36" rx="5" class="dg-box"/>
   <text class="dg-small dg-mono" x="74" y="93" text-anchor="middle">1 B</text>
   <rect x="110" y="70" width="218" height="36" rx="5" class="dg-box"/>
-  <text class="dg-small" x="219" y="93" text-anchor="middle"><tspan lang="en">2 bytes · durable</tspan><tspan lang="fr">2 octets · durables</tspan></text>
+  <text class="dg-small" x="219" y="93" text-anchor="middle"><tspan lang="en">2 bytes · durable</tspan><tspan lang="fr">2 octets · durables</tspan><tspan lang="zh-TW">2 位元組 · 持久</tspan></text>
   <rect x="330" y="70" width="228" height="36" rx="5" class="dg-hot"/>
-  <text class="dg-small" x="444" y="93" text-anchor="middle" font-weight="700"><tspan lang="en">2 bytes · bullet band</tspan><tspan lang="fr">2 octets · bande des balles</tspan></text>
+  <text class="dg-small" x="444" y="93" text-anchor="middle" font-weight="700"><tspan lang="en">2 bytes · bullet band</tspan><tspan lang="fr">2 octets · bande des balles</tspan><tspan lang="zh-TW">2 位元組 · 子彈區段</tspan></text>
   <rect x="560" y="70" width="160" height="36" rx="5" class="dg-box-2"/>
-  <text class="dg-small" x="640" y="93" text-anchor="middle"><tspan lang="en">4 bytes · durable</tspan><tspan lang="fr">4 octets · durables</tspan></text>
+  <text class="dg-small" x="640" y="93" text-anchor="middle"><tspan lang="en">4 bytes · durable</tspan><tspan lang="fr">4 octets · durables</tspan><tspan lang="zh-TW">4 位元組 · 持久</tspan></text>
   <text class="dg-small dg-mono" x="40" y="124">1</text>
   <text class="dg-small dg-mono" x="110" y="124">127</text>
   <text class="dg-small dg-mono" x="330" y="124">8 192</text>
   <text class="dg-small dg-mono" x="560" y="124">16 383</text>
-  <text class="dg-small" x="40" y="152"><tspan lang="en">durable: monotonic, never reused</tspan><tspan lang="fr">durables : monotones, jamais réutilisés</tspan></text>
-  <text class="dg-small" x="444" y="152" text-anchor="middle"><tspan lang="en">rent · release · 10 s quarantine</tspan><tspan lang="fr">louer · rendre · quarantaine de 10 s</tspan></text>
+  <text class="dg-small" x="40" y="152"><tspan lang="en">durable: monotonic, never reused</tspan><tspan lang="fr">durables : monotones, jamais réutilisés</tspan><tspan lang="zh-TW">持久：單調遞增，永不重複使用</tspan></text>
+  <text class="dg-small" x="444" y="152" text-anchor="middle"><tspan lang="en">rent · release · 10 s quarantine</tspan><tspan lang="fr">louer · rendre · quarantaine de 10 s</tspan><tspan lang="zh-TW">租用 · 釋放 · 10 秒隔離</tspan></text>
 </svg>
-<figcaption><span lang="en"><strong>One id space, two regimes.</strong> The varint has no three-byte size, so the bullet band sits just below the four-byte cliff and every rented id costs two bytes.</span><span lang="fr"><strong>Un espace d'identifiants, deux régimes.</strong> Le varint n'a pas de taille de trois octets : la bande des balles se place juste sous la falaise des quatre octets, et chaque identifiant loué coûte deux octets.</span></figcaption>
+<figcaption><span lang="en"><strong>One id space, two regimes.</strong> The varint has no three-byte size, so the bullet band sits just below the four-byte cliff and every rented id costs two bytes.</span><span lang="fr"><strong>Un espace d'identifiants, deux régimes.</strong> Le varint n'a pas de taille de trois octets : la bande des balles se place juste sous la falaise des quatre octets, et chaque identifiant loué coûte deux octets.</span><span lang="zh-TW"><strong>一個 ID 空間，兩種制度。</strong>varint 沒有三位元組的長度，所以子彈區段就放在四位元組斷崖的正下方，每個租出去的 ID 都只花兩個位元組。</span></figcaption>
 </figure>
 <div class="code"><div class="code-head"><span class="file">GameServer/Domain/MetaObjectId.cs · simplified</span></div><pre><code data-lang="cs">public const ulong TransientFirst = 8192, TransientLast = 16382;   // last two-byte id
 private const long QuarantineMs = 10_000;
@@ -178,6 +198,9 @@ public static void ReleaseTransient(ulong id)
 <p>La quarantaine est ce qui rend le recyclage sûr. Le client garde une balle sous son identifiant jusqu'à ce qu'elle expire de son côté, environ deux secondes plus une grâce d'impact. Un identifiant redonné plus tôt téléporterait la vieille balle sur la nouvelle. Dix secondes, c'est cinq fois cette durée de vie, et le dimensionnement tient : environ 300 balles vivantes plus 250 apparitions par seconde fois 10 secondes, c'est à peu près 2 800 identifiants en circulation, pour 8 191 dans la bande. Si une salve épuise quand même la bande, les balles se rabattent sur le compteur durable : des identifiants plus gros, toujours justes.</p>
 <div class="note rule"><p class="note-label">Règle</p><p>Ne réutiliser un identifiant qu'une fois que tous ceux qui pourraient encore le tenir l'ont oublié, et dimensionner le délai sur leur mémoire, pas sur la sienne.</p><p>Le serveur oublie une balle au tick où elle meurt. Le client, non, et c'est la mémoire du client qui décide quand le numéro est libre.</p></div>
 </div>
+<div lang="zh-TW">
+<p>隔離期讓回收變得安全。用戶端會以子彈的 ID 保留它，直到子彈在用戶端那邊到期，大約兩秒再加上一段命中寬限。一個太早被再次發出的 ID，會把舊的子彈瞬移到新的子彈上。十秒是那段生命週期的五倍，而容量也足夠：約 300 顆存活子彈，加上每秒 250 次產生乘以 10 秒，流通中的 ID 大約 2,800 個，而區段有 8,191 個。如果某次突發仍然用光了區段，子彈會退回持久計數器：ID 比較大，但仍然正確。</p>
+<div class="note rule"><p class="note-label">規則</p><p>只有在每個可能還持有某個識別碼的人都忘了它之後，才能重複使用它，而延遲的長短要依他們的記憶而定，不是你的。</p><p>伺服器在子彈死亡的那個 tick 就忘了它。用戶端不會，而決定這個號碼何時空出來的，是用戶端的記憶。</p></div></div>
 </section>
 
 <section class="sec" id="intentions">
@@ -191,6 +214,10 @@ public static void ReleaseTransient(ulong id)
 <p>Le vaisseau d'un joueur est piloté par quelques champs d'intention que le thread réseau écrit : aller par là, viser là-bas, gâchette tenue. Un vaisseau PNJ est piloté par le même genre de champs, écrits par ses comportements. Dans les deux cas, le tick du vaisseau <em>applique</em> ces intentions par la même physique : un PNJ lourd est lent pour les mêmes raisons qu'un joueur lourd, et une tourelle sous-alimentée hoquette visiblement sous le même budget d'énergie que celui des joueurs. Les comportements désirent ; l'acteur applique.</p>
 <p>Ce partage a une seconde règle : <strong>l'entretien des mécanismes reste sur l'acteur, jamais dans un comportement</strong>. Les temps de recharge des armes s'écoulent dans la mise à jour du vaisseau, que quelque chose essaie de tirer ou non. S'ils vivaient dans le comportement de tir, détacher ce comportement en plein combat figerait chaque point d'emport au milieu de sa recharge, pour toujours. Le même partage est ce qui permet à la coque rémanente d'un joueur déconnecté (chapitre <a href="handover.html#disconnects">2.3</a>) de devenir une épave inerte : ses intentions sont vidées, et ses mécanismes continuent de tourner.</p>
 </div>
+<div lang="zh-TW">
+<h2>玩家與 NPC 說同一種語言</h2>
+<p>玩家的船艦由網路執行緒寫入的幾個意圖欄位驅動：往這邊移動、瞄準那裡、扳機按住。NPC 的船艦由同一類欄位驅動，只是改由它的行為寫入。兩種情況下，都是船艦自己的 tick 透過同一套物理來<em>套用</em>這些意圖，所以一艘沉重的 NPC 船會因為和沉重的玩家船相同的理由而緩慢，而一座電力不足的哨兵，會在與玩家同樣的電力預算下明顯地卡頓。行為負責渴望；行動者負責套用。</p>
+<p>這種拆分還有第二條規則：<strong>機制的維護留在行動者身上，絕不放在行為裡</strong>。武器冷卻會在船艦自己的更新中 tick，不論有沒有東西想開火。如果它們放在開火行為中，在戰鬥中途卸下這個行為，就會讓每個武器掛點永遠凍結在冷卻中途。同樣的拆分，也讓斷線玩家的殘留船體（第 <a href="handover.html#disconnects">2.3</a> 章）能變成一具無動作的殘骸：它的意圖被清除，而它的機制繼續運作。</p></div>
 </section>
 
 <section class="sec" id="behaviours">
@@ -202,6 +229,9 @@ public static void ReleaseTransient(ulong id)
 <h2>Le comportement par composition</h2>
 <p>Ce que <em>fait</em> un PNJ n'est pas décidé par sa classe mais par les comportements qu'on lui attache à l'apparition. « Une sentinelle qui balaie et tire » et « un vaisseau qui vise la cible la plus proche et tire » sont la même classe de PNJ avec des pièces différentes, pas deux sous-classes.</p>
 </div>
+<div lang="zh-TW">
+<h2>以組合構成行為</h2>
+<p>NPC <em>做</em>什麼，不是由它的類別決定，而是由產生時附加在它身上的行為決定。「一座會掃視並開火的哨兵」和「一艘瞄準最近目標並開火的船」是同一個 NPC 類別配上不同的零件，而不是兩個子類別。</p></div>
 <div class="code"><div class="code-head"><span class="file">GameServer/Domain/AI · simplified</span></div><pre><code data-lang="cs">public interface IBehavior&lt;in TActor&gt;  // contravariant: a behaviour written for
 {                                        // Character works on every NpcCharacter
     void Tick(TActor actor, double dt);  // actor passed in, never captured
@@ -240,6 +270,13 @@ sentry.Behaviors
 <li><strong>L'ordre plutôt qu'un ordonnanceur.</strong> Les comportements tournent dans l'ordre d'insertion, sans priorités ni arbitrage. Cela couvre tout ce qu'il y a dans le jeu aujourd'hui ; inventer un ordonnanceur avant qu'un cas en ait besoin, ce serait deviner des besoins. L'ensemble est son propre petit type justement pour que l'arbitrage ait un endroit évident où grandir plus tard, sans toucher aucun acteur.</li>
 </ul>
 </div>
+<div lang="zh-TW">
+<p>有三個小決定讓這運作得很好：</p>
+<ul>
+<li><strong>反變性。</strong>介面是 <code>IBehavior&lt;in TActor&gt;</code>。一個針對它所需最寬鬆型別（任何能瞄準的東西）寫成的行為，可以直接放進任何更具體的行動者的行為集合中，不需要轉接器，也不需要轉型。讓每個行為都針對它所需的最小型別來寫，它在結構上就保持可重複使用。</li>
+<li><strong>行動者是參數。</strong>行為不擷取它們的行動者，所以不持有任何會讓已消失的 NPC 繼續存活的反向參考，而單一的無狀態行為實例也可以被共用。</li>
+<li><strong>用順序取代排程器。</strong>行為依加入的順序執行，沒有優先權，也沒有仲裁。這涵蓋了目前遊戲中的一切；在有案例需要之前就發明一個排程器，等於是在猜需求。行為集合本身就是一個小型別，正是為了讓仲裁日後有個明顯可以成長的地方，而不必動到任何行動者。</li>
+</ul></div>
 </section>
 
 <section class="sec" id="pools">
@@ -255,6 +292,11 @@ sentry.Behaviors
 <p>Les réserves viennent avec leur bug classique : restituer deux fois la même instance. Une balle peut arriver en bout de portée <em>et</em> toucher au même tick, et les deux chemins planifiaient son retour en réserve. Rendue deux fois, l'instance serait plus tard distribuée deux fois, et deux tirs futurs, logiquement distincts, partageraient un seul objet. Un drapeau « retrait en attente », posé par le premier chemin qui arrive, fait de la seconde tentative une opération nulle.</p>
 <div class="note rule"><p class="note-label">Règle</p><p>Rendre chaque restitution idempotente avant de mettre quoi que ce soit en réserve.</p><p>Une double libération dans une réserve n'est pas un plantage ; ce sont deux objets vivants qui partagent une identité, découverts bien plus tard ailleurs.</p></div>
 </div>
+<div lang="zh-TW">
+<h2>物件池，以及重複釋放</h2>
+<p>子彈與飛彈以地圖為單位放在物件池中：C# 物件圖在每次射擊之間重複使用，而不是每次都配置。物件池以地圖為單位，因為子彈的模擬格子位於那張地圖的子彈陣列中，掃掠的對象是那張地圖的物理世界；在一張地圖的池中的實例，永遠不可能被發給另一張地圖。</p>
+<p>物件池附帶著它自己的經典 bug：同一個實例被釋放兩次。一顆子彈可能在同一個 tick 中既超出射程、<em>又</em>被命中，兩條路徑都排定了把它還回池中。被歸還兩次的實例，之後會被發出兩次，兩次邏輯上不同的未來射擊就會共用同一個物件。一個「待消失」旗標，由先到的那條路徑設定，讓第二次嘗試變成什麼都不做。</p>
+<div class="note rule"><p class="note-label">規則</p><p>在把任何東西放進物件池之前，先讓每一次釋放都具有冪等性。</p><p>物件池中的重複釋放不會當機；它會讓兩個存活的物件共用同一個身分，然後在很久之後、在別的地方被發現。</p></div></div>
 </section>
 
 <section class="sec" id="swap">
@@ -268,6 +310,10 @@ sentry.Behaviors
 <p>La liste des pièces hexagonales d'une coque est lue depuis plusieurs threads : le tick la reconstruit après des travaux de construction, le thread réseau la lit en répondant aux demandes d'inventaire et d'interaction, et le constructeur de snapshots la lit aussi. Elle était autrefois reconstruite sur place, vidée puis remplie : tout lecteur qui la parcourait pendant cette fenêtre tombait sur « collection was modified ». Il fallait qu'un joueur appuie sur une touche à l'instant précis où une construction s'appliquait : rare, dépendant de la charge, impossible à reproduire à la demande.</p>
 <p>La liste n'est maintenant jamais modifiée : une nouvelle liste est construite puis échangée par une seule affectation de référence. Un lecteur qui tient l'ancienne garde une liste complète et cohérente, et voit simplement la disposition d'il y a un instant. Un tick de retard vaut mieux qu'une exception. Le commentaire à côté dit aussi ce que ça ne permet <em>pas</em> : les statistiques calculées du vaisseau viennent d'un cache sans cette garantie, donc seule la liste des pièces se lit sans risque hors du tick.</p>
 </div>
+<div lang="zh-TW">
+<h2>被多條執行緒讀取的資料：交換，不要修改</h2>
+<p>船體的六角零件清單會被好幾條執行緒讀取：tick 在建造工作之後重建它，網路執行緒在回應庫存與互動請求時讀取它，快照建構器也會讀取它。它過去是就地重建的，先清空再重新填入，所以任何在那段期間列舉它的讀取端，都會碰到「collection was modified」。這需要玩家剛好在一次建造被套用的那一刻按下按鍵：罕見、取決於負載、無法隨時重現。</p>
+<p>現在這份清單從不被修改：建立一份新清單，再用一次參考指派換上去。持有舊清單的讀取端保有一份完整、一致的清單，只是看到的是片刻之前的配置。慢一個 tick 勝過一次例外。旁邊的註解也說明了這<em>不</em>允許什麼：船艦計算出的數值來自一個沒有這種保證的快取，所以只有零件清單本身可以在其他執行緒上安全讀取。</p></div>
 </section>
 
 <section class="sec" id="takeaways">
@@ -286,6 +332,13 @@ sentry.Behaviors
 <li>Piloter joueurs et PNJ par les mêmes champs d'intention, garder l'entretien des mécanismes sur l'acteur, et composer les comportements.</li>
 <li>Rendre les restitutions en réserve idempotentes, et échanger les listes partagées au lieu de les modifier.</li>
 </ul></div>
+<div lang="zh-TW"><h2>重點整理</h2><ul>
+<li>給每個物件一條進入、一條離開地圖的路，延後到 tick 執行，並從唯一的出口宣告離開。</li>
+<li>讓 tick 跟著地圖歸屬走，而不是手動訂閱，並為那些窄問題保留型別清單。</li>
+<li>依生命週期與編碼選擇 ID 制度：持久物件用永不重複使用的計數器，子彈用帶隔離期、可回收的兩位元組區段。</li>
+<li>以相同的意圖欄位驅動玩家與 NPC，把機制的維護留在行動者身上，並組合行為。</li>
+<li>讓物件池的釋放具有冪等性，並交換共用的清單，而不是修改它們。</li>
+</ul></div>
 </div>
 </section>
 
@@ -298,6 +351,7 @@ sentry.Behaviors
 <footer class="site-footer" id="mq-footer"></footer>
 <script src="assets/js/site-data.js" defer></script>
 <script src="assets/js/glossary-data.js" defer></script>
+<script src="assets/js/ui-zh.js" defer></script>
 <script src="assets/js/app.js" defer></script>
 <script src="assets/js/widgets.js" defer></script>
 </body>

@@ -7,12 +7,12 @@
 <meta name="description" content="TCP, raw UDP or reliable UDP: delivery guarantees, head-of-line blocking, packet size limits, and why LiteNetLib.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Chakra+Petch:wght@500;600&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Chakra+Petch:wght@500;600&family=JetBrains+Mono:wght@400;500;600&family=Noto+Sans+TC:wght@400;700&display=swap">
 <link rel="stylesheet" href="assets/css/site.css">
-<script>(function(){var r=document.documentElement,l,t;try{l=localStorage.getItem("mq-lang");t=localStorage.getItem("mq-theme");}catch(e){}if(l!=="en"&&l!=="fr"){l=(navigator.language||"").toLowerCase().indexOf("fr")===0?"fr":"en";}r.setAttribute("data-lang",l);r.setAttribute("lang",l);if(t==="light"||t==="dark")r.setAttribute("data-theme",t);})();</script>
+<script>(function(){var r=document.documentElement,l,t,n;try{l=localStorage.getItem("mq-lang");t=localStorage.getItem("mq-theme");}catch(e){}if(l!=="en"&&l!=="fr"&&l!=="zh"){n=(navigator.language||"").toLowerCase();l=n.indexOf("fr")===0?"fr":n.indexOf("zh")===0?"zh":"en";}r.setAttribute("data-lang",l);r.setAttribute("lang",l==="zh"?"zh-TW":l);if(t==="light"||t==="dark")r.setAttribute("data-theme",t);})();</script>
 </head>
 <body data-page="transport">
-<a class="skip-link" href="#main"><span lang="en">Skip to content</span><span lang="fr">Aller au contenu</span></a>
+<a class="skip-link" href="#main"><span lang="en">Skip to content</span><span lang="fr">Aller au contenu</span><span lang="zh-TW">跳到主要內容</span></a>
 <header class="site-header" id="mq-header"></header>
 <div class="layout">
 <aside class="sidebar" id="mq-sidebar"></aside>
@@ -20,8 +20,8 @@
 <article>
 <header class="chapter-head">
   <div class="eyebrow" data-auto></div>
-  <h1><span lang="en">Choosing a transport</span><span lang="fr">Choisir un transport</span></h1>
-  <p class="dek"><span lang="en">TCP, raw UDP or reliable UDP: delivery guarantees, head-of-line blocking, packet size limits, and why LiteNetLib.</span><span lang="fr">TCP, UDP brut ou UDP fiable : garanties de livraison, blocage en tête de file, taille des paquets, et pourquoi LiteNetLib.</span></p>
+  <h1><span lang="en">Choosing a transport</span><span lang="fr">Choisir un transport</span><span lang="zh-TW">選擇傳輸層</span></h1>
+  <p class="dek"><span lang="en">TCP, raw UDP or reliable UDP: delivery guarantees, head-of-line blocking, packet size limits, and why LiteNetLib.</span><span lang="fr">TCP, UDP brut ou UDP fiable : garanties de livraison, blocage en tête de file, taille des paquets, et pourquoi LiteNetLib.</span><span lang="zh-TW">TCP、原始 UDP 還是可靠 UDP：遞送保證、隊頭阻塞、封包大小限制，以及為什麼選 LiteNetLib。</span></p>
   <div class="meta-row" data-auto></div>
 </header>
 
@@ -46,6 +46,14 @@
 </ul>
 <p>Pour la première famille, la latence compte bien plus que le débit. Un jeu vit très bien avec quelques centaines de kilobits par seconde et par joueur. Il ne vit pas avec une position qui arrive 200 ms en retard parce qu'autre chose devant elle attendait.</p>
 </div>
+<div lang="zh-TW">
+<h2>兩種流量</h2>
+<p>在選擇協定之前，先看看遊戲實際上送了什麼。它可分成兩類，需求恰好相反。</p>
+<ul>
+<li><strong>持續刷新的狀態。</strong>位置、速度、船體的耐久度。伺服器每秒送出 25 份新副本。一份遺失了，40 ms 後下一份就會取代它。一份晚到的舊副本比沒用還糟，因為它會讓船艦往回跳。</li>
+<li><strong>必須恰好發生一次的事情。</strong>登入、購買物品、送出一行聊天、「我想停靠」。遺失其中一則，就是玩家會察覺的 bug；收到兩次可能更糟（付了兩次錢）。</li>
+</ul>
+<p>對第一類來說，延遲遠比吞吐量重要。遊戲可以接受每位玩家每秒幾百 kbit 的流量，卻無法接受一個位置因為前面有別的東西在等而晚了 200 ms 才到。</p></div>
 </section>
 
 <section class="sec" id="tcp">
@@ -57,15 +65,18 @@
 <h2>TCP et le blocage en tête de file</h2>
 <p>TCP fournit un flux d'octets fiable et ordonné. Tout arrive, dans l'ordre, exactement une fois. C'est parfait pour la deuxième famille et exactement faux pour la première, pour une raison : le <a class="term" data-term="hol">blocage en tête de file</a>. Quand un segment se perd, TCP retient tous les octets qui le suivent jusqu'à ce que le manquant ait été retransmis, ce qui prend au moins un aller-retour. Votre position toute fraîche est dans le tampon du récepteur, arrivée en entier, et le jeu ne peut pas la lire parce qu'une plus ancienne, déjà inutile, manque.</p>
 </div>
+<div lang="zh-TW">
+<h2>TCP 與隊頭阻塞</h2>
+<p>TCP 提供一條可靠、有序的位元組流。所有東西都會依序到達，而且恰好一次。這對第二類完全正確，對第一類卻完全錯誤，原因只有一個：<a class="term" data-term="hol">隊頭阻塞</a>。當一個區段遺失時，TCP 會扣住它後面的每個位元組，直到遺失的那個被重傳為止，這至少要花一個往返時間。你那份最新的位置更新已經完整地躺在接收端的緩衝區裡，遊戲卻讀不到它，因為一份更舊、早已沒用的更新還沒到。</p></div>
 <figure class="fig fig-scroll">
 <svg viewBox="0 0 760 270" role="img" aria-label="Comparison: with reliable ordered delivery, packets 3 to 6 wait for the retransmission of lost packet 2; with sequenced delivery they are delivered on arrival and packet 2 is simply dropped">
   <defs><marker id="tr-arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="currentColor" opacity="0.6"/></marker></defs>
-  <text class="dg-label" x="16" y="24"><tspan lang="en">Reliable, ordered (TCP-like)</tspan><tspan lang="fr">Fiable, ordonné (façon TCP)</tspan></text>
-  <text class="dg-label" x="16" y="160"><tspan lang="en">Sequenced (newest wins)</tspan><tspan lang="fr">Séquencé (le plus récent gagne)</tspan></text>
-  <line x1="120" y1="50" x2="740" y2="50" class="dg-line"/><text class="dg-small" x="16" y="54"><tspan lang="en">sent</tspan><tspan lang="fr">envoyé</tspan></text>
-  <line x1="120" y1="110" x2="740" y2="110" class="dg-line"/><text class="dg-small" x="16" y="114"><tspan lang="en">game reads</tspan><tspan lang="fr">le jeu lit</tspan></text>
-  <line x1="120" y1="186" x2="740" y2="186" class="dg-line"/><text class="dg-small" x="16" y="190"><tspan lang="en">sent</tspan><tspan lang="fr">envoyé</tspan></text>
-  <line x1="120" y1="246" x2="740" y2="246" class="dg-line"/><text class="dg-small" x="16" y="250"><tspan lang="en">game reads</tspan><tspan lang="fr">le jeu lit</tspan></text>
+  <text class="dg-label" x="16" y="24"><tspan lang="en">Reliable, ordered (TCP-like)</tspan><tspan lang="fr">Fiable, ordonné (façon TCP)</tspan><tspan lang="zh-TW">可靠、有序（類似 TCP）</tspan></text>
+  <text class="dg-label" x="16" y="160"><tspan lang="en">Sequenced (newest wins)</tspan><tspan lang="fr">Séquencé (le plus récent gagne)</tspan><tspan lang="zh-TW">序列化（最新者優先）</tspan></text>
+  <line x1="120" y1="50" x2="740" y2="50" class="dg-line"/><text class="dg-small" x="16" y="54"><tspan lang="en">sent</tspan><tspan lang="fr">envoyé</tspan><tspan lang="zh-TW">送出</tspan></text>
+  <line x1="120" y1="110" x2="740" y2="110" class="dg-line"/><text class="dg-small" x="16" y="114"><tspan lang="en">game reads</tspan><tspan lang="fr">le jeu lit</tspan><tspan lang="zh-TW">遊戲讀取</tspan></text>
+  <line x1="120" y1="186" x2="740" y2="186" class="dg-line"/><text class="dg-small" x="16" y="190"><tspan lang="en">sent</tspan><tspan lang="fr">envoyé</tspan><tspan lang="zh-TW">送出</tspan></text>
+  <line x1="120" y1="246" x2="740" y2="246" class="dg-line"/><text class="dg-small" x="16" y="250"><tspan lang="en">game reads</tspan><tspan lang="fr">le jeu lit</tspan><tspan lang="zh-TW">遊戲讀取</tspan></text>
   <!-- TCP row: sends at 140,200,260,320,380,440 ; 2 lost, retransmit at ~520 -->
   <g class="dg-mono">
     <rect x="128" y="38" width="24" height="24" rx="4" class="dg-box-2"/><text x="140" y="55" text-anchor="middle">1</text>
@@ -77,12 +88,12 @@
     <rect x="528" y="38" width="24" height="24" rx="4" class="dg-hot"/><text x="540" y="55" text-anchor="middle">2</text>
   </g>
   <path d="M200 66 L214 92" class="dg-crit-stroke" stroke-width="2"/><path d="M214 66 L200 92" class="dg-crit-stroke" stroke-width="2"/>
-  <text class="dg-small" x="222" y="86" style="fill:var(--crit-ink)"><tspan lang="en">lost</tspan><tspan lang="fr">perdu</tspan></text>
-  <text class="dg-small" x="496" y="30"><tspan lang="en">retransmitted after ~1 round trip</tspan><tspan lang="fr">retransmis après ~1 aller-retour</tspan></text>
+  <text class="dg-small" x="222" y="86" style="fill:var(--crit-ink)"><tspan lang="en">lost</tspan><tspan lang="fr">perdu</tspan><tspan lang="zh-TW">遺失</tspan></text>
+  <text class="dg-small" x="496" y="30"><tspan lang="en">retransmitted after ~1 round trip</tspan><tspan lang="fr">retransmis après ~1 aller-retour</tspan><tspan lang="zh-TW">約一個往返後重傳</tspan></text>
   <line x1="140" y1="62" x2="160" y2="98" class="dg-line" marker-end="url(#tr-arr)"/>
   <rect x="148" y="98" width="24" height="24" rx="4" class="dg-box"/><text class="dg-mono" x="160" y="115" text-anchor="middle">1</text>
   <rect x="264" y="92" width="276" height="36" rx="6" fill="none" stroke-dasharray="4 4" style="stroke:var(--crit)"/>
-  <text class="dg-small" x="402" y="140" text-anchor="middle" style="fill:var(--crit-ink)"><tspan lang="en">3, 4, 5, 6 have arrived but wait, stalled behind 2</tspan><tspan lang="fr">3, 4, 5, 6 sont arrivés mais attendent, bloqués derrière 2</tspan></text>
+  <text class="dg-small" x="402" y="140" text-anchor="middle" style="fill:var(--crit-ink)"><tspan lang="en">3, 4, 5, 6 have arrived but wait, stalled behind 2</tspan><tspan lang="fr">3, 4, 5, 6 sont arrivés mais attendent, bloqués derrière 2</tspan><tspan lang="zh-TW">3、4、5、6 都已到達，卻卡在 2 後面等待</tspan></text>
   <g class="dg-mono">
     <rect x="556" y="98" width="24" height="24" rx="4" class="dg-box"/><text x="568" y="115" text-anchor="middle">2</text>
     <rect x="584" y="98" width="24" height="24" rx="4" class="dg-box"/><text x="596" y="115" text-anchor="middle">3</text>
@@ -111,9 +122,9 @@
   <line x1="320" y1="198" x2="340" y2="234" class="dg-line" marker-end="url(#tr-arr)"/>
   <line x1="380" y1="198" x2="400" y2="234" class="dg-line" marker-end="url(#tr-arr)"/>
   <line x1="440" y1="198" x2="460" y2="234" class="dg-line" marker-end="url(#tr-arr)"/>
-  <text class="dg-small" x="496" y="226"><tspan lang="en">each one read on arrival; 2 is never needed again</tspan><tspan lang="fr">chacun lu à l'arrivée ; 2 ne sert plus jamais</tspan></text>
+  <text class="dg-small" x="496" y="226"><tspan lang="en">each one read on arrival; 2 is never needed again</tspan><tspan lang="fr">chacun lu à l'arrivée ; 2 ne sert plus jamais</tspan><tspan lang="zh-TW">每個一到就讀取；2 再也不需要了</tspan></text>
 </svg>
-<figcaption><span lang="en"><strong>Head-of-line blocking.</strong> With ordered delivery, one lost packet delays everything behind it by a round trip. For position updates, the newer packets already contain everything the lost one had.</span><span lang="fr"><strong>Blocage en tête de file.</strong> Avec une livraison ordonnée, un paquet perdu retarde tout ce qui le suit d'un aller-retour. Pour des mises à jour de position, les paquets plus récents contiennent déjà tout ce qu'avait le paquet perdu.</span></figcaption>
+<figcaption><span lang="en"><strong>Head-of-line blocking.</strong> With ordered delivery, one lost packet delays everything behind it by a round trip. For position updates, the newer packets already contain everything the lost one had.</span><span lang="fr"><strong>Blocage en tête de file.</strong> Avec une livraison ordonnée, un paquet perdu retarde tout ce qui le suit d'un aller-retour. Pour des mises à jour de position, les paquets plus récents contiennent déjà tout ce qu'avait le paquet perdu.</span><span lang="zh-TW"><strong>隊頭阻塞。</strong>在有序遞送下，一個遺失的封包會讓它後面的所有東西延遲一個往返時間。對位置更新來說，較新的封包早已包含遺失那個封包的所有內容。</span></figcaption>
 </figure>
 <div lang="en">
 <p>TCP has a second trap for small real-time messages: Nagle's algorithm, which delays small writes to coalesce them. It can be disabled (<code>NoDelay</code>), but that does not remove head-of-line blocking. TCP also delivers a stream, not messages, so you frame messages yourself. None of this makes TCP unusable: plenty of games ship on it, and for login, chat and trading it is perfectly adequate. The problem appears when losses appear, and on real consumer connections they always do.</p>
@@ -121,6 +132,8 @@
 <div lang="fr">
 <p>TCP a un second piège pour les petits messages temps réel : l'algorithme de Nagle, qui retarde les petites écritures pour les regrouper. On peut le désactiver (<code>NoDelay</code>), mais ça ne supprime pas le blocage en tête de file. TCP livre aussi un flux, pas des messages : il faut encadrer les messages soi-même. Rien de tout ça ne rend TCP inutilisable : beaucoup de jeux tournent dessus, et pour le login, le chat ou les échanges, il convient parfaitement. Le problème apparaît quand les pertes apparaissent, et sur de vraies connexions grand public, elles apparaissent toujours.</p>
 </div>
+<div lang="zh-TW">
+<p>TCP 對小型即時訊息還有第二個陷阱：Nagle 演算法，它會延遲小筆寫入以便合併。它可以關閉（<code>NoDelay</code>），但這並不能消除隊頭阻塞。TCP 傳遞的也是一條資料流而不是訊息，所以你得自己幫訊息加上訊框。這些都不會讓 TCP 無法使用：很多遊戲都是用它上市的，而對登入、聊天與交易來說，它完全夠用。問題出現在發生遺失時，而在真實的家用網路上，遺失一定會發生。</p></div>
 </section>
 
 <section class="sec" id="udp">
@@ -148,6 +161,17 @@
 </ul>
 <p>Écrire tout ça correctement est un projet en soi, et les bugs que ça produit (un minuteur de retransmission qui se déclenche trop tôt, un numéro de séquence qui boucle) sont parmi les plus durs à reproduire.</p>
 </div>
+<div lang="zh-TW">
+<h2>原始 UDP：自由，以及一切都得自己來</h2>
+<p>UDP 送出彼此獨立的資料包，完全沒有任何承諾。它們可能遺失、重複或亂序，而且沒有連線：沒有任何東西會告訴你對方已經離開了。這份自由正是狀態更新想要的，但其他一切都變成你的工作：</p>
+<ul>
+<li>連線交握、保活訊息，以及偵測對方消失的逾時；</li>
+<li>為必須送達的訊息做確認與重傳；</li>
+<li>在需要的地方排序並移除重複；</li>
+<li>把超過網路封包大小限制的東西切開再組合回來；</li>
+<li>不要在已經壅塞的連線上灌爆流量。</li>
+</ul>
+<p>要把這些全部寫對，本身就是一個專案，而它產生的 bug（重傳計時器觸發得太早、序號溢位繞回）是最難重現的那一類。</p></div>
 </section>
 
 <section class="sec" id="reliable-udp">
@@ -179,6 +203,19 @@
 </tbody></table></div>
 <p>La propriété importante est que modes et canaux sont indépendants : une mise à jour d'état perdue sur un canal non fiable ne retarde pas un message de chat, et un achat retransmis ne retarde pas les positions. La bibliothèque mesure aussi le temps d'aller-retour, gère la fragmentation et découpe les gros messages, ce qu'il faudrait sinon écrire soi-même. D'autres bibliothèques de cette famille existent, comme ENet ou plusieurs options basées sur QUIC ; le choix entre elles compte moins que le fait d'en utiliser une.</p>
 </div>
+<div lang="zh-TW">
+<h2>可靠 UDP：每個通道各有一種遞送模式</h2>
+<p>可靠 UDP 函式庫介於兩者之間。它們在單一 UDP socket 上運作，處理連線、ping 與逾時，並讓每則訊息選擇自己的遞送模式。MoonQwak 使用的 <a href="https://github.com/RevenantX/LiteNetLib" rel="noopener">LiteNetLib</a> 提供以下模式：</p>
+<div class="table-wrap"><table>
+<thead><tr><th>模式</th><th>保證</th><th>適用於</th></tr></thead>
+<tbody>
+<tr><td><code>Unreliable</code></td><td>沒有：可能遺失、重複、亂序</td><td>反正每個 tick 都會重送的輸入</td></tr>
+<tr><td><code>Sequenced</code></td><td>舊封包會被丟棄；絕不會亂序遞送</td><td>只有最新值才重要的連續狀態</td></tr>
+<tr><td><code>ReliableUnordered</code></td><td>一定送達，順序不定</td><td>彼此獨立的事件</td></tr>
+<tr><td><code>ReliableOrdered</code></td><td>一定送達，而且依序（類似 TCP，以通道為單位）</td><td>請求、聊天、任何具交易性質的東西</td></tr>
+<tr><td><code>ReliableSequenced</code></td><td>只保證最後一則送達</td><td>中間值遺失無妨、但最後一個必須送達的狀態</td></tr>
+</tbody></table></div>
+<p>重要的特性是，模式與通道彼此獨立：不可靠通道上遺失的狀態更新不會延遲聊天訊息，而一筆被重傳的購買也不會延遲位置。函式庫也會量測往返時間、處理分段並切割大型訊息，這些否則都得自己寫。同類的函式庫還有 ENet 以及數個以 QUIC 為基礎的選項；選哪一個，遠不如「用一個」來得重要。</p></div>
 </section>
 
 <section class="sec" id="what-moonqwak-does">
@@ -196,12 +233,20 @@
 <p>Envoyer les snapshots en fiable est, en théorie, le mauvais canal pour un état continu : un snapshot perdu bloque les suivants, et il est retransmis alors qu'il est déjà périmé. C'est resté ainsi volontairement, parce que deux astuces de réplication décrites dans la partie 4 reposaient sur la livraison fiable : une balle n'est envoyée que deux fois (à son apparition et à son impact), et certains blocs partaient autrefois en delta par rapport à l'envoi précédent. Passer les snapshots sur un canal non fiable sans changer ça aurait fait perdre des balles en silence.</p>
 <p>À la place, le protocole a été rendu tolérant aux pertes, un mécanisme à la fois : l'état final d'une balle est répété sur trois snapshots, les objets sont retirés après un délai de grâce plutôt qu'à leur première absence, les dégâts par hex partent en liste absolue versionnée plutôt qu'en delta. Chacun de ces changements était justifié pour lui-même. Ensemble, ils font que le flux de snapshots ne dépend plus de la fiabilité, et séparer le trafic en un canal d'état séquencé et un canal d'événements fiable est devenu un changement de mode de livraison plutôt qu'une refonte.</p>
 </div>
+<div lang="zh-TW">
+<h2>MoonQwak 實際送了什麼、怎麼送</h2>
+<div class="note project"><p class="note-label">在 MoonQwak 中</p>
+<p>目前幾乎所有訊息，包括快照，都以 <code>ReliableOrdered</code> 傳送，這是專案傳送方法的預設值。用戶端的輸入每個 tick 都會送出，而且攜帶的是控制項的完整狀態（「按住推進、正在開火、瞄準這裡」），而不是按鍵事件，所以它們是冪等的：伺服器保留最新的一則，重複的不會改變任何事。負載測試的機器人以 <code>Unreliable</code> 送出輸入，之所以安全，正是因為這一點。</p></div>
+<p>理論上，以可靠方式送快照，對連續狀態而言是選錯了通道：一份遺失的快照會擋住後面的快照，而且等到它被重傳時早已過時。之所以刻意維持這樣，是因為第 4 部描述的兩個同步技巧依賴可靠遞送：一顆子彈只會送兩次（產生時與命中時），而且有些區塊過去是以相對於上一次傳送的差量送出的。如果沒改這些就把快照移到不可靠通道，子彈會悄悄地消失。</p>
+<p>實際的做法是，讓協定一次一個機制地變得能容忍遺失：子彈的終止狀態會在三份快照中重複出現、物件在寬限期之後才被移除而不是第一次缺席就移除、每個六角格的損傷改為以帶版本的絕對清單送出而不是差量。這些改動各自都有充分的理由。合在一起，它們代表快照流已不再依賴可靠性，而把流量拆成一條序列化的狀態通道與一條可靠的事件通道，已經變成只是改變遞送模式，而不是重新設計。</p></div>
 <div lang="en">
 <div class="note rule"><p class="note-label">Rule</p><p>If a fact is sent only once over a best-effort path, it will be lost one day.</p><p>Either make it state that is repeated until it cannot matter any more, or send it on a reliable channel. Repeating usually costs a few bytes and no change to the format.</p></div>
 </div>
 <div lang="fr">
 <div class="note rule"><p class="note-label">Règle</p><p>Si un fait n'est envoyé qu'une fois sur un chemin sans garantie, il sera perdu un jour.</p><p>Soit on en fait un état répété jusqu'à ce qu'il ne puisse plus compter, soit on l'envoie sur un canal fiable. Répéter coûte en général quelques octets et aucun changement de format.</p></div>
 </div>
+<div lang="zh-TW">
+<div class="note rule"><p class="note-label">規則</p><p>如果一項事實只在盡力而為的路徑上送一次，總有一天它會遺失。</p><p>要嘛把它變成會一再重複、直到不再重要的狀態，要嘛用可靠通道送。重複通常只花幾個位元組，而且不必改格式。</p></div></div>
 </section>
 
 <section class="sec" id="mtu">
@@ -217,6 +262,11 @@
 <div class="note measured"><p class="note-label">Mesuré</p><p>Avec 100 robots sur une carte, le snapshot moyen faisait 3 703 octets : trois fragments chacun, 25 fois par seconde. Le premier snapshot qu'un joueur reçoit à son arrivée, qui décrit tout ce qui l'entoure d'un coup, a atteint 15 687 octets : onze fragments, qui doivent tous arriver avant que quoi que ce soit ne s'affiche.</p></div>
 <p>Le budget par joueur décrit dans la partie 4 a ramené les snapshots réguliers bien sous la limite. Le premier snapshot après l'arrivée reste gros, et le découper en plusieurs paquets indépendants fait partie des problèmes ouverts. La règle à garder : dimensionner le trafic régulier par rapport à la limite, et traiter tout ce qui la dépasse comme une exception assumée.</p>
 </div>
+<div lang="zh-TW">
+<h2>封包大小限制</h2>
+<p>每條網路路徑都有最大傳輸單元，也就是它能一次完整傳送的最大封包，在乙太網路上通常約 1,500 位元組。扣掉 IP 與 UDP 標頭以及函式庫自己的標頭，留給你的資料大約只剩 1,400 多位元組。更大的訊息會被切成多個分段。這行得通，但只有在每個分段都到達時，訊息才能使用：若每個封包的遺失率為 <em>p</em>，切成 <em>n</em> 段的訊息遺失的機率接近 <em>n × p</em>。</p>
+<div class="note measured"><p class="note-label">實測</p><p>一張地圖上有 100 個機器人時，平均快照為 3,703 位元組：每份三個分段，每秒 25 次。玩家抵達時收到的第一份快照一次描述了他周遭的所有東西，達到 15,687 位元組：十一個分段，全部到齊之前什麼都畫不出來。</p></div>
+<p>第 4 部描述的每位玩家預算，讓一般快照回到遠低於限制的大小。抵達後的第一份快照仍然很大，把它拆成數個獨立封包，列在待解問題清單上。要記住的規則是：以這個限制來估算一般流量的大小，超過它的任何東西都當成刻意的例外。</p></div>
 </section>
 
 <section class="sec" id="caps">
@@ -232,6 +282,11 @@
 <div class="note pitfall"><p class="note-label">Piège rencontré</p><p>Le constructeur de la gateway avait une valeur par défaut de 10 pairs que <code>Program.cs</code> ne surchargeait jamais : le onzième joueur était refusé. Le serveur de jeu avait un 100 écrit en dur. Le banc de charge a trouvé le premier à onze robots et le second à cent, quand le client du développeur, venu regarder, s'est fait rejeter. Dans les deux cas le refus était muet des deux côtés : le <code>Reject()</code> de LiteNetLib ferme simplement la connexion, et le client ne voyait qu'une déconnexion.</p></div>
 <p>Les deux plafonds sont maintenant des réglages d'environnement, affichés au démarrage, et un refus écrit une ligne avec le compte courant et le plafond. Ce genre de limite ne casse rien tant qu'on reste dessous, et c'est pour ça qu'elles survivent des mois puis se montrent le premier jour où le jeu marche.</p>
 </div>
+<div lang="zh-TW">
+<h2>沒有人選過的連線上限</h2>
+<p>傳輸函式庫需要一個最大連線數，而你在開發期間隨手傳一次的數字，往往就這樣留了下來。MoonQwak 有兩個這樣的上限，都是以同樣的方式被發現的。</p>
+<div class="note pitfall"><p class="note-label">我踩過的坑</p><p>閘道的建構函式預設 10 個連線，而 <code>Program.cs</code> 從來沒有覆寫它，所以第十一位玩家被拒絕了。遊戲伺服器則寫死了 100。負載測試在第十一個機器人時發現了第一個，在一百個時發現了第二個——當時開發者自己的用戶端想加入觀看，卻被拒絕了。兩次的拒絕在兩端都是無聲的：LiteNetLib 的 <code>Reject()</code> 只是關閉連線，用戶端只看到斷線。</p></div>
+<p>這兩個上限現在都是環境設定，在啟動時印出來，而拒絕連線時會寫一行記錄目前的數量與上限。這類上限在你還沒碰到時什麼都不會弄壞，所以它們能存活好幾個月，然後在遊戲真正能玩的第一天冒出來。</p></div>
 <div class="code"><div class="code-head"><span class="file">Network/Server.cs · connection requests</span></div><pre><code data-lang="cs">listener.ConnectionRequestEvent += request =>
 {
     if (_netManager.ConnectedPeersCount &lt; _maxClient)
@@ -250,6 +305,8 @@
 <div lang="fr">
 <div class="note rule"><p class="note-label">Règle</p><p>Chaque limite dure a un nom, un réglage, une ligne au démarrage et une ligne quand elle se déclenche.</p><p>Une limite qu'on ne voit pas est une limite qu'on redécouvre en production.</p></div>
 </div>
+<div lang="zh-TW">
+<div class="note rule"><p class="note-label">規則</p><p>每個硬性上限都要有名稱、有設定、啟動時印一行、觸發時再印一行。</p><p>你看不見的上限，就是你會在正式環境重新發現一次的上限。</p></div></div>
 </section>
 
 <section class="sec" id="takeaways">
@@ -268,6 +325,13 @@
 <li>Concevoir les messages pour tolérer les pertes même s'ils voyagent aujourd'hui en fiable, pour pouvoir changer de mode plus tard.</li>
 <li>Garder les paquets réguliers sous le MTU, et rendre visible chaque plafond de connexions.</li>
 </ul></div>
+<div lang="zh-TW"><h2>重點整理</h2><ul>
+<li>遊戲流量分成兩類：持續刷新的狀態，以及必須恰好發生一次的事件。它們需要不同的遞送方式。</li>
+<li>TCP 的有序資料流讓一個遺失的封包延遲後面的所有東西。原始 UDP 則讓你得自己打造連線、可靠性與分段。</li>
+<li>可靠 UDP 函式庫在單一 socket 上提供每則訊息各自的遞送模式；選一個來用，而不是自己寫。</li>
+<li>即使訊息目前以可靠方式傳送，也要把它設計成能容忍遺失，這樣遞送模式日後才能更換。</li>
+<li>讓一般封包保持在 MTU 之下，並讓每個連線上限都看得見。</li>
+</ul></div>
 </div>
 </section>
 
@@ -280,6 +344,7 @@
 <footer class="site-footer" id="mq-footer"></footer>
 <script src="assets/js/site-data.js" defer></script>
 <script src="assets/js/glossary-data.js" defer></script>
+<script src="assets/js/ui-zh.js" defer></script>
 <script src="assets/js/app.js" defer></script>
 <script src="assets/js/widgets.js" defer></script>
 </body>

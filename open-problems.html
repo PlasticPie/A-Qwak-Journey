@@ -7,12 +7,12 @@
 <meta name="description" content="What is not solved yet, why it is acceptable for now, and what I would do next.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Chakra+Petch:wght@500;600&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Chakra+Petch:wght@500;600&family=JetBrains+Mono:wght@400;500;600&family=Noto+Sans+TC:wght@400;700&display=swap">
 <link rel="stylesheet" href="assets/css/site.css">
-<script>(function(){var r=document.documentElement,l,t;try{l=localStorage.getItem("mq-lang");t=localStorage.getItem("mq-theme");}catch(e){}if(l!=="en"&&l!=="fr"){l=(navigator.language||"").toLowerCase().indexOf("fr")===0?"fr":"en";}r.setAttribute("data-lang",l);r.setAttribute("lang",l);if(t==="light"||t==="dark")r.setAttribute("data-theme",t);})();</script>
+<script>(function(){var r=document.documentElement,l,t,n;try{l=localStorage.getItem("mq-lang");t=localStorage.getItem("mq-theme");}catch(e){}if(l!=="en"&&l!=="fr"&&l!=="zh"){n=(navigator.language||"").toLowerCase();l=n.indexOf("fr")===0?"fr":n.indexOf("zh")===0?"zh":"en";}r.setAttribute("data-lang",l);r.setAttribute("lang",l==="zh"?"zh-TW":l);if(t==="light"||t==="dark")r.setAttribute("data-theme",t);})();</script>
 </head>
 <body data-page="open-problems">
-<a class="skip-link" href="#main"><span lang="en">Skip to content</span><span lang="fr">Aller au contenu</span></a>
+<a class="skip-link" href="#main"><span lang="en">Skip to content</span><span lang="fr">Aller au contenu</span><span lang="zh-TW">跳到主要內容</span></a>
 <header class="site-header" id="mq-header"></header>
 <div class="layout">
 <aside class="sidebar" id="mq-sidebar"></aside>
@@ -20,8 +20,8 @@
 <article>
 <header class="chapter-head">
   <div class="eyebrow" data-auto></div>
-  <h1><span lang="en">Known gaps and next steps</span><span lang="fr">Limites connues et prochaines étapes</span></h1>
-  <p class="dek"><span lang="en">What is not solved yet, why it is acceptable for now, and what I would do next.</span><span lang="fr">Ce qui n'est pas encore résolu, pourquoi c'est acceptable pour l'instant, et ce que je ferais ensuite.</span></p>
+  <h1><span lang="en">Known gaps and next steps</span><span lang="fr">Limites connues et prochaines étapes</span><span lang="zh-TW">已知缺口與下一步</span></h1>
+  <p class="dek"><span lang="en">What is not solved yet, why it is acceptable for now, and what I would do next.</span><span lang="fr">Ce qui n'est pas encore résolu, pourquoi c'est acceptable pour l'instant, et ce que je ferais ensuite.</span><span lang="zh-TW">哪些還沒解決、為什麼目前可以接受，以及我接下來會做什麼。</span></p>
   <div class="meta-row" data-auto></div>
 </header>
 
@@ -64,6 +64,23 @@
 <tr><td>Les mises à jour sont vérifiées, pas authentifiées</td><td>Le canal de mise à jour est ouvert au public</td></tr>
 </tbody></table></div>
 </div>
+<div lang="zh-TW">
+<h2>如何閱讀這份清單</h2>
+<p>這個網站中的每個系統都有限制，假裝沒有，只會讓其他內容變得不可信。下面的每一個缺口都附帶三件事：為什麼它<em>今天</em>可以接受、什麼會讓它變得緊急，以及我會怎麼處理它。第二件事最重要。沒有觸發條件的缺口是一種擔憂；有觸發條件的缺口則是一個計畫。在可能的情況下，觸發條件是一個量測工具早已在量的數字，讓決定不必建立在印象之上。</p>
+<div class="table-wrap"><table>
+<thead><tr><th>缺口</th><th>在什麼情況下變得緊急</th></tr></thead>
+<tbody>
+<tr><td>船艦的移動不被預測</td><td>高延遲的玩家覺得駕駛起來很遲鈍</td></tr>
+<tr><td>抵達玩家的第一份快照很大</td><td>經由容易掉包之連線抵達的玩家要等心跳</td></tr>
+<tr><td>沒有明確的「離開了你的視野」訊息</td><td>心跳在流量中所佔的比例變得重要</td></tr>
+<tr><td>快照準備與興趣管理使用兩組物件</td><td>後備路徑計數器不再是零</td></tr>
+<tr><td>每張地圖的出站流量</td><td>一張地圖需要超過約 500 位玩家</td></tr>
+<tr><td>同一張地圖內的物件 tick 是循序的</td><td>一張地圖需要超過約 1,000 個船體</td></tr>
+<tr><td>受損的船體保留完整的碰撞幾何</td><td>一次使用會死之機器人的測試台顯示形狀數攀升</td></tr>
+<tr><td>結構描述遷移是手動套用的</td><td>某個世界保存了必須在發行之間存活的資料</td></tr>
+<tr><td>閘道是單一故障點</td><td>正常運作時間比重新啟動的簡單性更重要</td></tr>
+<tr><td>更新經過驗證，但沒有經過認證</td><td>更新管道對大眾開放</td></tr>
+</tbody></table></div></div>
 </section>
 
 <section class="sec" id="network">
@@ -89,6 +106,16 @@
 <h3>Deux ensembles d'objets sur le chemin des snapshots</h3>
 <p>La préparation des snapshots parcourt les objets de la carte ; les snapshots lisent l'index d'intérêt publié. Entre les deux tourne une phase séquentielle qui peut retirer des objets de la carte. Un objet retiré à ce moment-là est encore dans l'index mais n'a pas de bloc préparé, ce qui force une sérialisation de repli pour chaque spectateur. C'était la racine de la course à 780 joueurs (chapitre <a href="serialize-once.html">4.3</a>). <strong>Ce qui a été fait :</strong> le repli est désormais pur, la course est impossible, et un compteur rapporte chaque repli. <strong>Pourquoi la cause peut attendre :</strong> le compteur dit si elle compte, et il est attendu à zéro. C'est probablement aussi pourquoi un vaisseau détruit reste parfois environ deux secondes à l'écran. <strong>Ensuite :</strong> faire lire le même ensemble à la préparation et à l'intérêt.</p>
 </div>
+<div lang="zh-TW">
+<h2>網路與同步</h2>
+<h3>船艦的移動不被預測</h3>
+<p>行走的角色被完整地預測；船艦則沒有（第 <a href="prediction.html">5.3</a> 章）。船艦是伺服器物理世界中一個會與其他玩家船艦碰撞的剛體，要忠實地預測它，用戶端就必須執行一個與伺服器一致的物理模擬。每一個選項本身都是一個專案：在伺服器上改用 Unity 的物理而不是 Box2D；在用戶端上用伺服器的引擎取代 Unity 的物理；為兩端撰寫一套自訂的物理引擎並以良好的效能整合進 Unity；或使用一個讓共用模擬變得容易的引擎，甚至自己寫一個。<strong>為什麼可以等：</strong>運動周邊的一切都會立即回應（推進器、量表、冷卻），船艦的慣性掩蓋了一部分延遲，而第 <a href="interpolation.html">5.2</a> 章的平滑處理讓運動保持流暢。<strong>目前：</strong>保持簡單，等到高延遲下的駕駛成為玩家最常注意到的事情時再重新檢視。</p>
+<h3>抵達玩家的第一份快照很大</h3>
+<p>穩定狀態下的快照放得進一個封包。抵達一張擁擠地圖後的第一份快照則放不下：600 位玩家的測試台看到了 15,687 位元組，約十一個 UDP 分段，而遺失其中任何一個就會失去整個資料包；玩家接著得等心跳。<strong>為什麼可以等：</strong>每次抵達只發生一次，而且在載入畫面後面。<strong>下一步：</strong>以大約 1,200 位元組切分快照，或在最初的幾個 tick 中，由近到遠漸進地送出抵達狀態。</p>
+<h3>沒有明確的「離開了你的視野」訊息</h3>
+<p>新鮮度預算之外的物件，靠一個約 21 位元組的心跳維持存活，而它只說了一個位元的事：「還在這裡」（第 <a href="freshness-budget.html">4.5</a> 章）。伺服器在它的清除迴圈中早就偵測得到物件何時離開玩家的視野，只是把這項資訊丟掉了。有了明確的消失訊息，用戶端的寬限期可以延長到 30 秒，心跳可以降到 10 秒，讓預算成為唯一真正的項目。<strong>為什麼可以等：</strong>它會改變兩端的線路格式，連同用戶端的鏡像與線路測試，而收益真實但有限。<strong>下一步：</strong>一次線路格式變更，最好與下一次協定版本提升一起進行。</p>
+<h3>快照路徑中的兩組物件</h3>
+<p>快照準備走訪的是地圖的物件；快照讀取的是已發布的興趣索引。在這兩者之間，執行的是一個可能從地圖中移除物件的循序階段。在那裡被移除的物件仍然在索引中，卻沒有預先準備的區塊，這會迫使每一位觀察者都走後備序列化路徑。這就是 780 位玩家時那個競爭條件的根源（第 <a href="serialize-once.html">4.3</a> 章）。<strong>已經做的：</strong>後備路徑現在是純函式，所以競爭條件不可能發生，而一個計數器會回報每一次後備。<strong>為什麼原因可以等：</strong>計數器會說明它是否重要，而它的期望值是零。這大概也是為什麼一艘被摧毀的船有時會在畫面上逗留約兩秒。<strong>下一步：</strong>讓預先準備與興趣管理讀取同一組物件。</p></div>
 </section>
 
 <section class="sec" id="scale">
@@ -114,6 +141,16 @@
 <h3>Les coques abîmées gardent toute leur géométrie</h3>
 <p>La coque nue a divisé les formes physiques par huit, mais seulement pour les coques intactes près desquelles personne ne marche (chapitre <a href="physics.html">3.5</a>). Une coque abîmée garde sa description complète, environ 41 formes. Tous les bancs jusqu'ici utilisaient des bots invulnérables : le compte d'« abîmées » était nul par construction, et les bancs mesuraient le <em>meilleur</em> cas. <strong>Ensuite :</strong> une autre expérience, avec des bots mortels et une population qu'on laisse fondre, en lisant le recensement des coques pendant que les hex meurent. Si les coques abîmées grimpent avec le nombre de formes, fusionner les formes de la coque et de l'enveloppe des armes devient le prochain chantier physique.</p>
 </div>
+<div lang="zh-TW">
+<h2>規模</h2>
+<h3>每張地圖的出站流量</h3>
+<p>單一地圖 800 位玩家時，tick 撐住了（38 ms 的工作），但出站流量在峰值時達到 15.1 MB/s，只為了一張地圖：第一個真正的託管限制是網路，而不是 CPU（第 <a href="bench-journal.html#scaling">10.4</a> 章）。在每張地圖約 500 位玩家時，峰值會降到接近 9 MB/s，一台機器就能託管好幾張繁忙的地圖，而不是一張擁擠的地圖。<strong>為什麼可以等：</strong>玩家會分散在許多地圖上，而每張地圖的限制，只有在只有一張地圖時才是遊戲的限制。</p>
+<p><strong>什麼會改變這一點：</strong>一張真的需要更多玩家的單一地圖，那就需要把地圖<em>複製</em>到多台伺服器上，並訂出讓隊伍待在一起的規則。這個決定交給資料：監控器的佔用報告會顯示有多少張地圖承載了多少位玩家。一條介於 1 到 15 之間的長尾、加上約 40 人的峰值，是健康的人口分布；一個孤立在 300 人的尖峰，則是任何叢集平衡都救不了的地圖。</p>
+<div class="note pitfall"><p class="note-label">我踩過的坑</p><p>有一次的佔用讀數顯示一張地圖上有 312 位玩家。其中 305 位是幽靈：先前測試台的機器人，仍然記錄在它們最後一次持久化的位置上，全都在它們陣營的首都。我們差點就得出地圖必須能夠被複製的結論。現在報告會依最老的存活伺服器的啟動時間過濾（在那之前駕駛過的任何東西都不屬於這次量測），這個界限是從叢集的真實狀態推導出來的，不可能被遺忘，也不可能悄悄地過時。它仍然會印出它丟棄了多少幽靈：無聲地過濾，會掩蓋資料庫是髒的這件事。</p></div>
+<h3>同一張地圖內的物件 tick 是循序的</h3>
+<p>地圖之間是平行 tick 的，但同一張地圖的物件是一個接一個 tick 的。船體的 tick 會寫入它的物理剛體、在共用的模擬中產生子彈、拉動有爭議的碎片，並傷害其他船體，所以它們不能直接平行執行。<strong>為什麼可以等：</strong>從 400 到 600 個船體，一張地圖的模擬保持平坦（×1.02），而物件階段約佔 tick 的四分之一。<strong>下一步，在每張地圖超過約 1,000 個船體之後：</strong>平行地思考，循序地行動。決策（AI、瞄準）在世界的凍結視圖上平行計算，然後在 tick 執行緒上依序套用，使用已經存在的 tick 工作執行緒與每張地圖的暫存緩衝區。</p>
+<h3>受損的船體保留完整的幾何</h3>
+<p>裸船體把物理形狀除以八，但只適用於完好、而且附近沒有人行走的船體（第 <a href="physics.html">3.5</a> 章）。受損的船體保留它的完整描述，約 41 個形狀。到目前為止的每一次測試台都使用無敵的機器人，所以「受損」的數量在結構上就是零：測試台量到的是<em>最好</em>的情況。<strong>下一步：</strong>一個不同的實驗，使用會死的機器人與一個允許融化的人口，在六角格死亡時讀取船體普查。如果受損的船體隨著形狀數一起攀升，合併船體與武器輪廓的形狀就會成為下一個物理任務。</p></div>
 </section>
 
 <section class="sec" id="data">
@@ -139,6 +176,16 @@
 <h3>Les connexions à la base par opération</h3>
 <p>Chaque opération économique ouvre son propre contexte de base à vie courte : pas d'état partagé entre threads, ce qui est le bon défaut. Avec beaucoup de marchands simultanés, le pool de connexions devient une ressource disputée, et le symptôme sera de la latence sur les écrans, pas une erreur. <strong>Ensuite :</strong> pas une optimisation, d'abord un instrument : un compteur « connexions actives à la base » dans le moniteur.</p>
 </div>
+<div lang="zh-TW">
+<h2>資料與持久化</h2>
+<h3>結構描述遷移是手動套用的</h3>
+<p>資料專案帶著一份完整的結構描述遷移歷史，大約七十個，以命令列工具手動套用。在執行時，伺服器只確保結構描述存在：建立資料庫內容的工廠在資料庫為空時從模型建立結構描述，而且它在每一個它建立的內容上都這樣做；程式碼中的一則註解把遷移步驟標記為仍待完成。<strong>為什麼可以等：</strong>在開發期間，世界可以自由地被清除並重新建立初始資料（第 <a href="data-and-catalogs.html">6.3</a> 章），而改變結構描述的人會套用它的遷移。<strong>什麼會讓它變得緊急：</strong>第一個資料必須在由別人部署的發行之間存活的世界。兩種機制也不太能混用：直接從模型建立的資料庫沒有遷移歷史，所以之後的遷移無法直接套用在它上面。<strong>下一步：</strong>在啟動時，由一個程序、在與初始化相同的跨程序鎖之下，套用一次待處理的遷移，並把結構描述檢查從建立每一個資料庫內容的路徑中移出。</p>
+<h3>延後寫入船體損傷</h3>
+<p>什麼可以留在記憶體中晚點再寫的規則很清楚：如果沒有任何交易會重新讀取一個寫入來做決定，它就可以被延後（第 <a href="persistence.html">6.1</a> 章）。船體損傷通過了這個測試，卻仍然在發生時就寫入，而且就在伺服器最熱的路徑上。<strong>為什麼可以等：</strong>延後寫入的模式已經存在兩次（彈藥、連線階段位置），都是手寫的。<strong>下一步：</strong>為船體損傷再手寫第三次，然後才萃取出一個共同的抽象。兩次出現還看不出正確的抽象；三次就看得出來。</p>
+<h3>每個角色一個鎖</h3>
+<p>玩家的每一個經濟操作都由每個角色一個鎖依序執行（第 <a href="transactions.html">6.2</a> 章），包括那些不會衝突的操作，例如在一筆購買結算時讀取郵件。<strong>為什麼可以等：</strong>一個粗糙而明顯的鎖，好過一個精細而錯誤的鎖，而這個鎖保護的是正確性，也就是唯一絕不能壞掉的東西。<strong>什麼會讓它變得緊急：</strong>一位非常活躍的玩家，他的動作開始排隊。<strong>下一步：</strong>在量測顯示出競爭的地方，引入以容器為單位的更細的鎖，或樂觀的版本欄位。</p>
+<h3>每個操作一條資料庫連線</h3>
+<p>每一個經濟操作都開啟自己短命的資料庫內容：執行緒之間沒有共用狀態，這是正確的預設。在許多交易者同時進行時，連線池會變成一個被爭搶的資源，而症狀會是畫面上的延遲，而不是錯誤。<strong>下一步：</strong>不是一項最佳化，而是先加一個量測工具：在監控器中加一個「作用中的資料庫連線」計數器。</p></div>
 </section>
 
 <section class="sec" id="operations">
@@ -164,6 +211,16 @@
 <h3>Les fils qui dépassent de la simulation du monde</h3>
 <p>Deux petits, tous deux écrits au chapitre <a href="world-sim.html">9.1</a> : rejouer un tick compte sur le fait que la base renvoie les lignes dans l'ordre de la clé primaire, ce qu'un ordre explicite transformerait en garantie ; et un vidage raté du registre des faits abandonne son lot au lieu de le réessayer, ce qui est tolérable pour des faits qui ne font qu'infléchir un agrégat horaire, mais devrait être une décision plutôt qu'un accident.</p>
 </div>
+<div lang="zh-TW">
+<h2>營運</h2>
+<h3>閘道是單一故障點</h3>
+<p>閘道持有即時狀態（連線階段、隊伍），而且只有一個。它重新啟動時的行為從未被測試過。<strong>為什麼可以等：</strong>在開發期間，把一切重新啟動的成本很低。<strong>下一步：</strong>不是持久化，那會與隊伍和連線階段短暫的本質相衝突，而是<em>重新同步</em>：閘道重新啟動後，每台遊戲伺服器重新宣告它存活的連線階段，閘道再從實際持有玩家的伺服器重建它的視圖。</p>
+<h3>踢除、等待、關閉</h3>
+<p>當伺服器以一個原因讓玩家斷線時，它送出訊息，並在固定的 300 ms 延遲後關閉連線。這個延遲等於承認傳輸層沒有「先清空，再關閉」的操作。<strong>下一步：</strong>如果出現第二個需要它的情況，就在傳輸函式庫中尋找一個清空的基本操作，而不是再加一個延遲。</p>
+<h3>更新經過驗證，但沒有經過認證</h3>
+<p>雜湊保證完整性；目前還沒有任何東西保證是誰發布的（第 <a href="updater.html#trust">8.1</a> 章）。格式已經準備好了：為那個小小的指標檔案簽章，就能認證整條鏈。<strong>什麼會讓它變得緊急：</strong>把更新管道開放給朋友以外的人。物件之間的二進位差量也已經準備好了，正在等待能證明它值得的那個數字：發布主控台早已印出的、每個組建的新位元組數。</p>
+<h3>世界模擬的未竟之處</h3>
+<p>兩個小問題，都寫在第 <a href="world-sim.html">9.1</a> 章：重播一個 tick 依賴資料庫以主鍵順序回傳資料列，而一個明確的排序能把它變成保證；而事實帳本一次失敗的清空會丟掉它的批次而不是重試，這對只會輕推一個每小時彙總結果的事實來說可以容忍，但它應該是一個決定，而不是一個意外。</p></div>
 </section>
 
 <section class="sec" id="method">
@@ -187,6 +244,15 @@
 </ol>
 <div class="note rule"><p class="note-label">Règle</p><p>Donner à chaque limite connue un déclencheur, et faire de ce déclencheur un nombre qu'un instrument mesure déjà.</p><p>Cela transforme une liste d'inquiétudes en une liste de décisions qui attendent leurs données.</p></div>
 </div>
+<div lang="zh-TW">
+<h2>我接下來會做什麼，依序</h2>
+<ol>
+<li><strong>在不受機器影響的情況下進行測試台。</strong>把機器人放在另一台電腦上，讓延遲醒來不再汙染每一個結果。好幾次測試台都以「是機器，不是伺服器」作結；接下來的不應該再這樣。</li>
+<li><strong>測試傷害路徑。</strong>會死的機器人、一個正在融化的人口，以及在六角格死亡時讀取的船體普查。這是唯一一個還沒有任何測試台量測過的情況。</li>
+<li><strong>許多地圖，而不是一張更大的地圖。</strong>問題不再是「每張地圖多少玩家」，而是「每台伺服器能容納多少張地圖，世界 tick 才會溢出」，而這是一個量測，而不是一個預測。</li>
+<li><strong>在任何必須持久保存的世界出現之前，先處理遷移。</strong>這一頁上的其他一切都可以等待觸發條件；這一項有日期。</li>
+</ol>
+<div class="note rule"><p class="note-label">規則</p><p>給每一個已知缺口一個觸發條件，並讓觸發條件成為一個量測工具早已在量的數字。</p><p>這會把一份擔憂清單，變成一份等待資料的決策清單。</p></div></div>
 </section>
 
 <section class="sec" id="takeaways">
@@ -205,6 +271,13 @@
 <li>Laisser les limites par carte orienter vers une conception à beaucoup de cartes avant d'envisager la duplication de cartes.</li>
 <li>Mesurer les régimes qu'aucun banc n'a encore couverts, à commencer par le chemin des dégâts.</li>
 </ul></div>
+<div lang="zh-TW"><h2>重點整理</h2><ul>
+<li>公開列出已知的缺口，每一個都說明為什麼可以等、什麼會讓它變得緊急，以及你會怎麼做。</li>
+<li>偏好既有量測工具早已在量的觸發條件：後備路徑計數器、佔用直方圖、連線數。</li>
+<li>先讓症狀變得不可能，再根據資料決定如何處理原因。</li>
+<li>在考慮複製地圖之前，先讓每張地圖的限制推動一個多地圖的設計。</li>
+<li>量測還沒有任何測試台涵蓋過的情況，從傷害路徑開始。</li>
+</ul></div>
 </div>
 </section>
 
@@ -217,6 +290,7 @@
 <footer class="site-footer" id="mq-footer"></footer>
 <script src="assets/js/site-data.js" defer></script>
 <script src="assets/js/glossary-data.js" defer></script>
+<script src="assets/js/ui-zh.js" defer></script>
 <script src="assets/js/app.js" defer></script>
 <script src="assets/js/widgets.js" defer></script>
 </body>

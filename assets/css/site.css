@@ -155,10 +155,18 @@
   color-scheme: dark;
 }
 
-/* ---------- Language switching: one DOM, two languages ------------------ */
-/* Scoped under body so the <html lang> attribute never hides the page. */
-html[data-lang="en"] body [lang="fr"],
-html[data-lang="fr"] body [lang="en"] { display: none !important; }
+/* ---------- Language switching: one DOM, three languages ---------------- */
+/* Scoped under body so the <html lang> attribute never hides the page.
+   Chinese (Traditional, Taiwan) is data-lang="zh" on <html> and lang="zh-TW" on its blocks. */
+html[data-lang="en"] body [lang="fr"], html[data-lang="en"] body [lang="zh-TW"],
+html[data-lang="fr"] body [lang="en"], html[data-lang="fr"] body [lang="zh-TW"],
+html[data-lang="zh"] body [lang="en"], html[data-lang="zh"] body [lang="fr"] { display: none !important; }
+/* Latin glyphs keep the site fonts; Chinese falls through to a Taiwan font. */
+html[data-lang="zh"] {
+  --font-display: "Chakra Petch", "Noto Sans TC", "Microsoft JhengHei", "PingFang TC", "Heiti TC", sans-serif;
+  --font-body: "Atkinson Hyperlegible", "Noto Sans TC", "Microsoft JhengHei", "PingFang TC", "Heiti TC", system-ui, sans-serif;
+}
+html[data-lang="zh"] .prose { line-height: 1.8; }
 
 /* ---------- Base ---------------------------------------------------------- */
 *, *::before, *::after { box-sizing: border-box; }
@@ -464,6 +472,10 @@ th {
 tr:last-child td { border-bottom: 0; }
 td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
 td code { white-space: nowrap; }
+/* Chinese may break between any two characters, so the table layout would squeeze short
+   label columns to one character wide; a floor of a few characters keeps them readable. */
+html[data-lang="zh"] th, html[data-lang="zh"] td { min-width: 4.5em; }
+html[data-lang="zh"] th.num, html[data-lang="zh"] td.num { min-width: 0; }
 
 /* ---------- Callouts ----------------------------------------------------------- */
 .note {

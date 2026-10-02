@@ -7,12 +7,12 @@
 <meta name="description" content="The order I would build an MMO backend in today, what to postpone, and how to tell that a stage is finished.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Chakra+Petch:wght@500;600&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Chakra+Petch:wght@500;600&family=JetBrains+Mono:wght@400;500;600&family=Noto+Sans+TC:wght@400;700&display=swap">
 <link rel="stylesheet" href="assets/css/site.css">
-<script>(function(){var r=document.documentElement,l,t;try{l=localStorage.getItem("mq-lang");t=localStorage.getItem("mq-theme");}catch(e){}if(l!=="en"&&l!=="fr"){l=(navigator.language||"").toLowerCase().indexOf("fr")===0?"fr":"en";}r.setAttribute("data-lang",l);r.setAttribute("lang",l);if(t==="light"||t==="dark")r.setAttribute("data-theme",t);})();</script>
+<script>(function(){var r=document.documentElement,l,t,n;try{l=localStorage.getItem("mq-lang");t=localStorage.getItem("mq-theme");}catch(e){}if(l!=="en"&&l!=="fr"&&l!=="zh"){n=(navigator.language||"").toLowerCase();l=n.indexOf("fr")===0?"fr":n.indexOf("zh")===0?"zh":"en";}r.setAttribute("data-lang",l);r.setAttribute("lang",l==="zh"?"zh-TW":l);if(t==="light"||t==="dark")r.setAttribute("data-theme",t);})();</script>
 </head>
 <body data-page="start-here">
-<a class="skip-link" href="#main"><span lang="en">Skip to content</span><span lang="fr">Aller au contenu</span></a>
+<a class="skip-link" href="#main"><span lang="en">Skip to content</span><span lang="fr">Aller au contenu</span><span lang="zh-TW">跳到主要內容</span></a>
 <header class="site-header" id="mq-header"></header>
 <div class="layout">
 <aside class="sidebar" id="mq-sidebar"></aside>
@@ -20,8 +20,8 @@
 <article>
 <header class="chapter-head">
   <div class="eyebrow" data-auto></div>
-  <h1><span lang="en">Where to start</span><span lang="fr">Par où commencer</span></h1>
-  <p class="dek"><span lang="en">The order I would build an MMO backend in today, what to postpone, and how to tell that a stage is finished.</span><span lang="fr">L'ordre dans lequel je construirais un backend de MMO aujourd'hui, ce qu'il faut repousser, et comment savoir qu'une étape est finie.</span></p>
+  <h1><span lang="en">Where to start</span><span lang="fr">Par où commencer</span><span lang="zh-TW">從哪裡開始</span></h1>
+  <p class="dek"><span lang="en">The order I would build an MMO backend in today, what to postpone, and how to tell that a stage is finished.</span><span lang="fr">L'ordre dans lequel je construirais un backend de MMO aujourd'hui, ce qu'il faut repousser, et comment savoir qu'une étape est finie.</span><span lang="zh-TW">如果今天要打造 MMO 後端，我會採取的順序、哪些可以延後，以及如何判斷一個階段已經完成。</span></p>
   <div class="meta-row" data-auto></div>
 </header>
 
@@ -44,6 +44,13 @@
 <h3>Comment lire un chapitre</h3>
 <p>Chaque chapitre a un niveau représenté par des hexagones : un pour <strong>Fondation</strong> (commencez ici si les jeux en réseau sont nouveaux pour vous), deux pour <strong>Cœur</strong>, trois pour <strong>Avancé</strong>. Sur grand écran, la colonne de droite montre où le chapitre se situe dans le système. Les encadrés ont toujours le même sens :</p>
 </div>
+<div lang="zh-TW">
+<h2>這些筆記是什麼</h2>
+<p class="lead">MoonQwak 是一款俯視視角的太空遊戲，船艦由六角形零件組成；它也是一個進行中的專案，由一位自學 MMO 架構的開發者獨力打造，想知道一個人能走多遠。遊戲背後是一套伺服器架構，靈感來自大型線上遊戲公認的做法：一個閘道、許多遊戲伺服器、一個能自行調整規模的機器叢集、一個當作日誌使用的資料庫，以及一個為用戶端打更新的啟動器。這些筆記描述了這套架構是怎麼建起來的、遇到了哪些問題，以及由此產生的決策。分享是為了教學：這是我的選擇，而不是非這樣做不可（見<a href="index.html#about">關於這個專案</a>）。</p>
+<p>這不是食譜。大多數章節描述一個問題、我考慮過的選項、我選了什麼，以及事後量測結果怎麼說。有好幾個選擇第一次都做錯了，這些故事都保留了下來，因為走錯的那一步，通常就是教訓所在。文中出現的數字，都來自這個專案的真實量測，通常是用數百個機器人用戶端跑的負載測試。這些測試是在單一台開發機上執行的，所以請把絕對數字當成數量級來看，前後對比的比例才是真正的資訊。</p>
+<p>遊戲本身幾乎不會出現。船艦、子彈和地圖出現在範例中，是因為它們是伺服器要搬動的東西，但每一章談的都是架構：位元組如何傳遞、世界如何隨時間推進、要告訴每位玩家什麼、資料如何保持一致，以及整個系統如何在不只一台機器上運作。</p>
+<h3>如何閱讀一章</h3>
+<p>每一章都有以六角形表示的程度：一個代表<strong>基礎</strong>（如果你剛接觸連線遊戲，從這裡開始），兩個代表<strong>核心</strong>，三個代表<strong>進階</strong>。在寬螢幕上，右側欄會顯示本章在系統中的位置。各種提示框的意義永遠相同：</p></div>
 
 <div lang="en">
 <div class="note beginner"><p class="note-label">Beginner note</p><p>Background that an experienced reader can skip: what a term means, or why a problem exists at all.</p></div>
@@ -61,6 +68,13 @@
 <div class="note tradeoff"><p class="note-label">Compromis</p><p>Un choix qui renonce à quelque chose volontairement, et à quoi.</p></div>
 <div class="note rule sample"><p class="note-label">Règle</p><p>Une règle pratique tirée du chapitre.</p><p>Toutes les règles sont aussi réunies sur la page Règles d'or, pour pouvoir les lire d'un seul tenant.</p></div>
 </div>
+<div lang="zh-TW">
+<div class="note beginner"><p class="note-label">新手須知</p><p>有經驗的讀者可以跳過的背景知識：某個術語的意思，或某個問題為什麼會存在。</p></div>
+<div class="note project"><p class="note-label">在 MoonQwak 中</p><p>這個專案實際上怎麼做，並附上它程式碼中使用的名稱。</p></div>
+<div class="note pitfall"><p class="note-label">我踩過的坑</p><p>真的發生過的 bug 或錯誤決定，以及它的代價。</p></div>
+<div class="note measured"><p class="note-label">實測</p><p>來自基準測試或實際執行的數字，並附上它的情境。</p></div>
+<div class="note tradeoff"><p class="note-label">取捨</p><p>刻意放棄某些東西的選擇，以及放棄了什麼。</p></div>
+<div class="note rule sample"><p class="note-label">規則</p><p>從本章歸納出的經驗法則。</p><p>每一條規則也都收錄在「經驗法則」頁，可以在同一個地方讀完整套。</p></div></div>
 </section>
 
 <section class="sec" id="mindset">
@@ -82,12 +96,22 @@
 <h3>3. Mesurer avant de croire, y compris ses instruments</h3>
 <p>Les leçons les plus chères de ce projet sont venues de chiffres qui ne mesuraient pas ce que disait leur étiquette : une « durée de tick » qui était en fait l'intervalle entre deux ticks, un chronomètre « pre-step » qui englobait trois autres phases, un profileur qui ne se déclenchait que sur les ticks anormaux. Le chapitre 10.1 ne parle que de ça. En bref : construire l'instrument avant l'optimisation, et vérifier que deux nombres mesurent la même chose avant de chercher l'écart entre eux.</p>
 </div>
+<div lang="zh-TW">
+<h2>形塑一切的三個想法</h2>
+<h3>1. 伺服器說了算，依照固定的時鐘</h3>
+<p>MMO 伺服器具有權威。用戶端送出的是意圖（按住哪些鍵、滑鼠指向哪裡、「我想停靠」），由伺服器決定實際發生什麼。世界以稱為 <a class="term" data-term="tick">tick</a> 的固定步長推進，這裡是每秒 25 次，每個決定都發生在某一個 tick 之內。幾乎每一章都是這件事的後果：tick 有時間預算（40 ms），其中任何東西都不能等待緩慢的事物，而玩家看到的，是每個 tick 之後送出的伺服器狀態副本。</p>
+<h3>2. 形狀與常數</h3>
+<p>一項最佳化，要嘛是<strong>常數</strong>，要嘛是<strong>形狀</strong>。常數是一個慢了兩倍的函式、一次可以避免的記憶體配置：等量測顯示它造成傷害時再就地修正，等待不必付出任何代價。形狀則是 <code>O(玩家 × 物件)</code> 的工作量、平行路徑上的全域鎖、一個把三百顆子彈和四艘船混在一起的集合。形狀會被建進架構裡，其他程式碼開始依賴它，之後要改就得付出十倍的代價。「今天它很便宜」對常數來說是個好理由，對形狀來說則是個壞理由：畫面上只有三個物件時，什麼都不貴。</p>
+<h3>3. 先量測再相信，包括你的量測工具</h3>
+<p>這個專案最昂貴的教訓，都來自讀到一個量的不是標籤所寫內容的數字：一個其實是 tick 之間間隔的「tick 耗時」、一個包含了另外三個階段的「前置步驟」計時器、一個只在異常 tick 時才觸發的效能分析器。第 10.1 章整章都在談這件事。簡單來說：在最佳化之前先打造量測工具，而且在尋找兩個數字的差異之前，先確認它們量的是同一件事。</p></div>
 <div lang="en">
 <div class="note rule"><p class="note-label">Rule</p><p>Fix constants when a measurement says they hurt. Fix shapes before anything depends on them.</p><p>An O(n²) loop or a global lock on a parallel path is invisible with three test objects and fatal with four hundred. Waiting for proof is fine for a slow function, not for a structure other code will be built on.</p></div>
 </div>
 <div lang="fr">
 <div class="note rule"><p class="note-label">Règle</p><p>Corriger les constantes quand une mesure dit qu'elles font mal. Corriger les formes avant que quoi que ce soit n'en dépende.</p><p>Une boucle en O(n²) ou un verrou global sur un chemin parallèle est invisible avec trois objets de test et fatal avec quatre cents. Attendre une preuve convient à une fonction lente, pas à une structure sur laquelle on va bâtir.</p></div>
 </div>
+<div lang="zh-TW">
+<div class="note rule"><p class="note-label">規則</p><p>常數，等量測說它造成傷害時再修；形狀，要在任何東西依賴它之前就修好。</p><p>O(n²) 的迴圈或平行路徑上的全域鎖，在只有三個測試物件時看不見，在四百個時就是致命傷。對一個慢的函式，等證據出來再說沒問題；對一個其他程式碼將建立在其上的結構，就不行。</p></div></div>
 </section>
 
 <section class="sec" id="build-order">
@@ -123,6 +147,21 @@
 <li><strong>Livrer.</strong> Un système de mise à jour qui ne télécharge que ce qui a changé, et un launcher capable de se remplacer lui-même. <em>Fini quand :</em> un ami avec une vieille installation reçoit le nouveau build en un clic. Partie 8.</li>
 </ol>
 </div>
+<div lang="zh-TW">
+<h2>打造順序</h2>
+<p>如果重新來過，我會依照這個順序。每個階段都以一個具體的測試作結。在測試通過之前就往下走，就是專案為什麼會在還沒有能運作的 tick 迴圈時就先有了閘道，或是有了六百名玩家卻完全看不出時間花在哪裡。</p>
+<ol>
+<li><strong>一條連線和一則訊息。</strong>選定傳輸層、為有型別的封包加上訊框，並把它們分派給處理常式。<em>完成條件：</em>兩個程序能交換有型別的訊息，而且一個格式錯誤的封包只會造成丟掉一個封包，而不是伺服器當機。<a href="transport.html">1.1</a>、<a href="packet-format.html">1.2</a>、<a href="receiving.html">1.5</a>。</li>
+<li><strong>保護協定。</strong>為每個封包寫往返測試，並在登入時檢查版本號。刻意放在這麼前面：只在一端加了欄位，是手寫協定中最昂貴的 bug，而且每多加一個封包，它就更貴一點。<em>完成條件：</em>新增一個沒有測試的封包會讓建置失敗。<a href="protocol-testing.html">1.6</a>。</li>
+<li><strong>身分。</strong>一個負責註冊、登入並核發權杖的閘道，以及向閘道證明自己身分的遊戲伺服器。<em>完成條件：</em>用戶端登入、選擇角色，並帶著閘道核發的權杖進入遊戲伺服器。<a href="gateway.html">2.1</a>、<a href="login-flow.html">2.2</a>。</li>
+<li><strong>一個權威的世界。</strong>固定頻率的 tick、一張地圖、輸入進來、快照出去。<em>完成條件：</em>兩個用戶端看得到彼此移動、一切由伺服器決定，而且你設定的 tick 頻率就是你實際得到的頻率。<a href="tick-loop.html">3.1</a>、<a href="tick-anatomy.html">3.2</a>、<a href="snapshots.html">4.2</a>。</li>
+<li><strong>讓手感對味。</strong>對遠端物件做內插、預測自己的移動、與伺服器校正。<em>完成條件：</em>在每秒 25 份快照下，遠端船艦看起來流暢；在 150 ms 的往返延遲下，自己的角色仍立即反應。<a href="interpolation.html">5.2</a>、<a href="prediction.html">5.3</a>。</li>
+<li><strong>量測工具與機器人。</strong>一個顯示 tick 的每一毫秒花在哪裡的監控器，以及一個執行真實用戶端的負載測試。要比你覺得需要的時候更早：在這之後的每個階段，都是效能問題。<em>完成條件：</em>你能啟動 100 個機器人，並讀出每個 tick 階段的成本。<a href="observability.html">10.1</a>、<a href="load-testing.html">10.3</a>。</li>
+<li><strong>只告訴每位玩家重要的事。</strong>興趣區域、在觀察者之間共用的序列化、差量、每位玩家的預算。<em>完成條件：</em>一張地圖上的玩家人數加倍時，頻寬不會變成四倍。第 4 部。</li>
+<li><strong>持久，而且絕不複製。</strong>決定什麼留在 RAM、何時寫入，並讓玩家之間的每一次物品轉移都不可分割。<em>完成條件：</em>在任何時刻砍掉伺服器，最多只損失一分鐘的進度，而且絕不會複製出任何物品。第 6 部。</li>
+<li><strong>多張地圖，再來是多台伺服器。</strong>按需載入地圖、在程序之間移動玩家，再讓叢集自行調整規模。<em>完成條件：</em>玩家能從一個程序託管的地圖跨到另一個程序託管的地圖，而且當現有伺服器都滿了時，會出現一台新的伺服器。第 2.3 章與第 7 部。</li>
+<li><strong>出貨。</strong>一個只下載有變動部分的更新程式，以及一個能替換自己的啟動器。<em>完成條件：</em>一位安裝版本過舊的朋友，點一下就能拿到新組建。第 8 部。</li>
+</ol></div>
 </section>
 
 <section class="sec" id="postpone">
@@ -148,6 +187,16 @@
 <li><strong>Une seconde base, un cluster de cache, un bus de messages.</strong> Une seule instance MySQL, utilisée comme journal et jamais sur le chemin chaud, a suffi. Le chapitre 6.1 explique la règle qui le permet.</li>
 </ul>
 </div>
+<div lang="zh-TW">
+<h2>哪些可以延後</h2>
+<p>MMO 很容易誘使你去解決還沒遇到的問題。以下是我刻意留到之後再處理的，而且再來一次我還是會延後：</p>
+<ul>
+<li><strong>把一張地圖拆到多台伺服器上。</strong>MoonQwak 的每張地圖都恰好存在於一個程序中。這帶來的限制（一張地圖能容納多少玩家）實測可達數百人，而且玩家本來就會分散在許多地圖上。無縫的世界分割本身就是一個大型專案，而且會讓其他一切都變得更難。</li>
+<li><strong>微服務。</strong>這套架構只有少數幾個程序，每個程序對自己的資料都有明確的擁有者。程序越多，可能遺失、亂序或重複的訊息就越多。</li>
+<li><strong>自製物理引擎。</strong>只要謹慎地驅動，Box2D 在一張地圖上撐得住 600 艘船。問題出在餵給它的方式，而不在引擎本身。</li>
+<li><strong>在量測之前就做花俏的壓縮。</strong>這個專案中有兩項最佳化瞄錯了目標，因為沒有人量過那些位元組到底由什麼組成。一個依物件類型拆解快照的追蹤工具，來得比該來的時間晚了。</li>
+<li><strong>第二個資料庫、快取叢集、訊息匯流排。</strong>一個 MySQL 執行個體，當作日誌使用、從不出現在熱路徑上，就已足夠。第 6.1 章會說明讓這成為可能的那條規則。</li>
+</ul></div>
 </section>
 
 <section class="sec" id="stack">
@@ -179,6 +228,19 @@
 </tbody></table></div>
 <p>Les bibliothèques partagées ciblent à la fois <code>netstandard2.1</code> (ce que charge Unity) et <code>net10.0</code> (les serveurs). Un script de build copie les DLL compilées dans le projet Unity : client et serveur exécutent toujours le même code de sérialisation.</p>
 </div>
+<div lang="zh-TW">
+<h2>技術堆疊，作為背景</h2>
+<div class="table-wrap"><table>
+<thead><tr><th>層級</th><th>選擇</th><th>為什麼重要</th></tr></thead>
+<tbody>
+<tr><td>語言</td><td>全面使用 C#：伺服器用 .NET 10，用戶端用 Unity</td><td>封包格式、遊戲資料目錄、物理設定與六角形數學都只編譯一次、共同使用。同一種格式有兩份實作，遲早會分歧。</td></tr>
+<tr><td>傳輸</td><td>LiteNetLib（可靠 UDP）</td><td>在單一 socket 上提供可靠與不可靠的通道，連線管理也已經處理好了。</td></tr>
+<tr><td>加密</td><td>X25519 + HKDF + AES-256-GCM，每條連線各自一套</td><td>伺服器使用 .NET 標準的 <code>AesGcm</code>，Unity 較舊的執行環境則用一份小型的手寫實作。</td></tr>
+<tr><td>物理</td><td>透過 C# 綁定使用 Box2D v3，每張地圖一個世界</td><td>成熟的引擎，彼此獨立的世界可以平行推進。</td></tr>
+<tr><td>資料庫</td><td>MySQL 搭配 Entity Framework Core</td><td>當作持久性日誌使用，從不出現在遊戲迴圈之內。</td></tr>
+<tr><td>工具</td><td>WPF 桌面應用程式</td><td>監控器（即時 tick 指標與叢集檢視）、啟動器，以及支援熱重載的遊戲資料編輯器。</td></tr>
+</tbody></table></div>
+<p>共用函式庫同時以 <code>netstandard2.1</code>（Unity 載入的版本）和 <code>net10.0</code>（伺服器）為目標。一個建置指令碼會把編譯好的 DLL 複製到 Unity 專案中，所以用戶端與伺服器永遠執行同一份序列化程式碼。</p></div>
 </section>
 
 <section class="sec" id="reading-paths">
@@ -191,7 +253,7 @@
 <li><strong>Infrastructure and operations:</strong> <a href="gateway.html">2.1</a>, <a href="handover.html">2.3</a>, Part 7, Part 8.</li>
 <li><strong>Data integrity:</strong> <a href="no-db-in-tick.html">3.4</a>, then Part 6.</li>
 </ul>
-<p>The <a href="topics.html">topics page</a> filters chapters by subject and level, and the search (<kbd>Ctrl</kbd> <kbd>K</kbd>) covers every chapter in both languages.</p>
+<p>The <a href="topics.html">topics page</a> filters chapters by subject and level, and the search (<kbd>Ctrl</kbd> <kbd>K</kbd>) covers every chapter in all three languages.</p>
 </div>
 <div lang="fr">
 <h2>Parcours de lecture</h2>
@@ -202,8 +264,18 @@
 <li><strong>Infrastructure et exploitation :</strong> <a href="gateway.html">2.1</a>, <a href="handover.html">2.3</a>, partie 7, partie 8.</li>
 <li><strong>Intégrité des données :</strong> <a href="no-db-in-tick.html">3.4</a>, puis la partie 6.</li>
 </ul>
-<p>La <a href="topics.html">page des thèmes</a> filtre les chapitres par sujet et par niveau, et la recherche (<kbd>Ctrl</kbd> <kbd>K</kbd>) couvre chaque chapitre dans les deux langues.</p>
+<p>La <a href="topics.html">page des thèmes</a> filtre les chapitres par sujet et par niveau, et la recherche (<kbd>Ctrl</kbd> <kbd>K</kbd>) couvre chaque chapitre dans les trois langues.</p>
 </div>
+<div lang="zh-TW">
+<h2>閱讀路徑</h2>
+<p>課程依打造順序編號，但你不一定要照順序讀。以下是幾條較短的路徑：</p>
+<ul>
+<li><strong>剛接觸連線遊戲：</strong><a href="big-picture.html">0.2</a>、<a href="transport.html">1.1</a>、<a href="packet-format.html">1.2</a>、<a href="tick-loop.html">3.1</a>、<a href="aoi.html">4.1</a>、<a href="snapshots.html">4.2</a>、<a href="interpolation.html">5.2</a>、<a href="prediction.html">5.3</a>。</li>
+<li><strong>效能：</strong><a href="tick-anatomy.html">3.2</a>、<a href="threading.html">3.3</a>、<a href="serialize-once.html">4.3</a>、<a href="freshness-budget.html">4.5</a>，然後是整個第 10 部。</li>
+<li><strong>基礎設施與維運：</strong><a href="gateway.html">2.1</a>、<a href="handover.html">2.3</a>、第 7 部、第 8 部。</li>
+<li><strong>資料完整性：</strong><a href="no-db-in-tick.html">3.4</a>，然後是第 6 部。</li>
+</ul>
+<p><a href="topics.html">主題頁</a>可依主題與程度篩選章節，而搜尋（<kbd>Ctrl</kbd> <kbd>K</kbd>）涵蓋每一章的所有語言版本。</p></div>
 </section>
 
 <section class="sec" id="takeaways">
@@ -220,6 +292,12 @@
 <li>Traiter les coûts structurels (les formes) autrement que les lenteurs locales (les constantes).</li>
 <li>Repousser le partitionnement des cartes, les microservices et la compression spéculative jusqu'à ce qu'une mesure les réclame.</li>
 </ul></div>
+<div lang="zh-TW"><h2>重點整理</h2><ul>
+<li>依照能讓你測試每個階段的順序來打造：連線、協定測試、身分、一個世界、手感、量測工具、興趣管理、持久性、擴展、出貨。</li>
+<li>協定測試和量測工具要早點做。在它們之前每多做一個功能，之後補上它們的成本就越高。</li>
+<li>把結構性的成本（形狀）和局部的緩慢（常數）分開對待。</li>
+<li>地圖分割、微服務和投機性的壓縮，延後到有量測結果要求它們時再做。</li>
+</ul></div>
 </div>
 </section>
 
@@ -232,6 +310,7 @@
 <footer class="site-footer" id="mq-footer"></footer>
 <script src="assets/js/site-data.js" defer></script>
 <script src="assets/js/glossary-data.js" defer></script>
+<script src="assets/js/ui-zh.js" defer></script>
 <script src="assets/js/app.js" defer></script>
 <script src="assets/js/widgets.js" defer></script>
 </body>

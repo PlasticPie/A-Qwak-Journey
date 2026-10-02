@@ -7,12 +7,12 @@
 <meta name="description" content="Interpolation, damped extrapolation, render buffers in tick space, and dead-zones against micro-corrections.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Chakra+Petch:wght@500;600&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Chakra+Petch:wght@500;600&family=JetBrains+Mono:wght@400;500;600&family=Noto+Sans+TC:wght@400;700&display=swap">
 <link rel="stylesheet" href="assets/css/site.css">
-<script>(function(){var r=document.documentElement,l,t;try{l=localStorage.getItem("mq-lang");t=localStorage.getItem("mq-theme");}catch(e){}if(l!=="en"&&l!=="fr"){l=(navigator.language||"").toLowerCase().indexOf("fr")===0?"fr":"en";}r.setAttribute("data-lang",l);r.setAttribute("lang",l);if(t==="light"||t==="dark")r.setAttribute("data-theme",t);})();</script>
+<script>(function(){var r=document.documentElement,l,t,n;try{l=localStorage.getItem("mq-lang");t=localStorage.getItem("mq-theme");}catch(e){}if(l!=="en"&&l!=="fr"&&l!=="zh"){n=(navigator.language||"").toLowerCase();l=n.indexOf("fr")===0?"fr":n.indexOf("zh")===0?"zh":"en";}r.setAttribute("data-lang",l);r.setAttribute("lang",l==="zh"?"zh-TW":l);if(t==="light"||t==="dark")r.setAttribute("data-theme",t);})();</script>
 </head>
 <body data-page="interpolation">
-<a class="skip-link" href="#main"><span lang="en">Skip to content</span><span lang="fr">Aller au contenu</span></a>
+<a class="skip-link" href="#main"><span lang="en">Skip to content</span><span lang="fr">Aller au contenu</span><span lang="zh-TW">跳到主要內容</span></a>
 <header class="site-header" id="mq-header"></header>
 <div class="layout">
 <aside class="sidebar" id="mq-sidebar"></aside>
@@ -20,8 +20,8 @@
 <article>
 <header class="chapter-head">
   <div class="eyebrow" data-auto></div>
-  <h1><span lang="en">Smoothing remote objects</span><span lang="fr">Lisser les objets distants</span></h1>
-  <p class="dek"><span lang="en">Interpolation, damped extrapolation, render buffers in tick space, and dead-zones against micro-corrections.</span><span lang="fr">Interpolation, extrapolation amortie, tampons de rendu en espace de ticks, et zones mortes contre les micro-corrections.</span></p>
+  <h1><span lang="en">Smoothing remote objects</span><span lang="fr">Lisser les objets distants</span><span lang="zh-TW">平滑遠端物件</span></h1>
+  <p class="dek"><span lang="en">Interpolation, damped extrapolation, render buffers in tick space, and dead-zones against micro-corrections.</span><span lang="fr">Interpolation, extrapolation amortie, tampons de rendu en espace de ticks, et zones mortes contre les micro-corrections.</span><span lang="zh-TW">內插、阻尼外插、以 tick 為時間軸的繪製緩衝，以及對抗微小修正的死區。</span></p>
   <div class="meta-row" data-auto></div>
 </header>
 
@@ -40,6 +40,11 @@
 <div class="note beginner"><p class="note-label">Pour débuter</p><p>Il existe deux familles. L'<strong>interpolation</strong> affiche légèrement dans le passé, entre deux échantillons qu'on possède déjà : parfaitement fluide, mais tout est montré en retard du délai du tampon. L'<strong>extrapolation</strong> (estime) projette le dernier échantillon vers l'avant avec sa vitesse : aucun délai ajouté, mais elle devine, et chaque mauvaise estimation doit être corrigée. La plupart des jeux mélangent les deux, et c'est ce mélange que traite ce chapitre.</p></div>
 <p>Essayez les quatre stratégies dans le labo. Coller au dernier échantillon saccade ; l'extrapolation pure dépasse chaque virage ; l'interpolation tamponnée est fluide mais visiblement en retard sur le cercle pointillé ; lisser vers une cible extrapolée se place entre les deux.</p>
 </div>
+<div lang="zh-TW">
+<h2>在兩份快照之間</h2>
+<p>伺服器描述一艘遠端船艦，最多每秒 25 次，而且當它離得很遠時還更少（第 <a href="freshness-budget.html">4.5</a> 章）。螢幕每秒刷新 60 次或更多。封包到達時帶著抖動，有些晚到，有些根本沒到。繪製一個遠端物件，就是一門決定它在你手上這些樣本<em>之間</em>位於何處的藝術。</p>
+<div class="note beginner"><p class="note-label">新手須知</p><p>有兩大類做法。<strong>內插</strong>在稍微過去的時間點繪製，位於兩個你已經擁有的樣本之間：完全流暢，但所有東西都因為緩衝的延遲而晚一點顯示。<strong>外插</strong>（航位推算）則利用最新樣本的速度把它往前推：不增加延遲，但它是在猜，而每次猜錯都得修正。大多數遊戲會混用兩者，而本章談的就是如何混用。</p></div>
+<p>在實驗室中試試這四種策略。直接跳到最新樣本會卡頓；純粹的外插在每個轉彎處都會衝過頭；緩衝內插很流暢，但明顯落後於虛線圓；平滑趨近外插位置則介於兩者之間。</p></div>
 <div data-widget="interp"></div>
 </section>
 
@@ -68,12 +73,25 @@
 </tbody></table></div>
 <p>Les personnages sont un quatrième cas : le composant peut céder le transform à un autre propriétaire. Le personnage à pied du joueur est piloté par la prédiction (chapitre <a href="prediction.html">5.3</a>), et ceux des autres joueurs sont portés par la coque sur laquelle ils se tiennent.</p>
 </div>
+<div lang="zh-TW">
+<h2>三種運動，三種繪製模式</h2>
+<p>在 MoonQwak 中，所有網路物件都由同一個元件繪製，它有三種模式，因為船艦、子彈和行走的人移動的方式並不相同：</p>
+<div class="table-wrap"><table>
+<thead><tr><th>模式</th><th>做法</th><th>用於</th></tr></thead>
+<tbody>
+<tr><td><strong>平滑趨近外插位置</strong>（預設）</td><td>把最新樣本往前外插（帶阻尼，見下文），再用一個臨界阻尼彈簧追趕這個目標（Unity 的 <code>SmoothDamp</code>，約兩個快照 tick 的平滑時間）。</td><td>船艦與太空站：反應靈敏、不增加延遲，修正被平滑地吸收。</td></tr>
+<tr><td><strong>以 tick 為時間軸的線性繪製</strong></td><td>保留一個小緩衝區，存放標上伺服器 tick 的樣本；在「最新 tick 減 60 ms」的位置讀取，在相鄰的 tick 之間內插。</td><td>保留作為選項，給絕不能跳動的物件使用（tick 之間等速，代價是固定的延遲）；目前沒有任何物件類型使用它。</td></tr>
+<tr><td><strong>預測式繪製</strong></td><td>從產生狀態開始純粹的航位推算，每個影格重新計算；只有在不會讓物件往回移時才接受修正。</td><td>子彈：等速、壽命短，連續的路徑比像素級的同步更重要。</td></tr>
+</tbody></table></div>
+<p>角色是第四種情況：這個元件可以把 Transform 交給另一個擁有者。玩家自己行走中的角色由預測驅動（第 <a href="prediction.html">5.3</a> 章），而其他玩家的角色則由他們所站的船體承載。</p></div>
 <div lang="en">
 <div class="note project"><p class="note-label">In MoonQwak</p><p>The linear mode samples in <strong>tick space</strong>, not in arrival time. Server ticks are exactly one tick apart, so the interpolation factor between two consecutive samples is just the fractional part of the read cursor, uniform whatever the network did to their arrival times. The cursor advances at the snapshot rate and is clamped so it never reaches the newest sample, which is what removes jumps between snapshots.</p></div>
 </div>
 <div lang="fr">
 <div class="note project"><p class="note-label">Dans MoonQwak</p><p>Le mode linéaire échantillonne en <strong>espace de ticks</strong>, pas en temps d'arrivée. Les ticks serveur sont espacés d'exactement un tick : le facteur d'interpolation entre deux échantillons consécutifs est simplement la partie fractionnaire du curseur de lecture, uniforme quoi que le réseau ait fait à leurs heures d'arrivée. Le curseur avance à la cadence des snapshots et reste bridé pour ne jamais atteindre l'échantillon le plus récent, ce qui supprime les sauts entre snapshots.</p></div>
 </div>
+<div lang="zh-TW">
+<div class="note project"><p class="note-label">在 MoonQwak 中</p><p>線性模式是在 <strong>tick 時間軸</strong>上取樣，而不是依到達時間。伺服器的 tick 彼此恰好相隔一個 tick，所以兩個相鄰樣本之間的內插係數，就只是讀取游標的小數部分，無論網路對它們的到達時間做了什麼，都是均勻的。游標以快照頻率前進，並被夾住，永遠不會到達最新的樣本，這就是消除快照之間跳動的方法。</p></div></div>
 </section>
 
 <section class="sec" id="damping">
@@ -87,6 +105,10 @@
 <p>Les vaisseaux de MoonQwak ont un amortissement linéaire : quand le pilote relâche les propulseurs, la vitesse décroît exponentiellement au lieu de rester constante. Extrapoler avec <code>position + vitesse × temps</code> <em>dépasse</em> donc la vraie position chaque fois qu'un vaisseau file sur son élan : chaque nouveau snapshot tombait un peu derrière la prédiction, et le rendu produisait un flot régulier de petites corrections vers l'arrière. Cela se lisait comme une légère gigue de retour en arrière pendant un vol par ailleurs fluide, pire sur les vaisseaux que sur les personnages justement parce que seuls les vaisseaux portent un amortissement notable.</p>
 <p>La correction consiste à extrapoler avec la même loi que celle que simule le serveur. Pour une vitesse qui décroît en v₀·e<sup>−λt</sup>, le déplacement vaut v₀·(1 − e<sup>−λt</sup>)/λ :</p>
 </div>
+<div lang="zh-TW">
+<h2>像伺服器模擬那樣外插</h2>
+<p>MoonQwak 的船艦有線性阻尼：當駕駛員放開推進器時，速度會指數衰減，而不是保持不變。因此用 <code>位置 + 速度 × 時間</code> 外插，在船艦滑行時總會<em>衝過頭</em>：每一份新快照都落在預測位置稍微後面一點，繪製器就產生了源源不斷的小幅往回修正。在原本流暢的飛行中，它看起來像是輕微的回彈抖動，而且船艦比角色更嚴重，正是因為只有船艦帶著明顯的阻尼。</p>
+<p>修正方式是用伺服器模擬時所用的同一條定律來外插。對於以 v₀·e<sup>−λt</sup> 衰減的速度，位移是 v₀·(1 − e<sup>−λt</sup>)/λ：</p></div>
 <div class="code"><div class="code-head"><span class="file">QwakClient/Scripts/Core/RemotePhysicsController.cs</span></div><pre><code data-lang="cs">private Vector2 ExtrapolatePosition(Vector2 pos, Vector2 vel, float t)
 {
     if (_cachedShip != null)
@@ -103,6 +125,8 @@
 <div lang="fr">
 <div class="note rule"><p class="note-label">Règle</p><p>Le modèle de mouvement du client doit être celui du serveur, nourri des mêmes constantes.</p><p>Chaque différence entre les deux lois devient une correction que le joueur voit. Partager le fichier de configuration entre client et serveur réduit cet accord à la lecture d'un même nombre.</p></div>
 </div>
+<div lang="zh-TW">
+<div class="note rule"><p class="note-label">規則</p><p>用戶端的運動模型，應該就是伺服器的運動模型，並餵給它相同的常數。</p><p>兩條定律之間的每一點差異，都會變成玩家看得到的修正。讓用戶端與伺服器共用設定檔，就讓這份一致變成只是讀取同一個數字。</p></div></div>
 </section>
 
 <section class="sec" id="deadzone">
@@ -116,6 +140,10 @@
 <p>Même avec la bonne loi, le nouvel échantillon d'un vaisseau qui vire tombe rarement <em>exactement</em> là où l'extrapolation précédente l'attendait. La première version recalait l'extrapolation sur chaque échantillon brut : le moindre désaccord, même un bruit de quantification sous le centimètre, déplaçait la cible à chaque tick, et le ressort poursuivait consciencieusement chaque micro-correction : un petit « rebond » constant en vol.</p>
 <p>La réponse est une zone morte dimensionnée par la physique, pas par le bruit des flottants. Le serveur applique une entrée pendant un tick entier : l'instant où il reconnaît un changement peut différer de celui du client d'un tick au plus, soit jusqu'à <em>vitesse / cadence</em> de distance. La tolérance vaut cela, plus 20 %. À l'intérieur, la correction n'est pas ignorée pour autant : la référence est tirée d'un quart du chemin vers l'échantillon qui fait autorité. Adopter la prédiction telle quelle laissait les erreurs sous le seuil s'accumuler pendant les longues accélérations, jusqu'à franchir le seuil d'un coup : un à-coup périodique sorti de nulle part. La traction partielle garde chaque correction invisible tout en bornant la dérive.</p>
 </div>
+<div lang="zh-TW">
+<h2>死區：不要追逐雜訊</h2>
+<p>即使使用了正確的定律，一艘轉彎中的船，新樣本也很少<em>恰好</em>落在上一次外插所預測的位置。第一版在每一個原始樣本上重新設定外插的基準，所以任何微小的不一致，哪怕是不到一公分的量化雜訊，都會讓目標每個 tick 都移動，而彈簧就盡責地追逐每一次微小修正：飛行中持續出現的小小「彈跳」。</p>
+<p>答案是一個依物理、而不是依浮點雜訊決定大小的死區。伺服器會把一個輸入套用一整個 tick，所以它認知到變化的時間點，可能與用戶端相差最多一個 tick，也就是最多<em>速度 / tick 頻率</em>的距離。容許誤差就是這個值再加 20 %。在死區之內，修正也不是直接被忽略：基準會被往權威樣本的方向拉近四分之一。原封不動地採用預測，會讓低於門檻的誤差在長時間加速期間不斷累積，直到一次越過門檻，造成一次莫名其妙的週期性頓挫。部分拉近讓每次修正都看不出來，同時限制了漂移。</p></div>
 <div class="code"><div class="code-head"><span class="file">QwakClient/Scripts/Core/RemotePhysicsController.cs · ApplyState, simplified</span></div><pre><code data-lang="cs">float elapsed = Mathf.Min(Time.time - _snapshotTime, MaxExtrapolationTime);
 Vector2 predictedNow = ExtrapolatePosition(_snapshotPos, _snapshotVel, elapsed);
 float epsilon = speed / WorldTps * 1.2f;  // one tick of quantization, plus margin
@@ -133,6 +161,8 @@ _snapshotTime = Time.time;                // always refresh, even inside the zon
 <div lang="fr">
 <p>La dernière ligne compte autant que les autres. L'heure de référence est rafraîchie à chaque échantillon, pas seulement lors des vraies corrections ; sinon un vaisseau qui file en ligne droite, chaque échantillon dans la zone morte, laisserait l'âge de son extrapolation atteindre le maximum et se figerait sur place.</p>
 </div>
+<div lang="zh-TW">
+<p>最後一行和其他行一樣重要。基準時間在每個樣本上都會更新，而不只是在真正的修正時；否則一艘沿著長直線巡航、每個樣本都在死區之內的船，會讓它的外插時間一路用到上限，然後凍結在原地。</p></div>
 </section>
 
 <section class="sec" id="units">
@@ -144,12 +174,17 @@ _snapshotTime = Time.time;                // always refresh, even inside the zon
 <h2>Des constantes de lissage en ticks, pas en secondes</h2>
 <p>Le temps de lissage et l'extrapolation maximale étaient des durées fixes, 0,1 s et 0,5 s. Elles « semblaient justes », et elles l'étaient par accident : elles avaient été réglées pendant que le bug de minuterie du serveur (chapitre <a href="tick-loop.html#timer-traps">3.1</a>) plafonnait en silence la cadence réelle vers 21 Hz. Une fois que le serveur a livré sa cadence configurée, les durées fixes ne correspondaient plus à l'intervalle réel entre deux nouveaux états. Les deux sont maintenant exprimées en ticks de snapshot (2 et 10) et converties avec la cadence en vigueur, pour que le rendu garde le même comportement relatif à n'importe quelle cadence configurée.</p>
 </div>
+<div lang="zh-TW">
+<h2>平滑常數以 tick 計，而不是秒</h2>
+<p>平滑時間與最大外插時間過去是固定的時間長度，0.1 秒與 0.5 秒。它們「感覺對了」，結果卻是碰巧感覺對了：它們是在伺服器的計時器 bug（第 <a href="tick-loop.html#timer-traps">3.1</a> 章）默默地把實際 tick 頻率限制在約 21 Hz 時調出來的。一旦伺服器交出它設定的頻率，固定的時間長度就不再符合新狀態之間的真實間隔。現在兩者都以快照 tick 表示（2 與 10），並以即時的快照頻率換算，讓繪製器在任何設定頻率下都保持相同的相對行為。</p></div>
 <div lang="en">
 <div class="note tradeoff"><p class="note-label">Trade-off</p><p>This looks like it contradicts the rule of chapter <a href="snapshots.html#absence">4.2</a> ("any constant whose comment names a tick rate is in the wrong unit"). It does not: that rule is about contracts between two ends and durations that matter to a human, like a grace period. These constants describe the signal itself: "smooth over two samples" is naturally counted in samples.</p></div>
 </div>
 <div lang="fr">
 <div class="note tradeoff"><p class="note-label">Compromis</p><p>Cela semble contredire la règle du chapitre <a href="snapshots.html#absence">4.2</a> (« toute constante dont le commentaire nomme une cadence est dans la mauvaise unité »). Ce n'est pas le cas : cette règle vise les contrats entre deux bouts et les durées qui comptent pour un humain, comme une grâce. Ces constantes décrivent le signal lui-même : « lisser sur deux échantillons » se compte naturellement en échantillons.</p></div>
 </div>
+<div lang="zh-TW">
+<div class="note tradeoff"><p class="note-label">取捨</p><p>這看起來與第 <a href="snapshots.html#absence">4.2</a> 章的規則（「任何一個註解必須提到 tick 頻率的常數，都用錯了單位」）互相矛盾。其實不然：那條規則談的是兩端之間的契約，以及對人類重要的時間長度，例如寬限期。這些常數描述的是訊號本身：「在兩個樣本上平滑」本來就該以樣本為單位計算。</p></div></div>
 </section>
 
 <section class="sec" id="order">
@@ -165,6 +200,11 @@ _snapshotTime = Time.time;                // always refresh, even inside the zon
 <p>L'ordre est maintenant un contrat écrit, imposé par des attributs explicites d'ordre d'exécution : le rendu physique distant d'abord (−100), puis le contrôleur du personnage local qui se tient dessus (−50), puis le rendu du personnage (−20), et la caméra en dernier (+100). Chaque étape lit la sortie de la précédente de la même image.</p>
 <div class="note rule"><p class="note-label">Règle</p><p>Quand plusieurs composants lisent la sortie les uns des autres dans la même image, rendre leur ordre explicite.</p><p>Un ordre implicite marche jusqu'au jour où les objets sont créés dans un autre ordre, et produit alors le genre de bug le plus dur à signaler : « ça saccade un peu, parfois ».</p></div>
 </div>
+<div lang="zh-TW">
+<h2>繪製的先後順序</h2>
+<p>一個「有時候」才出現的細微卡頓，與網路毫無關係。Unity 以一個未指定、取決於建立順序的順序，執行每個元件的 LateUpdate。行走中的角色由它的船體 Transform 承載；攝影機跟隨角色；兩者都讀取遠端繪製器所寫入的 Transform。依連線階段不同，它們讀到的是<em>上一個影格</em>的位置。</p>
+<p>現在這個順序是一份寫下來的契約，由明確的執行順序屬性強制：遠端物理繪製器最先（−100），接著是站在它上面的本機角色控制器（−50），然後是角色繪製器（−20），攝影機最後（+100）。每個階段讀取的，都是前一個階段在同一個影格的輸出。</p>
+<div class="note rule"><p class="note-label">規則</p><p>當好幾個元件在同一個影格中讀取彼此的輸出時，讓它們的順序明確化。</p><p>隱含的順序會一直正常運作，直到物件以不同順序被建立的那一天，然後產生最難回報的那一種 bug：「它有時候會稍微卡一下」。</p></div></div>
 </section>
 
 <section class="sec" id="bullets">
@@ -176,6 +216,9 @@ _snapshotTime = Time.time;                // always refresh, even inside the zon
 <h2>Les balles : en avant seulement, sauf à l'impact</h2>
 <p>La vitesse d'une balle ne change jamais en vol : le client peut la simuler presque exactement depuis son état de départ. Les corrections ne sont acceptées que si elles n'obligent pas à dessiner la balle <em>derrière</em> l'endroit où elle est déjà : pour un objet rapide et éphémère, une trajectoire continue compte plus que de se resynchroniser à chaque tick, et une correction vers l'arrière se lit comme un vilain à-coup d'une image. Le seul cas où « derrière » est juste est l'impact : la balle s'est vraiment arrêtée, souvent en deçà de l'endroit où le vol libre l'aurait portée. Passé par la règle « en avant seulement », l'impact était ignoré et la balle continuait de voler à travers la cible. Un impact recale donc la balle sans condition, au point d'impact avec une vitesse nulle.</p>
 </div>
+<div lang="zh-TW">
+<h2>子彈：只往前，命中除外</h2>
+<p>子彈的速度在飛行中從不改變，所以用戶端幾乎可以從它的產生狀態精確地模擬它。只有在不需要把子彈畫在它目前位置<em>後方</em>時，才接受修正：對一個快速、短命的物件來說，連續的路徑比每個 tick 重新同步更重要，而往回的修正看起來就是難看的一影格頓挫。唯一「往後」才正確的情況是命中：子彈真的停下來了，而且往往停在自由飛行會帶它到達的位置之前。如果經過「只往前」的規則，命中就會被丟棄，子彈則繼續飛穿目標。因此命中會無條件地重設基準，移到撞擊點、速度為零。</p></div>
 </section>
 
 <section class="sec" id="takeaways">
@@ -194,6 +237,13 @@ _snapshotTime = Time.time;                // always refresh, even inside the zon
 <li>Interpoler en espace de ticks pour que la gigue d'arrivée ne puisse pas perturber l'espacement.</li>
 <li>Rendre explicite l'ordre de mise à jour de l'image, et laisser les impacts passer outre les règles « en avant seulement ».</li>
 </ul></div>
+<div lang="zh-TW"><h2>重點整理</h2><ul>
+<li>依運動的種類選擇繪製策略：船艦用外插加平滑，子彈用航位推算，不能接受跳動的地方用緩衝內插。</li>
+<li>用伺服器自己的運動定律與常數外插，包括阻尼。</li>
+<li>以一個 tick 的模擬量化來決定死區的大小，並在死區內部分拉近，而不是忽略或追逐。</li>
+<li>在 tick 時間軸上內插，讓到達時間的抖動無法擾亂間距。</li>
+<li>讓影格的更新順序明確化，並讓命中凌駕「只往前」的規則。</li>
+</ul></div>
 </div>
 </section>
 
@@ -206,6 +256,7 @@ _snapshotTime = Time.time;                // always refresh, even inside the zon
 <footer class="site-footer" id="mq-footer"></footer>
 <script src="assets/js/site-data.js" defer></script>
 <script src="assets/js/glossary-data.js" defer></script>
+<script src="assets/js/ui-zh.js" defer></script>
 <script src="assets/js/app.js" defer></script>
 <script src="assets/js/widgets.js" defer></script>
 </body>

@@ -7,12 +7,12 @@
 <meta name="description" content="Main-thread marshalling, keeping only the newest snapshot, discovering unknown objects, and loading screens that mean something.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Chakra+Petch:wght@500;600&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Chakra+Petch:wght@500;600&family=JetBrains+Mono:wght@400;500;600&family=Noto+Sans+TC:wght@400;700&display=swap">
 <link rel="stylesheet" href="assets/css/site.css">
-<script>(function(){var r=document.documentElement,l,t;try{l=localStorage.getItem("mq-lang");t=localStorage.getItem("mq-theme");}catch(e){}if(l!=="en"&&l!=="fr"){l=(navigator.language||"").toLowerCase().indexOf("fr")===0?"fr":"en";}r.setAttribute("data-lang",l);r.setAttribute("lang",l);if(t==="light"||t==="dark")r.setAttribute("data-theme",t);})();</script>
+<script>(function(){var r=document.documentElement,l,t,n;try{l=localStorage.getItem("mq-lang");t=localStorage.getItem("mq-theme");}catch(e){}if(l!=="en"&&l!=="fr"&&l!=="zh"){n=(navigator.language||"").toLowerCase();l=n.indexOf("fr")===0?"fr":n.indexOf("zh")===0?"zh":"en";}r.setAttribute("data-lang",l);r.setAttribute("lang",l==="zh"?"zh-TW":l);if(t==="light"||t==="dark")r.setAttribute("data-theme",t);})();</script>
 </head>
 <body data-page="client-architecture">
-<a class="skip-link" href="#main"><span lang="en">Skip to content</span><span lang="fr">Aller au contenu</span></a>
+<a class="skip-link" href="#main"><span lang="en">Skip to content</span><span lang="fr">Aller au contenu</span><span lang="zh-TW">跳到主要內容</span></a>
 <header class="site-header" id="mq-header"></header>
 <div class="layout">
 <aside class="sidebar" id="mq-sidebar"></aside>
@@ -20,8 +20,8 @@
 <article>
 <header class="chapter-head">
   <div class="eyebrow" data-auto></div>
-  <h1><span lang="en">The client's network layer</span><span lang="fr">La couche réseau du client</span></h1>
-  <p class="dek"><span lang="en">Main-thread marshalling, keeping only the newest snapshot, discovering unknown objects, and loading screens that mean something.</span><span lang="fr">Le passage au thread principal, ne garder que le dernier snapshot, découvrir les objets inconnus, et des écrans de chargement qui veulent dire quelque chose.</span></p>
+  <h1><span lang="en">The client's network layer</span><span lang="fr">La couche réseau du client</span><span lang="zh-TW">用戶端的網路層</span></h1>
+  <p class="dek"><span lang="en">Main-thread marshalling, keeping only the newest snapshot, discovering unknown objects, and loading screens that mean something.</span><span lang="fr">Le passage au thread principal, ne garder que le dernier snapshot, découvrir les objets inconnus, et des écrans de chargement qui veulent dire quelque chose.</span><span lang="zh-TW">交給主執行緒處理、只保留最新的快照、發現未知物件，以及真正有意義的載入畫面。</span></p>
   <div class="meta-row" data-auto></div>
 </header>
 
@@ -46,6 +46,14 @@
 <li><strong>Au moins un élément par image.</strong> Le budget est vérifié <em>après</em> chaque action, jamais avant de retirer de la file. Une file dont l'action suivante dépasse à elle seule le budget progresse quand même, lentement, au lieu de ne jamais se vider.</li>
 </ul>
 </div>
+<div lang="zh-TW">
+<h2>兩條絕不能碰彼此東西的執行緒</h2>
+<p>用戶端與伺服器共用網路函式庫與協定程式碼（第 <a href="protocol-testing.html">1.6</a> 章），也繼承了同樣的執行緒模型：封包在一條輪詢 socket 的<strong>網路執行緒</strong>上接收並解析。遊戲引擎 Unity 的限制卻正好相反：它幾乎整套 API 都只能從<strong>主執行緒</strong>呼叫。所以沒有任何封包處理常式可以直接碰遊戲物件、Transform 或使用者介面元素。</p>
+<p>橋樑是一個佇列。在網路執行緒上執行的處理常式，把它想做的事包裝成一個動作排入佇列；主執行緒每個影格清空一次佇列。有兩個細節讓這不只是正確，而且穩健：</p>
+<ul>
+<li><strong>每個影格有時間預算。</strong>清空在 8 ms 後停止，在 60 fps 的影格中留下繪製的空間。沒有預算的話，一個增長速度比單一影格清空速度還快的佇列只會每個影格越來越糟，也就是經典的「還有太多工作沒做完」螺旋，而不是把多出來的工作分散到幾個明顯較慢、但仍會呈現出來的影格中。</li>
+<li><strong>每個影格至少處理一項。</strong>預算是在每個動作<em>之後</em>檢查，而絕不是在取出之前。一個下一個動作本身就超過預算的佇列，仍然能緩慢地前進，而不是永遠清不完。</li>
+</ul></div>
 <div class="code"><div class="code-head"><span class="file">QwakClient/Scripts/Core/NetworkManager.cs</span></div><pre><code data-lang="cs">private readonly ConcurrentQueue&lt;Action&gt; _queue = new();
 
 public void EnqueueMainThread(Action a) =&gt; _queue.Enqueue(a);  // any thread
@@ -73,6 +81,10 @@ private void Update()                                          // main thread, o
 <p>Une file générique convient aux messages rares. Les snapshots ne le sont pas : 25 par seconde, et chacun décrit entièrement le monde (chapitre <a href="snapshots.html">4.2</a>). Si le client prend un instant de retard (une image lente, un ramasse-miettes), mettre chaque snapshot en file revient à passer ensuite plusieurs images à appliquer des photos du passé, chacune aussitôt rendue obsolète par la suivante.</p>
 <p>Les snapshots contournent donc la file. Le thread réseau ne stocke qu'une référence vers le plus récent et, si aucun rappel n'est déjà planifié, en planifie un. Le rappel du thread principal prend le snapshot le plus frais au moment où il s'exécute. Si trois snapshots arrivent pendant une longue image, les deux premiers ne sont tout simplement jamais traités : ils étaient déjà périmés.</p>
 </div>
+<div lang="zh-TW">
+<h2>只保留最新的快照</h2>
+<p>通用的佇列適合罕見的訊息。快照並不罕見：每秒 25 份，而且每一份都完整描述了世界（第 <a href="snapshots.html">4.2</a> 章）。如果用戶端一時落後（一個慢的影格、一次垃圾回收），把每份快照都排入佇列，就代表它接下來要花好幾個影格套用過去的照片，而每一份都立刻被下一份淘汰。</p>
+<p>所以快照繞過佇列。網路執行緒只儲存指向最新快照的參考，如果還沒有排定回呼，就排定一個。主執行緒的回呼在執行時，拿的是當下最新的那一份快照。如果在一個長影格中到達了三份快照，前兩份就根本不會被處理：它們早已過時。</p></div>
 <div class="code"><div class="code-head"><span class="file">QwakClient/Scripts/Core/SnapshotManager.cs · simplified</span></div><pre><code data-lang="cs">// Network thread: remember the newest, schedule at most one callback.
 d.Register&lt;Snapshot&gt;(Type.Snapshot, (id, pkt, src) =&gt;
 {
@@ -95,6 +107,8 @@ private void ProcessPendingSnapshot()
 <div lang="fr">
 <div class="note rule"><p class="note-label">Règle</p><p>Fusionner les messages d'état complet ; ne mettre en file que les événements.</p><p>Un message qui remplace tout ce qui le précède (un snapshot, une position, une valeur de vie) doit écraser une copie en attente. Un message qui ajoute quelque chose (une ligne de chat, une offre d'échange) doit être mis en file. Mélanger les deux dans un seul mécanisme perd des événements ou traite le passé.</p></div>
 </div>
+<div lang="zh-TW">
+<div class="note rule"><p class="note-label">規則</p><p>合併完整狀態的訊息；只把事件排入佇列。</p><p>一則取代先前一切的訊息（快照、位置、生命值）應該覆寫待處理的副本。一則新增東西的訊息（一行聊天、一個交易提議）則必須排入佇列。在同一個機制中混用兩者，不是會遺失事件，就是會處理過去。</p></div></div>
 </section>
 
 <section class="sec" id="register-first">
@@ -108,6 +122,10 @@ private void ProcessPendingSnapshot()
 <p>L'événement « connecté » est lui-même différé vers le thread principal : tout ce qui est enregistré en réponse arrive au moins une image après que la socket est vivante. Le serveur, lui, envoie les informations de carte juste après l'entrée en jeu. Les gestionnaires enregistrés « à la connexion » faisaient la course avec ce premier message et la perdaient, en silence, parfois.</p>
 <p>Ce qu'une version du client sait décoder est une propriété du protocole, pas du composant qui a démarré le premier. Tous les analyseurs sont enregistrés sur l'objet de connexion <em>avant</em> la connexion, à un seul endroit partagé par les connexions gateway et jeu ; les composants n'attachent leur comportement que plus tard.</p>
 </div>
+<div lang="zh-TW">
+<h2>在連線之前註冊解析器</h2>
+<p>「已連線」事件本身也被延後到主執行緒，所以任何回應它而註冊的東西，最早也要在 socket 開始運作後的一個影格才會生效。與此同時，伺服器在玩家進入遊戲後就立刻送出地圖資訊。「連線時」才註冊的處理常式與那第一則訊息賽跑，有時就會輸掉它，而且是無聲無息地。</p>
+<p>一個用戶端組建能解碼什麼，是協定的特性，而不是取決於哪個元件剛好已經啟動。所有解析器都在連線物件<em>連線之前</em>就註冊好，集中在閘道連線與遊戲連線共用的同一個地方；元件只是之後才附加它們的行為。</p></div>
 </section>
 
 <section class="sec" id="discover">
@@ -125,6 +143,12 @@ private void ProcessPendingSnapshot()
 <div class="note pitfall"><p class="note-label">Piège rencontré</p><p>Le client attachait le « contrôleur de vaisseau joueur » (le composant qui envoie les commandes du vaisseau) quand l'identifiant du vaisseau à soi changeait. Deux choses l'ont désarmé. S'amarrer retire le vaisseau de tous les snapshots : après la grâce, le client baissait son drapeau « j'ai un vaisseau », et au désamarrage la promotion n'avait plus lieu. Et l'identifiant était noté même quand la promotion n'avait pas encore eu lieu (vaisseau pas encore créé, description encore en vol) : au snapshot suivant les identifiants étaient égaux, et la condition ne pouvait plus jamais redevenir vraie. Symptôme : on se désamarre, le vaisseau est là, et les commandes ne partent nulle part pendant quelques secondes. La correction réaffirme au lieu de détecter : la promotion est idempotente et tourne à chaque snapshot, et l'identifiant n'est noté qu'une fois le vaisseau réellement présent.</p></div>
 <div class="note rule"><p class="note-label">Règle</p><p>Si le fil répète un fait à chaque tick, l'appliquer à chaque tick ; ne pas en faire une transition unique côté client.</p><p>Une transition qu'on détecte peut être manquée ; un état qu'on réapplique ne le peut pas. La réapplication idempotente coûte une recherche et supprime toute une famille de bugs d'ordre.</p></div>
 </div>
+<div lang="zh-TW">
+<h2>發現你還不認識的東西</h2>
+<p>當一份快照提到一個用戶端從未見過的 ID 時，用戶端會建立一個佔位物件並收集這個 ID；解析完整份快照後，它會為所有未知的 ID 一次送出一個 <code>Discover</code> 請求。回覆攜帶每個物件的完整描述（第 <a href="snapshots.html#discover">4.2</a> 章），物件在那時才被建立。快照狀態本身就攜帶目錄 ID 的類型（子彈、飛彈、小行星、碎片），永遠不需要這次往返。</p>
+<p>有一個後果花了一段時間才弄對：「這艘船是我的」是<em>狀態</em>，每份快照都會重新確認，但在用戶端上它被實作成了一個<em>邊緣觸發</em>，在 ID 改變時只做一次的提升。</p>
+<div class="note pitfall"><p class="note-label">我踩過的坑</p><p>用戶端在自己船艦的 ID 改變時，附加「玩家船艦控制器」（負責送出船艦輸入的元件）。有兩件事讓它失效。停靠會讓這艘船從每份快照中消失，所以在寬限期過後，用戶端放下了「我有一艘船」的旗標，而出港時提升沒有再次發生。而且即使提升還沒發生（船還沒建立，它的描述還在傳送中），ID 也已經被記錄下來，所以在下一份快照中 ID 相符，條件就再也不可能成立。症狀：你出港了，船就在那裡，而你的輸入有好幾秒不知道送到哪裡去了。修正方式是重新確認而不是偵測：提升是冪等的，在每份快照中都執行，而 ID 只有在船真正存在時才被記錄。</p></div>
+<div class="note rule"><p class="note-label">規則</p><p>如果線路每個 tick 都重複一項事實，就每個 tick 都套用它；不要在用戶端上把它變成一次性的轉變。</p><p>你偵測的轉變可能會錯過；你重新套用的狀態則不會。冪等的重新套用只花一次查詢，卻能消除一整族的順序 bug。</p></div></div>
 </section>
 
 <section class="sec" id="forget">
@@ -136,6 +160,9 @@ private void ProcessPendingSnapshot()
 <h2>Une seule sortie de scène</h2>
 <p>Un objet quitte la scène du client pour deux raisons : le serveur a dit qu'il est parti, ou il n'a pas été vu pendant la durée de grâce. Les deux passent par une seule fonction « oublier », et cette fonction est idempotente, parce que les deux déclencheurs peuvent viser le même identifiant (le serveur répète son annonce trois fois, et la grâce peut expirer entre-temps). Tout ce qui doit se passer au retrait vit là : détruire l'objet de jeu, effacer les références « mon personnage » et « mon vaisseau » pour que le contrôleur du joueur ne tienne jamais un objet détruit, et retirer l'identifiant de chaque dictionnaire de suivi. Deux chemins de retrait qui différeraient d'une ligne garantiraient qu'un jour, l'un d'eux oublie de baisser un drapeau.</p>
 </div>
+<div lang="zh-TW">
+<h2>離開場景只有一條路</h2>
+<p>一個物件離開用戶端場景的原因有兩個：伺服器說它已離開，或者它已經有一個寬限期沒被看到。兩者都經過同一個「遺忘」函式，而這個函式是冪等的，因為兩個觸發可能對同一個 ID 都發生（伺服器會重複宣告三次，寬限期也可能在這之間到期）。移除時必須發生的一切都在那裡：銷毀遊戲物件、清除「我的角色」與「我的船」參考，讓玩家控制器永遠不會持有一個已摧毀的物件，並從每一本簿記字典中移除這個 ID。兩條只差一行的移除路徑，保證總有一天其中一條會忘記放下某個旗標。</p></div>
 </section>
 
 <section class="sec" id="loading">
@@ -159,12 +186,23 @@ private void ProcessPendingSnapshot()
 </ul>
 <p>Le gestionnaire retient aussi à quelle connexion il appartient. Une connexion déjà remplacée (après une transition) qui meurt en retard ne doit pas démonter la session courante.</p>
 </div>
+<div lang="zh-TW">
+<h2>真正有意義的載入畫面</h2>
+<p>載入畫面是一個承諾：當它消失時，世界已經準備好了。MoonQwak 的抵達階段（第 <a href="login-flow.html#arrival">2.2</a> 章）讓這個承諾可以被檢查。用戶端會保持載入畫面，直到地圖描述套用完畢，然後在 <code>finally</code> 區塊中回報「地圖已就緒」，所以即使某一部分套用失敗，回報仍然會送出。只有在那之後，伺服器才把玩家的船放進世界並開始送出快照。同一台伺服器上的地圖切換，會在不重新連線的情況下重跑同一個階段（第 <a href="handover.html#in-place">2.3</a> 章）。</p>
+<p>斷線也需要同樣的謹慎，因為「遊戲伺服器關閉了我的連線」可能代表兩件相反的事：</p>
+<ul>
+<li><strong>預期中的</strong>：用戶端是刻意離開的（切換到另一台伺服器、退出遊戲）。在關閉之前會設定一個旗標，讓處理常式知道。</li>
+<li><strong>預期之外的</strong>：被踢除（在別處有新的登入）或伺服器死了。用戶端會等兩秒再下結論：一次「你正在移動」訊息遺失了的切換，看起來就和一次乾脆的斷線一模一樣，但閘道的另一條連線隨後就會送來新的位址。如果沒有出現新的連線，用戶端會清除世界（它的物件存在於場景之外，否則會一直留在畫面上）、顯示說明，並回到角色選擇。絕不會讓用戶端凍結在一個死掉的世界裡。</li>
+</ul>
+<p>處理常式也會記下它屬於哪一條連線。一條早已被取代（在切換之後）而晚死的連線，絕不能拆掉目前的連線階段。</p></div>
 <div lang="en">
 <div class="note project"><p class="note-label">In MoonQwak</p><p>The shared network library cannot reference Unity, so it logs through a static hook that defaults to the console. In Unity the console output goes to a log file nobody watches: a dropped packet reported there is the same as not reported. The client points the hook at Unity's warning log at startup. The messages are then written from the network thread, and Unity's warning log is one of the few Unity calls that are safe off the main thread.</p></div>
 </div>
 <div lang="fr">
 <div class="note project"><p class="note-label">Dans MoonQwak</p><p>La bibliothèque réseau partagée ne peut pas référencer Unity : elle journalise par un crochet statique qui écrit par défaut sur la console. Dans Unity, la sortie console part dans un fichier de journal que personne ne regarde : un paquet perdu signalé là, c'est un paquet non signalé. Le client branche le crochet sur le journal d'avertissements d'Unity au démarrage. Les messages sont ensuite écrits depuis le thread réseau, et le journal d'avertissements d'Unity fait partie des rares appels Unity sûrs hors du thread principal.</p></div>
 </div>
+<div lang="zh-TW">
+<div class="note project"><p class="note-label">在 MoonQwak 中</p><p>共用的網路函式庫無法參考 Unity，所以它透過一個預設指向主控台的靜態掛勾來記錄日誌。在 Unity 中，主控台輸出會寫到一個沒有人在看的日誌檔：在那裡回報一個被丟棄的封包，等於沒有回報。用戶端在啟動時把這個掛勾指向 Unity 的警告日誌。這些訊息因此是從網路執行緒寫入的，而 Unity 的警告日誌是少數在主執行緒之外呼叫也安全的 Unity 呼叫之一。</p></div></div>
 </section>
 
 <section class="sec" id="takeaways">
@@ -183,6 +221,13 @@ private void ProcessPendingSnapshot()
 <li>Grouper les demandes d'objets inconnus, et réappliquer les faits que le fil répète au lieu de détecter des transitions.</li>
 <li>Donner aux objets une sortie unique et idempotente, faire des écrans de chargement une promesse vérifiable, et distinguer les déconnexions attendues des inattendues.</li>
 </ul></div>
+<div lang="zh-TW"><h2>重點整理</h2><ul>
+<li>透過一個在每影格預算下清空、而且永遠會前進的佇列，把網路工作交給主執行緒處理。</li>
+<li>把快照這類完整狀態的訊息合併成「保留最新的」；只把事件排入佇列。</li>
+<li>在連線之前註冊每一個解析器；解碼是協定的特性。</li>
+<li>批次索取未知物件，並重新套用線路所重複的事實，而不是偵測轉變。</li>
+<li>給物件單一、冪等的出口，讓載入畫面成為可被檢查的承諾，並區分預期中與預期之外的斷線。</li>
+</ul></div>
 </div>
 </section>
 
@@ -195,6 +240,7 @@ private void ProcessPendingSnapshot()
 <footer class="site-footer" id="mq-footer"></footer>
 <script src="assets/js/site-data.js" defer></script>
 <script src="assets/js/glossary-data.js" defer></script>
+<script src="assets/js/ui-zh.js" defer></script>
 <script src="assets/js/app.js" defer></script>
 <script src="assets/js/widgets.js" defer></script>
 </body>

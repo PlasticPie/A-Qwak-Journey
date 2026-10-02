@@ -122,8 +122,12 @@
     ctx.textBaseline = opts.base || "alphabetic";
     ctx.fillText(s, x, y);
   }
+  // A chart or timeline label in the current language; English when a language is missing.
+  function pick(o) { var l = U.lang(); return o[l] != null ? o[l] : o.en; }
+  // Approximate width at 10.5 px: CJK characters are about twice as wide as Latin ones.
+  function labelWidth(t) { var w = 0; for (var i = 0; i < t.length; i++) w += /[\u2e80-\uffef]/.test(t.charAt(i)) ? 10.8 : 6.2; return w; }
   function fmt(n, d) {
-    var l = U.lang() === "fr" ? "fr-FR" : "en-US";
+    var l = { fr: "fr-FR", zh: "zh-TW" }[U.lang()] || "en-US";
     return Number(n).toLocaleString(l, { minimumFractionDigits: d || 0, maximumFractionDigits: d || 0 });
   }
 
@@ -266,7 +270,7 @@
       var show = function () {
         host.querySelectorAll(".byte-field").forEach(function (x) { x.classList.remove("hot"); });
         f.classList.add("hot");
-        legend.innerHTML = bi(f.getAttribute("data-en") || "", f.getAttribute("data-fr") || "");
+        legend.innerHTML = bi(f.getAttribute("data-en") || "", f.getAttribute("data-fr") || "", f.getAttribute("data-zh"));
       };
       f.addEventListener("mouseenter", show);
       f.addEventListener("focus", show);
@@ -384,12 +388,14 @@
       }).join("");
       var ranges = { 1: "0 – 126", 2: "127 – 16 382", 4: "16 383 – 536 870 910", 8: "536 870 911 – 2⁶⁰−2", 9: "≥ 2⁶⁰−1" };
       note.innerHTML = bi("The highlighted bits of the first byte tell the reader how many bytes follow. This size holds " + ranges[n] + ".",
-        "Les bits en surbrillance du premier octet disent au lecteur combien d'octets suivent. Cette taille couvre " + ranges[n] + ".") +
+        "Les bits en surbrillance du premier octet disent au lecteur combien d'octets suivent. Cette taille couvre " + ranges[n] + ".",
+        "第一個位元組中標示的位元告訴讀取端後面還有幾個位元組。這個長度涵蓋 " + ranges[n] + "。") +
         (label ? " <code>" + esc(label) + "</code>" : "");
       ro.set("size", n + (n === 1 ? L(" byte", " octet") : L(" bytes", " octets")));
       ro.set("raw", encoded.toString());
       ro.set("fixed", L((fixedBytes - n >= 0 ? "saves " : "costs ") + Math.abs(fixedBytes - n) + " of " + fixedBytes,
-        (fixedBytes - n >= 0 ? "économise " : "coûte ") + Math.abs(fixedBytes - n) + " sur " + fixedBytes));
+        (fixedBytes - n >= 0 ? "économise " : "coûte ") + Math.abs(fixedBytes - n) + " sur " + fixedBytes,
+        (fixedBytes - n >= 0 ? "省下 " : "多花 ") + Math.abs(fixedBytes - n) + " / " + fixedBytes));
       ro.set("err", err == null ? L("exact", "exact") : (err * 100).toFixed(2) + " cm");
       drawChart(encoded);
     }
@@ -1050,7 +1056,7 @@
       servers.forEach(function (s, i) {
         html += "<tr><td><code>" + esc(s.id) + '</code></td><td class="num"><input data-i="' + i + '" data-k="maps" type="number" min="0" max="130" value="' + s.maps + '" style="width:5rem"></td>' +
           '<td class="num"><input data-i="' + i + '" data-k="players" type="number" min="0" max="900" value="' + s.players + '" style="width:5rem"></td>' +
-          '<td><input data-i="' + i + '" data-k="draining" type="checkbox"' + (s.draining ? " checked" : "") + ' aria-label="draining"></td>' +
+          '<td><input data-i="' + i + '" data-k="draining" type="checkbox"' + (s.draining ? " checked" : "") + ' aria-label="' + esc(L("Draining", "En retrait")) + '"></td>' +
           '<td class="num">' + score(s).toFixed(2) + "</td><td>" + (s === pick ? "<strong>" + esc(L("← next map goes here", "← la prochaine carte va ici")) + "</strong>" : (s.maps >= 110 ? esc(L("at ceiling", "au plafond")) : "")) + "</td></tr>";
       });
       html += "</tbody></table>";
@@ -1071,7 +1077,7 @@
       var full = minMaps >= mapsPer.value;
       var crowdedFlag = playersPer.value > 0 && maxPlayers >= playersPer.value;
       var needed = running, why;
-      if (full || crowdedFlag) { needed = running + 1; why = full ? L("the emptiest server already holds " + minMaps + " maps", "le serveur le plus vide porte déjà " + minMaps + " cartes") : L("the busiest server carries " + maxPlayers + " players", "le serveur le plus peuplé porte " + maxPlayers + " joueurs"); }
+      if (full || crowdedFlag) { needed = running + 1; why = full ? L("the emptiest server already holds " + minMaps + " maps", "le serveur le plus vide porte déjà " + minMaps + " cartes", "最空的伺服器也已承載 " + minMaps + " 張地圖") : L("the busiest server carries " + maxPlayers + " players", "le serveur le plus peuplé porte " + maxPlayers + " joueurs", "最忙的伺服器承載 " + maxPlayers + " 名玩家"); }
       else if (running > 1) {
         var without = running - 1;
         var mapRoom = totalMaps / without < mapsPer.value * 0.8;
@@ -1079,7 +1085,7 @@
         if (waiting.value === 0 && mapRoom && playerRoom) { needed = without; why = L("everything would fit on one server fewer, with 20 % margin", "tout tiendrait sur un serveur de moins, avec 20 % de marge"); }
         else why = L("within thresholds, no surplus", "dans les seuils, pas de surplus");
       } else why = L("single server, within thresholds", "un seul serveur, dans les seuils");
-      if (waiting.value > 0) { needed = Math.max(needed, running + 1); why = L(waiting.value + " map(s) found no host", waiting.value + " carte(s) sans hôte"); }
+      if (waiting.value > 0) { needed = Math.max(needed, running + 1); why = L(waiting.value + " map(s) found no host", waiting.value + " carte(s) sans hôte", waiting.value + " 張地圖找不到主機"); }
       var desired = Math.max(1, Math.min(8, needed));
       out.innerHTML = '<div class="readout hot"><b>' + esc(L("Desired servers", "Serveurs désirés")) + "</b><span>" + running + " → " + desired + "</span></div>" +
         '<div class="readout" style="grid-column: span 3"><b>' + esc(L("Why", "Pourquoi")) + "</b><span style=\"font-size:0.9rem;font-family:var(--font-body)\">" + esc(why) + "</span></div>";
@@ -1099,24 +1105,23 @@
     var tip = document.createElement("div"); tip.className = "chart-tip"; tip.hidden = true; plot.appendChild(tip);
     var W = 760, laneH = 34, top = 18, left = 132, right = 16;
     function render() {
-      var l = U.lang();
       var H = top + cfg.lanes.length * (laneH + 12) + 34;
       var budget = cfg.budget;
       function X(ms) { return left + (W - left - right) * ms / budget; }
-      var s = '<svg viewBox="0 0 ' + W + " " + H + '" role="img" aria-label="' + esc(cfg.aria[l]) + '">';
+      var s = '<svg viewBox="0 0 ' + W + " " + H + '" role="img" aria-label="' + esc(pick(cfg.aria)) + '">';
       for (var ms = 0; ms <= budget; ms += 5) {
         s += '<line class="grid-line" x1="' + X(ms) + '" x2="' + X(ms) + '" y1="' + (top - 6) + '" y2="' + (H - 26) + '"/>';
         s += '<text class="tick-label" x="' + X(ms) + '" y="' + (H - 10) + '" text-anchor="middle">' + ms + (ms === budget ? " ms" : "") + "</text>";
       }
       cfg.lanes.forEach(function (lane, i) {
         var y = top + i * (laneH + 12);
-        s += '<text class="cat-label" x="' + (left - 10) + '" y="' + (y + laneH / 2 + 4) + '" text-anchor="end">' + esc(lane.name[l]) + "</text>";
+        s += '<text class="cat-label" x="' + (left - 10) + '" y="' + (y + laneH / 2 + 4) + '" text-anchor="end">' + esc(pick(lane.name)) + "</text>";
         lane.segs.forEach(function (sg, k) {
           var x0 = X(sg.s), w = Math.max(2, X(sg.s + sg.d) - x0 - 2);
           var fill = { accent: "var(--accent)", s1: "var(--series-1)", s2: "var(--series-2)", s3: "var(--series-3)", s4: "var(--series-4)", muted: "var(--rule-2)" }[sg.tone || "s1"];
           s += '<rect class="mark" data-l="' + i + '" data-k="' + k + '" x="' + x0.toFixed(1) + '" y="' + y + '" width="' + w.toFixed(1) + '" height="' + laneH + '" rx="4" style="fill:' + fill + '"/>';
           var ink = { s1: "var(--on-series-1)", muted: "var(--ink)" }[sg.tone || "s1"] || "var(--on-series)";
-          if (w > sg.label[l].length * 6.2 + 12) s += '<text x="' + (x0 + 6).toFixed(1) + '" y="' + (y + laneH / 2 + 4) + '" style="font:600 10.5px var(--font-body);fill:' + ink + ';pointer-events:none">' + esc(sg.label[l]) + "</text>";
+          if (w > labelWidth(pick(sg.label)) + 12) s += '<text x="' + (x0 + 6).toFixed(1) + '" y="' + (y + laneH / 2 + 4) + '" style="font:600 10.5px var(--font-body);fill:' + ink + ';pointer-events:none">' + esc(pick(sg.label)) + "</text>";
         });
       });
       s += '<line id="' + (host.id || "ph") + '-head" x1="' + X(0) + '" x2="' + X(0) + '" y1="' + (top - 8) + '" y2="' + (H - 26) + '" style="stroke:var(--ink)" stroke-width="1.5" opacity="0.6"/>';
@@ -1127,7 +1132,7 @@
         r.addEventListener("mousemove", function (e) {
           var sg = cfg.lanes[+r.getAttribute("data-l")].segs[+r.getAttribute("data-k")];
           tip.hidden = false;
-          tip.innerHTML = "<b>" + esc(sg.label[l]) + " · " + sg.d.toFixed(1) + " ms</b>" + esc(sg.desc[l]);
+          tip.innerHTML = "<b>" + esc(pick(sg.label)) + " · " + sg.d.toFixed(1) + " ms</b>" + esc(pick(sg.desc));
           var box = plot.getBoundingClientRect();
           tip.style.left = (e.clientX - box.left) + "px"; tip.style.top = (e.clientY - box.top) + "px";
         });
@@ -1163,13 +1168,12 @@
     var tip = document.createElement("div"); tip.className = "chart-tip"; tip.hidden = true;
     var tableBox = document.createElement("div"); tableBox.className = "chart-table"; tableBox.hidden = true; host.appendChild(tableBox);
     var showTable = false;
-    function cats(l) { return Array.isArray(cfg.cats) ? cfg.cats : cfg.cats[l]; }
-    function val(v) { return v == null ? "–" : fmt(v, cfg.decimals || 0) + (cfg.unit ? " " + (typeof cfg.unit === "string" ? cfg.unit : cfg.unit[U.lang()]) : ""); }
+    function cats() { return Array.isArray(cfg.cats) ? cfg.cats : pick(cfg.cats); }
+    function val(v) { return v == null ? "–" : fmt(v, cfg.decimals || 0) + (cfg.unit ? " " + (typeof cfg.unit === "string" ? cfg.unit : pick(cfg.unit)) : ""); }
     function render() {
-      var l = U.lang();
-      var cs = cats(l), series = cfg.series, nS = series.length;
+      var cs = cats(), series = cfg.series, nS = series.length;
       var legend = nS > 1 ? '<div class="legend">' + series.map(function (s, i) {
-        return '<span><i style="background:var(--series-' + (i + 1) + ')"></i>' + esc(s.name[l]) + "</span>";
+        return '<span><i style="background:var(--series-' + (i + 1) + ')"></i>' + esc(pick(s.name)) + "</span>";
       }).join("") + "</div>" : "<span></span>";
       tools.innerHTML = legend + '<button type="button" class="btn" style="padding:0.35rem 0.6rem;font-size:0.76rem">' +
         (showTable ? bi("Hide table", "Masquer le tableau") : bi("Show as table", "Voir en tableau")) + "</button>";
@@ -1181,7 +1185,7 @@
       var band = horizontal ? 34 : 0;
       var H = horizontal ? mt + cs.length * band + mb : (cfg.height || 260);
       var step = niceStep(max, 5), top = Math.ceil(max / step) * step || 1;
-      var s = '<svg viewBox="0 0 ' + W + " " + H + '" role="img" aria-label="' + esc(cfg.aria ? cfg.aria[l] : "") + '">';
+      var s = '<svg viewBox="0 0 ' + W + " " + H + '" role="img" aria-label="' + esc(cfg.aria ? pick(cfg.aria) : "") + '">';
       var hits = [];
       if (!horizontal) {
         var pw = W - ml - mr, ph = H - mt - mb, bw = pw / cs.length;
@@ -1261,7 +1265,7 @@
       hits.forEach(function (hb) {
         s += '<rect class="hit" data-i="' + hb.i + '" x="' + hb.x.toFixed(1) + '" y="' + hb.y.toFixed(1) + '" width="' + hb.w.toFixed(1) + '" height="' + hb.h.toFixed(1) + '" fill="transparent"/>';
       });
-      if (cfg.unitLabel) s += '<text class="tick-label" x="' + (horizontal ? W - mr : ml) + '" y="' + (horizontal ? H - 6 : 10) + '" text-anchor="' + (horizontal ? "end" : "start") + '">' + esc(cfg.unitLabel[l]) + "</text>";
+      if (cfg.unitLabel) s += '<text class="tick-label" x="' + (horizontal ? W - mr : ml) + '" y="' + (horizontal ? H - 6 : 10) + '" text-anchor="' + (horizontal ? "end" : "start") + '">' + esc(pick(cfg.unitLabel)) + "</text>";
       s += "</svg>";
       plot.innerHTML = s;
       plot.appendChild(tip);
@@ -1271,8 +1275,8 @@
           tip.hidden = false;
           tip.innerHTML = "<b>" + esc(String(cs[i]).replace("\n", " ")) + "</b>" + series.map(function (sr, si) {
             return '<div><i style="display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:6px;background:var(--series-' + (si + 1) + ')"></i>' +
-              (nS > 1 ? esc(sr.name[l]) + " : " : "") + esc(val(sr.values[i])) + "</div>";
-          }).join("") + (cfg.notes && cfg.notes[l] && cfg.notes[l][i] ? '<div class="muted" style="margin-top:4px">' + esc(cfg.notes[l][i]) + "</div>" : "");
+              (nS > 1 ? esc(pick(sr.name)) + " : " : "") + esc(val(sr.values[i])) + "</div>";
+          }).join("") + (cfg.notes && pick(cfg.notes) && pick(cfg.notes)[i] ? '<div class="muted" style="margin-top:4px">' + esc(pick(cfg.notes)[i]) + "</div>" : "");
           var box = plot.getBoundingClientRect();
           tip.style.left = Math.max(80, Math.min(box.width - 80, e.clientX - box.left)) + "px";
           tip.style.top = (e.clientY - box.top) + "px";
@@ -1281,7 +1285,7 @@
       });
       tableBox.hidden = !showTable;
       if (showTable) {
-        var t = '<div class="table-wrap"><table><thead><tr><th></th>' + series.map(function (sr) { return '<th class="num">' + esc(sr.name[l]) + "</th>"; }).join("") + "</tr></thead><tbody>";
+        var t = '<div class="table-wrap"><table><thead><tr><th></th>' + series.map(function (sr) { return '<th class="num">' + esc(pick(sr.name)) + "</th>"; }).join("") + "</tr></thead><tbody>";
         cs.forEach(function (c, i) {
           t += "<tr><td>" + esc(String(c).replace("\n", " ")) + "</td>" + series.map(function (sr) { return '<td class="num">' + esc(val(sr.values[i])) + "</td>"; }).join("") + "</tr>";
         });

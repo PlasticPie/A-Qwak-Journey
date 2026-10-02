@@ -7,12 +7,12 @@
 <meta name="description" content="Dirty bits, baselines, and why a global delta broke the moment each viewer started receiving a different stream.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Chakra+Petch:wght@500;600&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Chakra+Petch:wght@500;600&family=JetBrains+Mono:wght@400;500;600&family=Noto+Sans+TC:wght@400;700&display=swap">
 <link rel="stylesheet" href="assets/css/site.css">
-<script>(function(){var r=document.documentElement,l,t;try{l=localStorage.getItem("mq-lang");t=localStorage.getItem("mq-theme");}catch(e){}if(l!=="en"&&l!=="fr"){l=(navigator.language||"").toLowerCase().indexOf("fr")===0?"fr":"en";}r.setAttribute("data-lang",l);r.setAttribute("lang",l);if(t==="light"||t==="dark")r.setAttribute("data-theme",t);})();</script>
+<script>(function(){var r=document.documentElement,l,t,n;try{l=localStorage.getItem("mq-lang");t=localStorage.getItem("mq-theme");}catch(e){}if(l!=="en"&&l!=="fr"&&l!=="zh"){n=(navigator.language||"").toLowerCase();l=n.indexOf("fr")===0?"fr":n.indexOf("zh")===0?"zh":"en";}r.setAttribute("data-lang",l);r.setAttribute("lang",l==="zh"?"zh-TW":l);if(t==="light"||t==="dark")r.setAttribute("data-theme",t);})();</script>
 </head>
 <body data-page="deltas">
-<a class="skip-link" href="#main"><span lang="en">Skip to content</span><span lang="fr">Aller au contenu</span></a>
+<a class="skip-link" href="#main"><span lang="en">Skip to content</span><span lang="fr">Aller au contenu</span><span lang="zh-TW">跳到主要內容</span></a>
 <header class="site-header" id="mq-header"></header>
 <div class="layout">
 <aside class="sidebar" id="mq-sidebar"></aside>
@@ -20,8 +20,8 @@
 <article>
 <header class="chapter-head">
   <div class="eyebrow" data-auto></div>
-  <h1><span lang="en">Deltas that survive loss</span><span lang="fr">Des deltas qui survivent aux pertes</span></h1>
-  <p class="dek"><span lang="en">Dirty bits, baselines, and why a global delta broke the moment each viewer started receiving a different stream.</span><span lang="fr">Bits sales, références, et pourquoi un delta global a cassé dès que chaque spectateur a reçu un flux différent.</span></p>
+  <h1><span lang="en">Deltas that survive loss</span><span lang="fr">Des deltas qui survivent aux pertes</span><span lang="zh-TW">禁得起掉包的差量</span></h1>
+  <p class="dek"><span lang="en">Dirty bits, baselines, and why a global delta broke the moment each viewer started receiving a different stream.</span><span lang="fr">Bits sales, références, et pourquoi un delta global a cassé dès que chaque spectateur a reçu un flux différent.</span><span lang="zh-TW">髒位元、基準，以及為什麼全域差量在每位觀察者開始收到不同資料流的那一刻就壞了。</span></p>
   <div class="meta-row" data-auto></div>
 </header>
 
@@ -46,6 +46,14 @@
 </ul>
 <div class="note beginner"><p class="note-label">Pour débuter</p><p>La référence est toute la difficulté. Si le serveur calcule « ce qui a changé depuis mon dernier envoi de ce vaisseau » mais que certains destinataires n'ont pas reçu ce dernier envoi, ceux-là appliquent une différence à un état qu'ils n'ont pas, et s'éloignent de la vérité sans qu'aucune erreur ne soit levée. Tout ce chapitre consiste à garder la référence honnête.</p></div>
 </div>
+<div lang="zh-TW">
+<h2>不重複自己的兩種方法</h2>
+<p>世界的大部分在大部分時間裡都不會改變。一艘停泊的船、一個完好的船體、一座沒人使用的砲塔：每秒原封不動地送 25 次是純粹的浪費。對付它有兩種經典工具，而它們失敗的方式不同：</p>
+<ul>
+<li><strong>髒位元</strong>：當一個區塊沒什麼好說的時候就整個跳過，並設定一個位元說明哪些區塊存在。便宜又安全，只要「不存在」有精確的意義。</li>
+<li><strong>差量</strong>：只送出自某個<em>基準</em>以來改變的部分，基準是確定接收端已經擁有的最後狀態。對於只改變一點點的大型狀態小得多，但也很危險，因為差量只有相對於<em>這個</em>接收端實際擁有的東西才是正確的。</li>
+</ul>
+<div class="note beginner"><p class="note-label">新手須知</p><p>基準就是全部的難處。如果伺服器計算的是「自從我上次送出這艘船以來改變了什麼」，但有些接收端沒收到上一次的傳送，這些接收端就會把一個差異套用到它們並不擁有的狀態上，在不引發任何錯誤的情況下逐漸偏離真相。本章的一切，都是為了讓基準保持誠實。</p></div></div>
 </section>
 
 <section class="sec" id="flags">
@@ -57,18 +65,21 @@
 <h2>Un octet de drapeaux, un bit par bloc</h2>
 <p>Chaque vaisseau d'un autre joueur commence par un unique octet de drapeaux, et chaque bit annonce si un bloc suit. Survolez les bits :</p>
 </div>
+<div lang="zh-TW">
+<h2>一個旗標位元組，每個區塊一個位元</h2>
+<p>其他玩家的每艘船都以單一個旗標位元組開頭，每個位元宣告是否有一個區塊跟在後面。把滑鼠移到位元上：</p></div>
 <div data-bytes>
 <div class="bytes">
-  <div class="byte-field" data-en="0x01 Movement: position, rotation and velocities follow. Off when the ship is at rest (see below)." data-fr="0x01 Mouvement : position, rotation et vitesses suivent. Éteint quand le vaisseau est au repos (voir plus bas)."><b>Move</b><span>0x01</span></div>
-  <div class="byte-field" data-en="0x02 Rebuild: the hull layout changed in build mode. No block: the client asks for the full description again." data-fr="0x02 Reconstruction : la disposition de la coque a changé en mode construction. Pas de bloc : le client redemande la description complète."><b>Rebuild</b><span>0x02</span></div>
-  <div class="byte-field" data-en="0x04 Part states: the complete list of damaged hexes follows, to apply as is (possibly empty: a repaired hull). Off: unchanged since what you have." data-fr="0x04 États des pièces : la liste complète des hex abîmés suit, à appliquer telle quelle (éventuellement vide : une coque réparée). Éteint : inchangé depuis ce que vous avez."><b>Parts</b><span>0x04</span></div>
-  <div class="byte-field" data-en="0x08 Rotating turrets: the orientation of the hull's rotating turrets." data-fr="0x08 Tourelles orientables : l'orientation des tourelles orientables de la coque."><b>Turrets</b><span>0x08</span></div>
-  <div class="byte-field" data-en="0x10 Beams: active continuous lasers (part index, length, hit flag). Absent means no beam: the client switches them off." data-fr="0x10 Faisceaux : lasers continus actifs (index de pièce, longueur, drapeau d'impact). Absent veut dire aucun faisceau : le client les éteint."><b>Beams</b><span>0x10</span></div>
-  <div class="byte-field" data-en="0x20 Effects: active buffs on the hull." data-fr="0x20 Effets : les effets actifs sur la coque."><b>Effects</b><span>0x20</span></div>
-  <div class="byte-field" data-en="0x40 Manned stations: which turrets have a gunner. Absent means nobody: the client frees them." data-fr="0x40 Postes occupés : quelles tourelles ont un artilleur. Absent veut dire personne : le client les libère."><b>Manned</b><span>0x40</span></div>
-  <div class="byte-field" data-en="0x80 Burning: hexes on fire. Absent means nothing burns: the client puts the fires out." data-fr="0x80 En feu : les hex qui brûlent. Absent veut dire que rien ne brûle : le client éteint les feux."><b>Burning</b><span>0x80</span></div>
+  <div class="byte-field" data-en="0x01 Movement: position, rotation and velocities follow. Off when the ship is at rest (see below)." data-fr="0x01 Mouvement : position, rotation et vitesses suivent. Éteint quand le vaisseau est au repos (voir plus bas)." data-zh="0x01 移動：後面跟著位置、旋轉與速度。船艦靜止時關閉（見下文）。"><b>Move</b><span>0x01</span></div>
+  <div class="byte-field" data-en="0x02 Rebuild: the hull layout changed in build mode. No block: the client asks for the full description again." data-fr="0x02 Reconstruction : la disposition de la coque a changé en mode construction. Pas de bloc : le client redemande la description complète." data-zh="0x02 重建：船體配置在建造模式中改變了。沒有區塊：用戶端會重新索取完整描述。"><b>Rebuild</b><span>0x02</span></div>
+  <div class="byte-field" data-en="0x04 Part states: the complete list of damaged hexes follows, to apply as is (possibly empty: a repaired hull). Off: unchanged since what you have." data-fr="0x04 États des pièces : la liste complète des hex abîmés suit, à appliquer telle quelle (éventuellement vide : une coque réparée). Éteint : inchangé depuis ce que vous avez." data-zh="0x04 零件狀態：後面跟著完整的受損六角格清單，照原樣套用（可能是空的：已修好的船體）。關閉：與你已有的相比沒有改變。"><b>Parts</b><span>0x04</span></div>
+  <div class="byte-field" data-en="0x08 Rotating turrets: the orientation of the hull's rotating turrets." data-fr="0x08 Tourelles orientables : l'orientation des tourelles orientables de la coque." data-zh="0x08 旋轉砲塔：船體上旋轉砲塔的方位。"><b>Turrets</b><span>0x08</span></div>
+  <div class="byte-field" data-en="0x10 Beams: active continuous lasers (part index, length, hit flag). Absent means no beam: the client switches them off." data-fr="0x10 Faisceaux : lasers continus actifs (index de pièce, longueur, drapeau d'impact). Absent veut dire aucun faisceau : le client les éteint." data-zh="0x10 光束：啟動中的連續雷射（零件索引、長度、命中旗標）。不存在代表沒有光束：用戶端會把它們關掉。"><b>Beams</b><span>0x10</span></div>
+  <div class="byte-field" data-en="0x20 Effects: active buffs on the hull." data-fr="0x20 Effets : les effets actifs sur la coque." data-zh="0x20 效果：船體上作用中的增益效果。"><b>Effects</b><span>0x20</span></div>
+  <div class="byte-field" data-en="0x40 Manned stations: which turrets have a gunner. Absent means nobody: the client frees them." data-fr="0x40 Postes occupés : quelles tourelles ont un artilleur. Absent veut dire personne : le client les libère." data-zh="0x40 有人操作的崗位：哪些砲塔有砲手。不存在代表沒有人：用戶端會讓出它們。"><b>Manned</b><span>0x40</span></div>
+  <div class="byte-field" data-en="0x80 Burning: hexes on fire. Absent means nothing burns: the client puts the fires out." data-fr="0x80 En feu : les hex qui brûlent. Absent veut dire que rien ne brûle : le client éteint les feux." data-zh="0x80 燃燒：著火的六角格。不存在代表沒有東西在燒：用戶端會把火撲滅。"><b>Burning</b><span>0x80</span></div>
 </div>
-<p class="byte-legend"><span lang="en">A quiet, intact, parked ship costs its id, its type and this one byte.</span><span lang="fr">Un vaisseau tranquille, intact et à l'arrêt coûte son identifiant, son type et cet unique octet.</span></p>
+<p class="byte-legend"><span lang="en">A quiet, intact, parked ship costs its id, its type and this one byte.</span><span lang="fr">Un vaisseau tranquille, intact et à l'arrêt coûte son identifiant, son type et cet unique octet.</span><span lang="zh-TW">一艘安靜、完好、停泊的船，只花它的 ID、類型和這一個位元組。</span></p>
 </div>
 <div lang="en">
 <p>The five last bits replaced five <em>count</em> bytes that were written unconditionally. The format used to bill every ship, every tick, one byte per game feature, whether the ship used that feature or not: five then, six with the next system. That cost grew with the list of features rather than with what happens in the game, which is the wrong denominator. The flag byte had five spare bits and there were five blocks.</p>
@@ -78,6 +89,9 @@
 <p>Les cinq derniers bits ont remplacé cinq octets de <em>compte</em> écrits sans condition. Le format facturait à chaque vaisseau, à chaque tick, un octet par fonctionnalité du jeu, qu'il s'en serve ou non : cinq alors, six au prochain système. Ce coût grandissait avec la liste des fonctionnalités et non avec ce qui se passe dans la partie, ce qui est le mauvais dénominateur. L'octet de drapeaux avait cinq bits libres et il y avait cinq blocs.</p>
 <div class="note pitfall"><p class="note-label">Piège rencontré</p><p>Pour ces blocs, <strong>absent veut dire vide, pas inchangé</strong>. Trois d'entre eux effacent côté client : un faisceau qui n'est plus listé s'éteint, un artilleur qui n'est plus listé libère la tourelle, un hex qui n'est plus listé cesse de brûler. Le client doit donc toujours faire sa passe de remise à zéro, et ne rendre conditionnelle que la <em>lecture</em>. Sauter la remise à zéro quand le bit est éteint laisserait un vaisseau brûler pour toujours, le genre de bug qu'on ne voit qu'en jeu, longtemps après.</p></div>
 </div>
+<div lang="zh-TW">
+<p>最後五個位元取代了五個無條件寫入的<em>數量</em>位元組。這個格式過去每個 tick 都向每艘船收取每個遊戲功能一個位元組，不管這艘船有沒有使用那個功能：當時是五個，加入下一個系統就是六個。這個成本隨著功能清單增長，而不是隨著遊戲中發生的事情增長，分母選錯了。旗標位元組有五個備用位元，而區塊正好有五個。</p>
+<div class="note pitfall"><p class="note-label">我踩過的坑</p><p>對這些區塊來說，<strong>不存在代表空的，而不是沒變</strong>。其中三個在用戶端上具有清除作用：不再列出的光束會關閉，不再列出的砲手會讓出砲塔，不再列出的六角格會停止燃燒。所以用戶端必須永遠執行它的重設步驟，只有<em>讀取</em>才是有條件的。在位元關閉時跳過重設，會讓一艘船永遠燒下去，這種 bug 只有在遊玩時、而且是很久之後才會看到。</p></div></div>
 </section>
 
 <section class="sec" id="movement">
@@ -93,6 +107,11 @@
 <p>Cette décision est mémorisée par tick, et la raison est une leçon sur les deltas en général. Quand le sérialiseur était appelé une fois par spectateur, le premier spectateur traité dans un tick voyait la transition du mouvement au repos, mettait à jour l'état « déjà dit », et tous les autres lisaient ensuite « rien à dire », alors qu'ils n'avaient jamais reçu la mise à jour finale. Le mémo répond à la question une fois par tick et donne à tous les spectateurs la même réponse.</p>
 <div class="note pitfall"><p class="note-label">Piège rencontré</p><p>Le mémo lit le numéro de tick dans le paquet qu'on écrit. Pendant la préparation, le paquet de travail doit donc être un snapshot réglé sur le tick courant. Avec tout autre paquet, le mémo voit le même tick sentinelle à chaque appel et rend pour toujours la réponse mise en cache la première fois : un delta figé, c'est-à-dire des coques qui cessent en silence de rapporter leurs dégâts.</p></div>
 </div>
+<div lang="zh-TW">
+<h2>移動：靜止時安靜，停下時說最後一句</h2>
+<p>一艘靜止的船不送出它的移動區塊。「靜止」不是一個任意的 epsilon：它代表船的速度以線路自己的量化比例四捨五入後會是零，所以「移動中」的定義是「會改變用戶端收到的內容」。在船艦停穩的那一個 tick，會再送出一次完整的移動區塊，讓每位觀察者都精確地停在最終位置、速度為零，而不是依據過時的外插繼續滑行。之後它就保持安靜，直到船再次移動。</p>
+<p>這個決定以每個 tick 為單位做備忘，而原因是關於差量的普遍教訓。當序列化器對每位觀察者各呼叫一次時，一個 tick 中第一位被處理的觀察者會看到從移動到靜止的轉變，並更新「已經告知」的狀態，接著其他每位觀察者都會讀到「沒什麼好說的」，雖然它們自己從未收到最後那次更新。備忘每個 tick 只回答這個問題一次，並給每位觀察者相同的答案。</p>
+<div class="note pitfall"><p class="note-label">我踩過的坑</p><p>備忘從正在寫入的封包中讀取 tick 編號。因此在準備期間，暫存封包必須是一份設定為目前 tick 的快照。換成任何其他封包，備忘在每次呼叫時都會看到同一個哨兵 tick，於是永遠回傳它第一次快取的答案：一個凍結的差量，也就是船體會悄悄地停止回報它們的損傷。</p></div></div>
 </section>
 
 <section class="sec" id="baseline">
@@ -116,6 +135,15 @@
 </div>
 <p>La troisième conception devait cohabiter avec la sérialisation-une-fois (chapitre <a href="serialize-once.html">4.3</a>), où un bloc est partagé par tous les spectateurs d'une coque. La réponse n'est pas un bloc par spectateur : c'est <strong>deux vues par coque et un bit par spectateur</strong>. Le bloc préparé existe en vue <em>pleine</em> (avec la liste des dégâts) et en vue <em>légère</em> (les mêmes octets sans elle, bit éteint). Un spectateur qui a déjà la version courante reçoit la vue légère ; les autres reçoivent la pleine, et leur version est notée. La vue légère n'est pas sérialisée une seconde fois : pendant l'écriture de la pleine, le sérialiseur marque où commence et finit le bloc de dégâts, et la légère est découpée dans la pleine par deux petites copies mémoire.</p>
 </div>
+<div lang="zh-TW">
+<h2>壞掉的全域差量</h2>
+<p>其他玩家船艦的每格損傷狀態經歷了三種設計。每一種在當時的假設下都是正確的，而下一章（新鮮度預算）正是打破第一種設計的東西。</p>
+<div class="compare">
+<div><h4>1. 每艘船一個基準的差量</h4><p>只送出自上次傳送以來改變的六角格。只要每位觀察者都收到每次傳送，這就是正確的。新鮮度預算終結了這一點：現在每位觀察者收到的是 tick 的不同子集。只要<em>第一位</em>觀察者被服務，基準就會為所有人推進，其他人則失去了約 98 % 的變化。畫面上的損傷條是錯的。</p></div>
+<div><h4>2. 每次傳送都是絕對值</h4><p>每次都送出完整的受損六角格清單。不論觀察者錯過了什麼，都是正確的。但很昂貴：一座有三十個受損六角格的太空站，每個 tick 要花 140 位元組送給 200 位玩家中的每一位，佔出站頻寬的 8 %，只為了一個不會移動的物件。</p></div>
+<div class="pick"><h4>3. 絕對值、帶版本、每位觀察者各自記錄</h4><p>清單維持絕對值，但攜帶一個每次改變都會推進的版本號。伺服器<em>為每位觀察者</em>記住他最後收到的版本，只把清單重送給沒有這個版本的人。基準是每位觀察者一個整數，而不是狀態的一份副本。</p></div>
+</div>
+<p>第三種設計必須與「序列化一次」共存（第 <a href="serialize-once.html">4.3</a> 章），在那裡一個區塊由船體的所有觀察者共用。答案不是每位觀察者一個區塊：而是<strong>每個船體兩種視圖，每位觀察者一個位元</strong>。準備好的區塊同時存在一個<em>完整</em>視圖（含損傷清單）和一個<em>精簡</em>視圖（相同的位元組，但不含損傷清單，位元關閉）。已經擁有目前版本的觀察者收到精簡視圖；其他人收到完整視圖，並記錄下他們的版本。精簡視圖不會被序列化第二次：在寫入完整視圖時，序列化器會標記損傷區塊的開始與結束位置，精簡視圖就用兩次小小的記憶體複製從完整視圖中裁切出來。</p></div>
 <div class="code"><div class="code-head"><span class="file">GameServer/Players/Player.cs · EmitHull, simplified</span></div><pre><code data-lang="cs">private void EmitHull(ISnapshotObject obj, long nowMs)
 {
     if (obj is Ship ship)
@@ -139,6 +167,9 @@
 <div class="note pitfall"><p class="note-label">Piège rencontré</p><p>La première version de la vue légère pointait sur la pleine quand il n'y avait « rien à omettre », pour les coques intactes. Mais la vue pleine portait le bit avec un compte à zéro : chaque coque intacte partait donc sous sa forme pleine à chaque tick, un octet de plus qu'avant le changement. Mesuré : les vaisseaux sont passés de 19 à 20 octets, bit de dégâts allumé sur 63 coques sur 63. La vue légère est maintenant toujours découpée, même quand la découpe est vide : « bit éteint, pas de bloc » est le contrat que le client applique.</p></div>
 <div class="note rule"><p class="note-label">Règle</p><p>La référence d'un delta doit appartenir au destinataire. Si les destinataires peuvent voir des flux différents, garder une référence par destinataire, ou envoyer un état absolu.</p><p>La coque du propriétaire utilise toujours un delta classique à référence unique pour ses valeurs exactes par hex, et c'est juste : elle part vers exactement un destinataire, à chaque tick, hors de tout budget.</p></div>
 </div>
+<div lang="zh-TW">
+<div class="note pitfall"><p class="note-label">我踩過的坑</p><p>精簡視圖的第一版在「沒什麼可省略」時（對完好的船體）直接指向完整視圖。但完整視圖帶著該位元以及數量零，所以每個完好的船體每個 tick 都以完整形式送出，比變更之前多了一個位元組：實測船艦從 19 位元組變成 20 位元組，63 個船體中有 63 個設定了損傷位元。現在精簡視圖永遠都會被裁切，即使裁切的部分是空的：「位元關閉，沒有區塊」才是用戶端所套用的契約。</p></div>
+<div class="note rule"><p class="note-label">規則</p><p>差量的基準必須屬於接收端。如果接收端可能看到不同的資料流，就為每個接收端各保留一個基準，或送出絕對狀態。</p><p>擁有者自己的船仍然使用經典的單一基準差量來傳送它精確的每格數值，而這是正確的：它只送給恰好一個接收端，每個 tick 都送，不受任何預算限制。</p></div></div>
 </section>
 
 <section class="sec" id="events">
@@ -150,12 +181,17 @@
 <h2>Des événements avec une forme courte</h2>
 <p>Le même raisonnement s'applique aux quelques vrais événements. Une balle est envoyée en entier quand un spectateur la voit pour la première fois (position, vitesse, spécification d'arme, tireur). Quand elle touche, un spectateur qui la connaît déjà n'a plus besoin de tout ça, seulement de l'endroit où elle s'est arrêtée : il reçoit une forme courte faite des drapeaux et de la position finale. Les deux formes réutilisent la comptabilité par spectateur qui existe déjà (« quels identifiants de balles ce spectateur a-t-il reçus »), et la bascule entre elles se fait avec la même astuce que la vue légère des coques : un petit objet miroir par joueur, de même identifiant et de même type, dont le sérialiseur écrit la forme courte. Ni le format du paquet ni le code partagé des snapshots n'ont besoin de le savoir.</p>
 </div>
+<div lang="zh-TW">
+<h2>有簡短形式的事件</h2>
+<p>同樣的思考也適用於少數真正的事件。一顆子彈在觀察者第一次看到它時以完整形式送出（位置、速度、武器規格、射擊者）。當它命中時，已經認識它的觀察者不需要再收到這些，只需要知道它停在哪裡：它收到的是由旗標與最終位置組成的簡短形式。兩種形式都重複使用已經存在的每位觀察者簿記（「這位觀察者已經收過哪些子彈 ID」），而兩者之間的切換用的是與精簡船體視圖相同的技巧：一個每位玩家專屬、具有相同 ID 與類型的小型鏡像物件，它的序列化器寫出簡短形式。封包格式與共用的快照程式碼都不需要知道這件事。</p></div>
 <div lang="en">
 <div class="note tradeoff"><p class="note-label">Trade-off</p><p>Everything in this chapter trades server memory and bookkeeping (a version per viewer and hull, a set of bullet ids per viewer) for bandwidth and correctness. The bookkeeping must be pruned, or it grows for the whole session: entries for bullets out of view are dropped every tick, and entries for hulls are forgotten by age, 4 seconds after they leave the view, which is shorter than the client's 5-second grace so that the server never believes the client knows something the client has already destroyed.</p></div>
 </div>
 <div lang="fr">
 <div class="note tradeoff"><p class="note-label">Compromis</p><p>Tout ce chapitre échange de la mémoire et de la comptabilité serveur (une version par spectateur et par coque, un ensemble d'identifiants de balles par spectateur) contre de la bande passante et de la justesse. Cette comptabilité doit être élaguée, sinon elle grandit pendant toute la session : les entrées des balles hors de vue sont retirées à chaque tick, et celles des coques sont oubliées par l'âge, 4 secondes après leur sortie de la vue, ce qui est plus court que la grâce de 5 secondes du client, pour que le serveur ne croie jamais que le client sait quelque chose qu'il a déjà détruit.</p></div>
 </div>
+<div lang="zh-TW">
+<div class="note tradeoff"><p class="note-label">取捨</p><p>本章的一切，都是用伺服器的記憶體與簿記（每位觀察者每個船體一個版本、每位觀察者一組子彈 ID）去換頻寬與正確性。簿記必須修剪，否則它會在整個連線階段中持續增長：視野外子彈的項目每個 tick 都會被丟棄，船體的項目則依時間被遺忘，在離開視野 4 秒後，這比用戶端 5 秒的寬限期短，讓伺服器永遠不會以為用戶端知道某個用戶端早已摧毀的東西。</p></div></div>
 </section>
 
 <section class="sec" id="takeaways">
@@ -174,6 +210,13 @@
 <li>Ne jamais partager une référence de delta entre destinataires qui peuvent voir des flux différents ; versionner plutôt un état absolu par spectateur.</li>
 <li>Combiner sérialisation-une-fois et deltas par spectateur avec deux vues préparées par objet et un bit par spectateur.</li>
 </ul></div>
+<div lang="zh-TW"><h2>重點整理</h2><ul>
+<li>使用旗標位元，讓安靜的區塊不花成本，並精確定義「不存在」：空的，而不是沒變。</li>
+<li>以線路自己的精度判斷，在靜止時跳過移動，並在物件停下時送出最後一次更新。</li>
+<li>以每個 tick 為單位備忘差量決定，讓同一個 tick 的每位觀察者得到相同的答案。</li>
+<li>絕不在可能看到不同資料流的接收端之間共用差量基準；改為對每位觀察者為絕對狀態標上版本。</li>
+<li>以每個物件兩種預先準備的視圖、每位觀察者一個位元，結合「序列化一次」與每位觀察者的差量。</li>
+</ul></div>
 </div>
 </section>
 
@@ -186,6 +229,7 @@
 <footer class="site-footer" id="mq-footer"></footer>
 <script src="assets/js/site-data.js" defer></script>
 <script src="assets/js/glossary-data.js" defer></script>
+<script src="assets/js/ui-zh.js" defer></script>
 <script src="assets/js/app.js" defer></script>
 <script src="assets/js/widgets.js" defer></script>
 </body>

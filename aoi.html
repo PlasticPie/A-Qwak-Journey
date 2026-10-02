@@ -7,12 +7,12 @@
 <meta name="description" content="A flat grid instead of a quadtree, radius queries, cell sizing, and an index rebuilt and published every tick.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Chakra+Petch:wght@500;600&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Chakra+Petch:wght@500;600&family=JetBrains+Mono:wght@400;500;600&family=Noto+Sans+TC:wght@400;700&display=swap">
 <link rel="stylesheet" href="assets/css/site.css">
-<script>(function(){var r=document.documentElement,l,t;try{l=localStorage.getItem("mq-lang");t=localStorage.getItem("mq-theme");}catch(e){}if(l!=="en"&&l!=="fr"){l=(navigator.language||"").toLowerCase().indexOf("fr")===0?"fr":"en";}r.setAttribute("data-lang",l);r.setAttribute("lang",l);if(t==="light"||t==="dark")r.setAttribute("data-theme",t);})();</script>
+<script>(function(){var r=document.documentElement,l,t,n;try{l=localStorage.getItem("mq-lang");t=localStorage.getItem("mq-theme");}catch(e){}if(l!=="en"&&l!=="fr"&&l!=="zh"){n=(navigator.language||"").toLowerCase();l=n.indexOf("fr")===0?"fr":n.indexOf("zh")===0?"zh":"en";}r.setAttribute("data-lang",l);r.setAttribute("lang",l==="zh"?"zh-TW":l);if(t==="light"||t==="dark")r.setAttribute("data-theme",t);})();</script>
 </head>
 <body data-page="aoi">
-<a class="skip-link" href="#main"><span lang="en">Skip to content</span><span lang="fr">Aller au contenu</span></a>
+<a class="skip-link" href="#main"><span lang="en">Skip to content</span><span lang="fr">Aller au contenu</span><span lang="zh-TW">跳到主要內容</span></a>
 <header class="site-header" id="mq-header"></header>
 <div class="layout">
 <aside class="sidebar" id="mq-sidebar"></aside>
@@ -20,8 +20,8 @@
 <article>
 <header class="chapter-head">
   <div class="eyebrow" data-auto></div>
-  <h1><span lang="en">Area of interest</span><span lang="fr">La zone d'intérêt</span></h1>
-  <p class="dek"><span lang="en">A flat grid instead of a quadtree, radius queries, cell sizing, and an index rebuilt and published every tick.</span><span lang="fr">Une grille plate plutôt qu'un quadtree, des requêtes par rayon, le dimensionnement des cellules, et un index reconstruit et publié à chaque tick.</span></p>
+  <h1><span lang="en">Area of interest</span><span lang="fr">La zone d'intérêt</span><span lang="zh-TW">興趣區域</span></h1>
+  <p class="dek"><span lang="en">A flat grid instead of a quadtree, radius queries, cell sizing, and an index rebuilt and published every tick.</span><span lang="fr">Une grille plate plutôt qu'un quadtree, des requêtes par rayon, le dimensionnement des cellules, et un index reconstruit et publié à chaque tick.</span><span lang="zh-TW">用平面網格取代四元樹、半徑查詢、格子大小的決定，以及每個 tick 重建並發布的索引。</span></p>
   <div class="meta-row" data-auto></div>
 </header>
 
@@ -50,6 +50,16 @@
 </ul>
 <p>Pour les formes, « ce n'est pas cher aujourd'hui » n'est pas une raison d'attendre : un coût invisible avec trois objets et une balle ne dit rien d'une bataille à quarante joueurs.</p>
 </div>
+<div lang="zh-TW">
+<h2>沒有人需要整張地圖</h2>
+<p>玩家看不到地圖另一頭的船，所以沒有理由告訴他那艘船的事。<strong>興趣區域</strong>（AoI）是這個 tick 應該告訴某位玩家的物件集合。計算它是每份快照的第一步，每位玩家每個 tick 執行一次，而且它同時決定了伺服器的 CPU 成本與頻寬：把一切都送給所有人，成本會隨人口數的平方增長。</p>
+<div class="note beginner"><p class="note-label">新手須知</p><p>「興趣區域」背後藏著兩個問題，把它們搞混是經典錯誤。<em>這位玩家能看到什麼？</em>是一個設計問題，由一個距離來回答。<em>我要怎麼快速找到那個距離內的物件？</em>是一個資料結構問題，由空間索引來回答。MoonQwak 的索引會出錯，正是因為用一個數字回答了兩個問題。</p></div>
+<p>在改動任何東西之前，我先寫下計畫，並區分了兩種最佳化，這個區分的用處遠遠超出本章：</p>
+<ul>
+<li><strong>常數</strong>：慢了兩倍的計算、一次可避免的記憶體配置。它們可以在造成傷害時再量測、就地修正，等待不必付出任何代價。</li>
+<li><strong>形狀</strong>：O(行動者 × 物件)、平行路徑上的全域鎖、把三百顆子彈和四艘船混在一起的集合。它們會凝固進架構中，程式碼開始依賴它們，之後要改就得付出十倍的代價。</li>
+</ul>
+<p>對形狀而言，「今天它不貴」不是等待的理由：在三個物件和一顆子彈時看不見的成本，對一場四十位玩家的戰鬥毫無代表性。</p></div>
 </section>
 
 <section class="sec" id="grid">
@@ -73,6 +83,15 @@
 </ul>
 <p>La première version était la grille classique des MMO : des cellules aussi grandes que la distance de vue, et un joueur voit le bloc 3×3 de cellules autour de la sienne. C'est bon marché, avec un défaut visible dans le labo ci-dessous : la portée dépend de l'endroit où l'on se tient dans sa cellule. Au bord d'une cellule, on voit presque deux cellules plus loin d'un côté que de l'autre, et deux vaisseaux côte à côte peuvent être en désaccord sur qui est visible.</p>
 </div>
+<div lang="zh-TW">
+<h2>平面網格，而不是四元樹</h2>
+<p>索引是一個均勻網格：每個物件被歸檔到包含其位置的那個正方形格子中，查詢則造訪某一點周圍的格子。四元樹與其他自適應樹是教科書上的答案，而計畫明確地拒絕了它們，理由有三，對大多數動作類 MMO 都成立：</p>
+<ul>
+<li><strong>所有東西都在移動。</strong>樹每個 tick 都得重新平衡；網格只需要重新填入。</li>
+<li><strong>記憶體配置。</strong>樹的查詢要一路追指標；網格的查詢只讀幾個桶子。</li>
+<li><strong>每張地圖的世界都很小。</strong>每張地圖都有自己的索引，所以網格永遠不必涵蓋整片大陸。</li>
+</ul>
+<p>第一版是經典的 MMO 網格：格子和視野距離一樣大，玩家看到自己周圍 3×3 的格子區塊。它很便宜，但有一個你在下面實驗室中就看得到的缺陷：可見範圍取決於你在格子裡的位置。站在格子邊緣時，你在一側看得比另一側遠了將近兩格，所以兩艘並排的船，可能對誰看得見誰意見不一。</p></div>
 <div data-widget="aoi"></div>
 <div lang="en">
 <p>The fix is to separate the two questions. The <strong>view radius</strong> is a design value; the <strong>cell size</strong> is a query-cost knob. Every caller asks for the radius it actually needs, the query walks the square of cells that covers that radius, and an exact distance test turns the square into a circle. The same index then serves a player's view (120 units), a weapon's search for the nearest target, or a cargo scoop that only cares about the next two units.</p>
@@ -80,6 +99,8 @@
 <div lang="fr">
 <p>La correction consiste à séparer les deux questions. Le <strong>rayon de vue</strong> est une valeur de conception ; la <strong>taille de cellule</strong> est un bouton de coût de requête. Chaque appelant demande le rayon dont il a vraiment besoin, la requête parcourt le carré de cellules qui couvre ce rayon, et un test de distance exact transforme le carré en cercle. Le même index sert alors la vue d'un joueur (120 unités), la recherche de la cible la plus proche d'une arme, ou une écope à minerai qui ne s'intéresse qu'aux deux unités suivantes.</p>
 </div>
+<div lang="zh-TW">
+<p>修正方式是把兩個問題分開。<strong>視野半徑</strong>是一個設計值；<strong>格子大小</strong>是一個查詢成本的調節鈕。每個呼叫端都要求它真正需要的半徑，查詢走訪涵蓋這個半徑的正方形格子區塊，再以精確的距離測試把正方形變成圓形。同一個索引於是可以服務玩家的視野（120 單位）、武器搜尋最近的目標，或一個只在乎接下來兩個單位的貨物收集器。</p></div>
 <div class="code"><div class="code-head"><span class="file">GameServer/Interest/ZoneIndex.cs · simplified</span></div><pre><code data-lang="cs">public void Query&lt;T&gt;(Vector2 centre, double radius, List&lt;T&gt; results) where T : class
 {
     results.Clear();                                     // caller-owned list: no allocation
@@ -130,6 +151,19 @@
 </tbody></table></div>
 <p>La règle empirique qui en est sortie : <strong>cellule ≈ rayon de vue / 3</strong>, et les deux nombres bougent ensemble ou pas du tout. Quand le rayon de vue a augmenté et que la cellule est restée en arrière, chaque requête est passée en silence de 7×7 à 11×11 cellules, deux fois et demie le travail pour un résultat identique. Le fichier de configuration porte maintenant cet avertissement à côté des deux valeurs.</p>
 </div>
+<div lang="zh-TW">
+<h2>決定格子大小：查表才是昂貴的部分</h2>
+<p>直覺說「格子越小、查詢越精準、越好」。算術卻說不是。一次查詢會掃描 (2·⌈半徑 / 格子⌉ + 1)² 個格子。每掃描一個格子要花一次字典查詢，約 20 ns；格子裡每個物件要花一次距離平方測試，約 2 ns。縮小格子，是用一次查表換來幾次距離測試，而查表的價格是十倍。</p>
+<div class="table-wrap"><table>
+<thead><tr><th>視野半徑</th><th>格子大小</th><th>每次查詢掃描的格子數</th></tr></thead>
+<tbody>
+<tr><td>75</td><td>12.5</td><td>13 × 13 = 169</td></tr>
+<tr><td>75</td><td>25</td><td>7 × 7 = 49</td></tr>
+<tr><td>75</td><td>75</td><td>3 × 3 = 9（但每格都裝了地圖的一大部分）</td></tr>
+<tr><td><strong>120</strong></td><td><strong>40</strong></td><td><strong>7 × 7 = 49</strong>（目前）</td></tr>
+<tr><td>120</td><td>25</td><td>11 × 11 = 121，結果完全相同</td></tr>
+</tbody></table></div>
+<p>由此得出的經驗法則：<strong>格子 ≈ 視野半徑 / 3</strong>，而且兩個數字要嘛一起調整，要嘛都不動。當視野半徑調高、格子大小卻沒跟上時，每次查詢都悄悄地從 7×7 變成 11×11 個格子，為了完全相同的結果多做了兩倍半的工作。現在設定檔在這兩個數值旁邊都寫上了這個警告。</p></div>
 </section>
 
 <section class="sec" id="view-radius">
@@ -141,6 +175,9 @@
 <h2>Choisir le rayon de vue à partir de la caméra</h2>
 <p>Le rayon de vue est passé par 75, 112,5, 168,75, retour à 75, et enfin 120, et l'histoire est une leçon de méthode plus que de réseau. Il est monté parce que des objets « apparaissaient » brusquement ; il est redescendu parce que j'ai décidé que c'était un artefact d'affichage ; puis je l'ai enfin calculé. Si la frontière d'intérêt tombe <em>à l'intérieur</em> de l'écran, les objets apparaissent en plein champ, et aucun fondu ni délai de grâce ne répare ça, parce que le problème n'est pas la brutalité de l'apparition mais l'endroit où elle se produit.</p>
 </div>
+<div lang="zh-TW">
+<h2>從攝影機推導視野半徑</h2>
+<p>視野半徑經歷了 75、112.5、168.75，回到 75，最後是 120，而這段故事與其說是網路的教訓，不如說是方法的教訓。它調高，是因為物件會「突然冒出」到視野中；它又調回來，是因為我認定冒出只是顯示上的瑕疵；最後我才終於把它算出來。如果興趣邊界落在螢幕<em>之內</em>，物件就會出現在視野的正中間，而任何淡入或寬限期都修不好，因為問題不在於它們出現得多突然，而在於它們出現在哪裡。</p></div>
 <div class="code"><div class="code-head"><span class="file">physics_config.json · the arithmetic, kept next to the value</span></div><pre><code data-lang="txt">half-diagonal visible = orthographicSize × √(1 + aspect²)
 max zoom 50, 1920×1080  →  50 × 2.04 = 102 units in the corners
 ViewRadius = 120        →  ~18 % margin for camera look-ahead and recentring</code></pre></div>
@@ -152,6 +189,9 @@ ViewRadius = 120        →  ~18 % margin for camera look-ahead and recentring</
 <p>Le coût a été accepté en connaissance de cause : la surface vue grandit avec le carré du rayon, donc 120 contre 75, c'est 2,56 fois plus d'objets par joueur. C'est exactement ce que les chapitres suivants (règles de delta, budget de fraîcheur) existent pour absorber, et c'est le nouveau rayon qui les a fait passer du confort à la nécessité.</p>
 <div class="note rule"><p class="note-label">Règle</p><p>Déduire une valeur de réglage de la chose qu'elle sert, et écrire la déduction à côté.</p><p>Le 112,5 atteint à tâtons était presque juste ; ce qui manquait, c'était un critère. Deux erreurs symétriques (régler à la sensation, puis écarter une observation juste faute de l'avoir formalisée) ont coûté plus cher que le calcul.</p></div>
 </div>
+<div lang="zh-TW">
+<p>代價是在知情的情況下接受的：可見面積隨半徑的平方增長，所以 120 對 75，每位玩家的物件數是 2.56 倍。這正是接下來幾章（差量規則、新鮮度預算）存在的目的，而新的半徑讓它們從錦上添花變成了必要。</p>
+<div class="note rule"><p class="note-label">規則</p><p>從一個調校值所服務的對象推導出它，並把推導過程寫在它旁邊。</p><p>憑感覺得到的 112.5 幾乎是對的；缺少的是一個判斷標準。兩個對稱的錯誤（憑感覺調校，然後因為一個正確的觀察還沒被形式化就否定它）的代價，比計算本身還高。</p></div></div>
 </section>
 
 <section class="sec" id="rebuild">
@@ -175,12 +215,23 @@ ViewRadius = 120        →  ~18 % margin for camera look-ahead and recentring</
 </ul>
 <p>La publication est une seule affectation de référence, atomique en .NET : les lecteurs voient tout l'ancien index ou tout le nouveau, jamais une moitié, et aucun lecteur ne prend de verrou (chapitre <a href="threading.html#handoffs">3.3</a>). Les lecteurs suivent deux règles : capturer l'index dans une locale une fois par requête, et ne jamais le garder au-delà du tick courant, parce que ses seaux sont recyclés deux reconstructions plus tard et qu'un index périmé rendrait du vide en silence au lieu d'échouer bruyamment.</p>
 </div>
+<div lang="zh-TW">
+<h2>每個 tick 重建，以參考發布</h2>
+<p>第一個索引是增量維護的：一個旁邊的字典記住每個物件目前所在的格子，每次移動都把物件從舊桶子搬到新桶子。它有兩個問題。這套簿記產生了一個幽靈物件 bug（一艘已被釋放的船仍在回應查詢，因為它的舊格子從未被清理）。而且每次讀取都要持有一個全域鎖，而這個查詢在平行迴圈中每位玩家每個 tick 執行一次。這個鎖從未出現在 CPU 效能分析中，因為鎖的代價是核心在等待，而不是燒掉的時脈。</p>
+<p>取而代之的做法，是每個 tick 從地圖的物件表重建整個索引一次，作為地圖 tick 的<strong>最後</strong>一個階段：在一切都移動完之後、任何快照讀取它之前。它是 O(物件)，而且就在 tick 本來就要走一遍的那一輪上（三個各自獨立的重新索引迴圈也隨之消失）。有兩個細節讓它在穩定狀態下不花成本：</p>
+<ul>
+<li><strong>雙重緩衝。</strong>兩組桶子交替使用：tick 填入備用的那一組，發布它，再把舊的留作下一次的備用。桶子清單被重複使用，所以穩定的 tick 除了那個小小的索引物件之外什麼都不配置。</li>
+<li><strong>清理用過的，而不是存在的。</strong>桶子從不被移除（留下的桶子就是一個可重複使用的清單），所以在一個連線階段中，字典會為任何東西曾經造訪過的每個格子累積一個項目。如果走訪每個項目來清理，重建的成本就會隨地圖的<em>面積</em>增長。每個緩衝區都記得自己填過哪些格子，只清理那些。</li>
+</ul>
+<p>發布只是一次參考指派，在 .NET 中是不可分割的：讀取端看到的不是完整的上一個索引，就是完整的新索引，永遠不會是半個，所以沒有任何讀取端需要上鎖（第 <a href="threading.html#handoffs">3.3</a> 章）。讀取端遵守兩條規則：每次查詢只把索引擷取一次存進區域變數，而且絕不保留到目前的 tick 之後，因為它的桶子兩次重建後就會被回收，而一個過時的索引會悄悄地什麼都不回傳，而不是大聲地失敗。</p></div>
 <div lang="en">
 <div class="note tradeoff"><p class="note-label">Trade-off</p><p>Not everything goes through the grid. Debris (tens of pieces per map) is scanned linearly, and only by ships whose scoop or tractor is active: a spatial index for tens of anything is complexity with no customer, and re-indexing drifting debris every tick would cost more than scanning it. The typed lists of chapter <a href="entities.html#ticking">3.6</a> (all hulls, all characters) answer most of the remaining narrow questions without any index at all.</p></div>
 </div>
 <div lang="fr">
 <div class="note tradeoff"><p class="note-label">Compromis</p><p>Tout ne passe pas par la grille. Les débris (quelques dizaines par carte) sont parcourus linéairement, et seulement par les vaisseaux dont l'écope ou le tracteur est actif : un index spatial pour quelques dizaines de choses, c'est de la complexité sans client, et ré-indexer à chaque tick des débris qui dérivent coûterait plus que les parcourir. Les listes typées du chapitre <a href="entities.html#ticking">3.6</a> (toutes les coques, tous les personnages) répondent à la plupart des questions étroites restantes sans aucun index.</p></div>
 </div>
+<div lang="zh-TW">
+<div class="note tradeoff"><p class="note-label">取捨</p><p>並不是所有東西都經過網格。碎片（每張地圖幾十塊）是線性掃描的，而且只有收集器或牽引器啟動中的船才會掃描：為幾十個東西建空間索引，是沒有客戶的複雜度，而每個 tick 為漂移的碎片重新建立索引，成本會比掃描它們還高。第 <a href="entities.html#ticking">3.6</a> 章的型別清單（所有船體、所有角色），不需要任何索引就能回答其餘大部分的窄問題。</p></div></div>
 </section>
 
 <section class="sec" id="two-radii">
@@ -194,12 +245,18 @@ ViewRadius = 120        →  ~18 % margin for camera look-ahead and recentring</
 <p>Une fois que la distance de vue est un paramètre et non une propriété de la grille, elle peut varier selon le type d'objet. Les balles sont le cas le plus net. Après que le budget de fraîcheur a plafonné le coût des vaisseaux, ce sont les balles qui dominaient le snapshot : environ 270 des 375 objets par snapshot dans une mêlée à 200 joueurs. Une balle à 100 unités est un pixel qui traverse l'écran en une demi-seconde ; personne ne la lit et personne ne l'esquive. Celle qui compte est celle qui vient vers vous, et elle est proche par définition, puisque la portée des armes du catalogue tourne autour de 60 à 70 unités.</p>
 <p>Les balles ont donc leur propre rayon de vue, 50 contre 120 pour les coques : 17 % de la surface, et la portée des armes toujours couverte. Les bords n'exigent aucun cas particulier : une balle hors du rayon est simplement « pas encore envoyée », donc si elle se rapproche elle part comme une nouvelle balle au bon moment ; si elle s'éloigne après avoir été envoyée, le serveur oublie son identifiant et le client la laisse expirer sur son propre minuteur.</p>
 </div>
+<div lang="zh-TW">
+<h2>不同的物件，不同的半徑</h2>
+<p>一旦視野距離是一個參數，而不是網格的一個屬性，它就可以依物件類型而不同。子彈是最清楚的例子。在新鮮度預算為船艦成本設下上限之後，子彈就主宰了快照：在一場 200 名玩家的混戰中，每份快照的 375 個物件中約有 270 個是子彈。100 單位外的子彈，是一個半秒內橫越螢幕的像素；沒有人會去看它，也沒有人會去閃它。重要的是朝你飛來的那一顆，而依定義它就在附近，因為目錄中的武器射程大約是 60 到 70 單位。</p>
+<p>因此子彈有自己的視野半徑 50，船體則是 120：面積只有 17 %，而武器射程仍被涵蓋。邊緣不需要特殊處理：半徑外的子彈只是「還沒送出」，所以如果它靠近了，就會在正確的時機以一顆新子彈的身分送出；如果它在送出後離開，伺服器就忘掉它的 ID，用戶端則讓它依自己的計時器到期。</p></div>
 <div lang="en">
 <div class="note rule"><p class="note-label">Rule</p><p>"What can be seen" and "what is worth telling" are two questions with two numbers.</p><p>The hull radius comes from the camera; the bullet radius comes from what a player can read and react to. One number for both would either blind players or flood them.</p></div>
 </div>
 <div lang="fr">
 <div class="note rule"><p class="note-label">Règle</p><p>« Ce qu'on peut voir » et « ce qui vaut la peine d'être dit » sont deux questions avec deux nombres.</p><p>Le rayon des coques vient de la caméra ; celui des balles vient de ce qu'un joueur peut lire et à quoi il peut réagir. Un seul nombre pour les deux aveuglerait les joueurs ou les noierait.</p></div>
 </div>
+<div lang="zh-TW">
+<div class="note rule"><p class="note-label">規則</p><p>「看得到什麼」與「什麼值得告知」是兩個問題，有兩個數字。</p><p>船體的半徑來自攝影機；子彈的半徑來自玩家能看清並做出反應的範圍。兩者共用一個數字，不是讓玩家看不見，就是把他們淹沒。</p></div></div>
 </section>
 
 <section class="sec" id="takeaways">
@@ -218,6 +275,13 @@ ViewRadius = 120        →  ~18 % margin for camera look-ahead and recentring</
 <li>Reconstruire l'index à chaque tick depuis la table d'objets, en double tampon, et le publier par référence pour que les lecteurs ne verrouillent jamais.</li>
 <li>Donner à chaque type d'objet son propre rayon de pertinence ; corriger les formes tôt, mesurer les constantes plus tard.</li>
 </ul></div>
+<div lang="zh-TW"><h2>重點整理</h2><ul>
+<li>把「玩家能看到什麼」（一個半徑，一個設計值）與「如何快速找到物件」（一個網格，一個成本調節鈕）分開。</li>
+<li>對移動中的物件使用平面網格，以半徑加上精確距離測試來查詢，格子大小設為半徑的三分之一左右。</li>
+<li>從攝影機推導視野半徑，保留一些餘裕，並把推導過程寫下來。</li>
+<li>每個 tick 從物件表重建索引，使用雙重緩衝，並以參考發布，讓讀取端永遠不用上鎖。</li>
+<li>讓每種物件類型有自己的關聯半徑；形狀早點修，常數晚點量。</li>
+</ul></div>
 </div>
 </section>
 
@@ -230,6 +294,7 @@ ViewRadius = 120        →  ~18 % margin for camera look-ahead and recentring</
 <footer class="site-footer" id="mq-footer"></footer>
 <script src="assets/js/site-data.js" defer></script>
 <script src="assets/js/glossary-data.js" defer></script>
+<script src="assets/js/ui-zh.js" defer></script>
 <script src="assets/js/app.js" defer></script>
 <script src="assets/js/widgets.js" defer></script>
 </body>

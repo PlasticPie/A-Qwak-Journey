@@ -7,12 +7,12 @@
 <meta name="description" content="Escrow in the same write, locks ordered by id, re-reading under the lock, all or nothing.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Chakra+Petch:wght@500;600&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Chakra+Petch:wght@500;600&family=JetBrains+Mono:wght@400;500;600&family=Noto+Sans+TC:wght@400;700&display=swap">
 <link rel="stylesheet" href="assets/css/site.css">
-<script>(function(){var r=document.documentElement,l,t;try{l=localStorage.getItem("mq-lang");t=localStorage.getItem("mq-theme");}catch(e){}if(l!=="en"&&l!=="fr"){l=(navigator.language||"").toLowerCase().indexOf("fr")===0?"fr":"en";}r.setAttribute("data-lang",l);r.setAttribute("lang",l);if(t==="light"||t==="dark")r.setAttribute("data-theme",t);})();</script>
+<script>(function(){var r=document.documentElement,l,t,n;try{l=localStorage.getItem("mq-lang");t=localStorage.getItem("mq-theme");}catch(e){}if(l!=="en"&&l!=="fr"&&l!=="zh"){n=(navigator.language||"").toLowerCase();l=n.indexOf("fr")===0?"fr":n.indexOf("zh")===0?"zh":"en";}r.setAttribute("data-lang",l);r.setAttribute("lang",l==="zh"?"zh-TW":l);if(t==="light"||t==="dark")r.setAttribute("data-theme",t);})();</script>
 </head>
 <body data-page="transactions">
-<a class="skip-link" href="#main"><span lang="en">Skip to content</span><span lang="fr">Aller au contenu</span></a>
+<a class="skip-link" href="#main"><span lang="en">Skip to content</span><span lang="fr">Aller au contenu</span><span lang="zh-TW">跳到主要內容</span></a>
 <header class="site-header" id="mq-header"></header>
 <div class="layout">
 <aside class="sidebar" id="mq-sidebar"></aside>
@@ -20,8 +20,8 @@
 <article>
 <header class="chapter-head">
   <div class="eyebrow" data-auto></div>
-  <h1><span lang="en">Moving goods without duplicating them</span><span lang="fr">Déplacer des biens sans les dupliquer</span></h1>
-  <p class="dek"><span lang="en">Escrow in the same write, locks ordered by id, re-reading under the lock, all or nothing.</span><span lang="fr">Séquestre dans la même écriture, verrous ordonnés par identifiant, relecture sous le verrou, tout ou rien.</span></p>
+  <h1><span lang="en">Moving goods without duplicating them</span><span lang="fr">Déplacer des biens sans les dupliquer</span><span lang="zh-TW">轉移物品而不複製</span></h1>
+  <p class="dek"><span lang="en">Escrow in the same write, locks ordered by id, re-reading under the lock, all or nothing.</span><span lang="fr">Séquestre dans la même écriture, verrous ordonnés par identifiant, relecture sous le verrou, tout ou rien.</span><span lang="zh-TW">在同一次寫入中託管、依 ID 排序上鎖、在鎖內重新讀取，全有或全無。</span></p>
   <div class="meta-row" data-auto></div>
 </header>
 
@@ -38,6 +38,10 @@
 <p>La plupart des bugs d'un serveur de jeu coûtent une image, une déconnexion, un rapport agacé. Une duplication coûte l'économie. Un objet qui existe en double est vendu, échangé, transformé en autre chose ; le temps que quelqu'un s'en aperçoive, des copies de sa valeur sont réparties sur des dizaines de joueurs, et il n'existe aucun moyen propre de les reprendre. Tout ce chapitre tourne autour d'une propriété : <strong>les biens se déplacent, ils ne sont jamais copiés ni perdus à mi-chemin</strong>.</p>
 <div class="note beginner"><p class="note-label">Pour débuter</p><p>Une <em>mise à jour perdue</em> survient quand deux opérations lisent la même valeur, que chacune en calcule une nouvelle, et que la seconde écriture efface la première. Avec des inventaires, c'est pire qu'un compteur faux : si un transfert supprime les lignes d'une soute avant de les réinsérer, le perdant de la course peut effacer le contenu entier d'une soute.</p></div>
 </div>
+<div lang="zh-TW">
+<h2>無法修復的 bug</h2>
+<p>遊戲伺服器中大多數的 bug，代價是一個影格、一次斷線、一份憤怒的回報。複製的代價則是整個經濟體系。一件存在兩份的物品會被賣掉、交易、做成別的東西；等到有人察覺時，它價值的副本已經擴散到數十位玩家身上，而且沒有乾淨的方法收回。本章的一切都只關乎一個特性：<strong>物品會移動，但絕不會被複製，也絕不會在半途遺失</strong>。</p>
+<div class="note beginner"><p class="note-label">新手須知</p><p>當兩個操作讀取同一個值、各自算出一個新值，而第二次寫入抹掉了第一次時，就會發生<em>更新遺失</em>。在庫存上，這比一個錯誤的計數器更糟：如果一次轉移在重新插入之前先刪除了一個貨艙的資料列，競爭中的輸家可能會把整個貨艙的內容都抹掉。</p></div></div>
 </section>
 
 <section class="sec" id="locks">
@@ -63,6 +67,16 @@
 <li>C'est un verrou <strong>interne au processus</strong>. Il ne protège de rien face à un autre serveur de jeu. C'est acceptable tant qu'un personnage n'existe que sur un seul serveur à la fois, et cesse de l'être le jour où deux joueurs peuvent toucher la même soute depuis des cartes différentes. La réponse sera alors une colonne de version et une nouvelle tentative, pas un plus gros verrou.</li>
 </ul>
 </div>
+<div lang="zh-TW">
+<h2>每個角色一個鎖，而且載入在鎖內</h2>
+<p>庫存轉移是跨越兩個貨艙的讀取－修改－寫入：載入資料列、算出放得下什麼、寫入結果。伺服器用一個鎖讓每個角色的這類操作依序執行，這個鎖按需建立，而且是<strong>靜態的</strong>：庫存服務可能正當地被實例化不只一次（每位玩家一個是很自然的寫法），而以實例為單位的鎖，各自守著不同的物件，什麼都保護不了。</p>
+<p>只有在<em>載入</em>位於鎖內時，鎖才有用。轉移的第一版接受兩個已經載入好的貨艙作為參數，所以每個呼叫端都在任何鎖之外載入，臨界區段只涵蓋了無害的那一半。現在進入點接受的是兩個貨艙的描述，並在鎖內自己載入它們。</p>
+<div class="note rule"><p class="note-label">規則</p><p>一個讓錯誤做法變得自然的函式簽章，就是簽章裡的 bug。</p><p>如果正確的使用方式需要呼叫端記得某件事（先取得鎖，再載入），就讓函式自己做，讓錯誤的順序根本寫不出來。</p></div>
+<p>那個鎖上的註解也列出了它的兩個限制，這是值得照抄的那種文件：</p>
+<ul>
+<li>當貨艙變成<strong>共用</strong>的那一天（公司倉庫、被登艦的船、灑在太空中被別人撿走的貨物），每個角色一個鎖就不再足夠；它必須變成每個貨艙一個鎖，以標準順序取得。</li>
+<li>它是一個<strong>程序內</strong>的鎖。它對另一台遊戲伺服器毫無保護作用。只要一個角色同一時間恰好只存在於一台伺服器上，這就沒問題；而當兩位玩家能從不同的地圖碰到同一個貨艙的那一天，它就不再沒問題。到那時，答案是一個版本欄位加上重試，而不是更大的鎖。</li>
+</ul></div>
 </section>
 
 <section class="sec" id="all-or-nothing">
@@ -76,6 +90,10 @@
 <p>Un échange entre deux joueurs, ou un achat au marché, ce sont plusieurs mouvements : prendre d'un côté, donner de l'autre, parfois dans les deux sens. L'atomicité ne vient pas d'une annulation astucieuse. Tout le travail se fait sur des objets <strong>en mémoire</strong> (les soutes chargées, les lignes suivies) et une <strong>unique validation</strong> tout à la fin écrit l'ensemble. Un refus n'importe où au milieu retourne simplement sans avoir rien écrit : il n'y a pas de chemin d'annulation où se tromper, parce qu'il n'y a rien à annuler.</p>
 <p>L'ordre des opérations à l'intérieur compte aussi : <strong>prendre, puis donner</strong>. La place libérée par ce qu'on donne compte pour ce qu'on reçoit ; sans ça, une soute pleine à ras bord ne pourrait jamais rien échanger, pas même un troc un pour un du même volume. Et un échange qui ne tient pas est refusé, jamais tronqué.</p>
 </div>
+<div lang="zh-TW">
+<h2>全有或全無，而且沒有東西要復原</h2>
+<p>兩位玩家之間的交易或一次市場購買，是好幾次移動：從一方拿走、給另一方，有時是雙向的。不可分割性不是來自一個聰明的回滾。所有工作都在<strong>記憶體中</strong>的物件上完成（載入的貨艙、被追蹤的資料列），而最後的<strong>一次提交</strong>寫入一切。中途任何地方的拒絕，都只是在沒寫入任何東西的情況下返回：不存在一條可能寫錯的回滾路徑，因為根本沒有東西要復原。</p>
+<p>內部操作的順序也很重要：<strong>先拿，再給</strong>。你給出去的東西所空出的空間，會算進你收到的東西裡；沒有這一點，一個裝到滿的貨艙就永遠無法交易任何東西，即使是同體積的一換一也不行。而放不下的交易會被拒絕，絕不會被截斷。</p></div>
 </section>
 
 <section class="sec" id="ordered">
@@ -87,6 +105,9 @@
 <h2>Deux verrous, toujours dans le même ordre</h2>
 <p>Un échange est le seul geste d'inventaire qui touche deux personnages : il prend donc deux verrous. Si chaque côté prenait « son » verrou d'abord, deux échanges simultanés entre les mêmes personnes, ou une chaîne (A avec B pendant que B échange avec C), pourraient chacun tenir un verrou et attendre l'autre pour toujours. Prendre les deux verrous par identifiant de personnage croissant donne un ordre global unique, ce qui rend cet interblocage <strong>impossible par construction</strong>, et pas seulement improbable en pratique.</p>
 </div>
+<div lang="zh-TW">
+<h2>兩個鎖，永遠同樣的順序</h2>
+<p>交易是唯一一個碰到兩個角色的庫存動作，所以它要取得兩個鎖。如果每一方都先取得「自己的」鎖，同樣兩人之間的兩筆同時交易，或一條鏈（A 與 B 交易，同時 B 與 C 交易），就可能各自持有一個鎖，然後永遠等待另一個。依角色 ID 由小到大取得兩個鎖，就有了一個全域順序，讓這種死結<strong>在結構上不可能發生</strong>，而不只是實務上不太可能。</p></div>
 <div class="code"><div class="code-head"><span class="file">GameServer/Inventory/InventoryService.Trade.cs · simplified</span></div><pre><code data-lang="cs">public TradeOutcome ExecuteTrade(TradeSide a, TradeSide b)
 {
     var first  = a.CharacterId &lt;= b.CharacterId ? a : b;  // one global order: by id
@@ -112,6 +133,8 @@
 <div lang="fr">
 <div class="note rule"><p class="note-label">Règle</p><p>Charger chaque stockage une seule fois par transaction, et réutiliser cet objet.</p><p>Charger deux fois la même soute donne deux vues mémoire indépendantes des mêmes lignes, et la seconde écriture écrase la première en silence. Dans un achat au marché où le prix et la marchandise sont dans le même genre de stockage, la soute de l'acheteur est chargée une fois pour payer et doit être le <em>même objet</em> que celui qui reçoit ; un second chargement écrirait la marchandise par-dessus le paiement qu'on vient de prélever. C'est le rôle du cache des soutes de l'extrait.</p></div>
 </div>
+<div lang="zh-TW">
+<div class="note rule"><p class="note-label">規則</p><p>每筆交易中，每一塊儲存空間只載入一次，並重複使用那個物件。</p><p>載入同一個貨艙兩次，會得到同樣那些資料列的兩個獨立記憶體視圖，而第二次寫入會悄悄地覆寫第一次。在一筆價格與貨物位於同一種儲存空間的市場購買中，買方的貨艙為了付款載入一次，而收貨時必須使用<em>同一個物件</em>；第二次載入會把貨物寫在剛剛扣掉的款項之上。摘錄中的貨艙快取就是為此而存在的。</p></div></div>
 </section>
 
 <section class="sec" id="escrow">
@@ -139,12 +162,25 @@
 </ol>
 <p>Un ordre échu n'a besoin d'aucun balayage pour devenir sûr : la requête d'achat filtre sur la date d'expiration, il est donc impossible à acheter dès la seconde où il expire. Le balayage de fond ne fait que rendre les biens à leurs propriétaires, ce qui peut attendre (chapitre <a href="no-db-in-tick.html#patterns">3.4</a>).</p>
 </div>
+<div lang="zh-TW">
+<h2>在同一次寫入中託管</h2>
+<p>市場是不同時在線的玩家交換物品的地方，所以它不能依賴雙方都在場。它的核心保證在掛單時就確立了：貨物在建立訂單的<strong>同一次寫入</strong>中離開賣方的倉庫。沒有任何一個瞬間，貨物已經消失卻沒有訂單攜帶它們；也沒有任何一個瞬間，一張可見的訂單沒有已經被保留的貨物作為後盾。沒有這一點，賣方可以在別處賣掉他仍在展示的東西，而買方要在付款之後才發現失敗，這是市場唯一承擔不起的順序。</p>
+<p>購買是它的鏡像，其中包含一個值得命名的小模式：</p>
+<ol>
+<li><strong>在鎖外偷看一眼，只為了知道要鎖誰。</strong>買方需要賣方的鎖，所以先在沒有鎖的情況下讀一次訂單。這次讀取不授權任何事；它只是定向。</li>
+<li><strong>依 ID 順序鎖住兩個角色</strong>，原因和交易中避免死結一樣：A 向 B 購買，同時 B 向 A 購買。</li>
+<li><strong>在鎖內重新讀取訂單。</strong>在顯示清單與點擊之間，可能有別人買走了同一張訂單。這次重新讀取，就是防止同一批貨被賣兩次的唯一手段。</li>
+<li><strong>在一次寫入中移動一切</strong>：價款離開買方、託管的貨物到達買方、價款在這個太空站到達賣方、訂單被刪除，並新增一行歷史紀錄。</li>
+</ol>
+<p>過期的訂單不需要掃除就已經安全：購買查詢會依到期日期過濾，所以從到期那一秒起它就無法被購買。背景掃除只是把貨物還給它的擁有者，這可以等（第 <a href="no-db-in-tick.html#patterns">3.4</a> 章）。</p></div>
 <div lang="en">
 <div class="note rule"><p class="note-label">Rule</p><p>Anything read before taking a lock is a hint; everything that decides is re-read after.</p><p>The window between a read and a lock is exactly where concurrent buyers, sellers and cancellations live. Treat the early read as orientation, never as authorization.</p></div>
 </div>
 <div lang="fr">
 <div class="note rule"><p class="note-label">Règle</p><p>Tout ce qui est lu avant de prendre un verrou est un indice ; tout ce qui décide est relu après.</p><p>La fenêtre entre une lecture et un verrou est exactement l'endroit où vivent les acheteurs, vendeurs et annulations concurrents. Traiter la lecture préalable comme une orientation, jamais comme une autorisation.</p></div>
 </div>
+<div lang="zh-TW">
+<div class="note rule"><p class="note-label">規則</p><p>在取得鎖之前讀到的任何東西都只是提示；所有做決定的東西都要在之後重新讀取。</p><p>讀取與上鎖之間的那段空檔，正是並行的買方、賣方與取消所在之處。把早先的讀取當作定向，絕不要當作授權。</p></div></div>
 </section>
 
 <section class="sec" id="protocol">
@@ -158,6 +194,10 @@
 <p>Un échange direct a un problème humain en plus du problème technique : un joueur peut tenter de changer son offre au dernier moment. La défense de la table d'échange tient en une ligne de code : <strong>toute modification de l'une des offres casse les deux verrous</strong>. Une fois qu'un joueur a validé, rien n'a bougé depuis qu'il a regardé, parce que tout mouvement l'aurait déverrouillé. Une seconde étape, la confirmation, n'existe qu'une fois les deux côtés verrouillés, ce qui ferme complètement la fenêtre.</p>
 <p>Trois décisions plus petites la complètent. La table vit sur le serveur de jeu et non sur la gateway, parce qu'un échange exige la proximité, donc la même carte, donc le même serveur par construction. La portée est revérifiée à chaque geste : s'éloigner est la façon naturelle de quitter une table. Et seul ce que les joueurs portent sur eux peut s'échanger, pas les soutes de leur vaisseau : la capacité d'une soute dépend de la coque vivante et pourrait rétrécir pendant l'échange si quelqu'un tire sur le vaisseau, et vider une soute par un échange contournerait l'écoutille et le rayon tracteur, qui sont du gameplay. Un côté vide est légal, et le code le dit explicitement, pour que personne ne « corrige » la générosité : le double verrou protège des arnaques, pas des cadeaux.</p>
 </div>
+<div lang="zh-TW">
+<h2>交易桌：一個對抗詐騙的協定</h2>
+<p>直接交易在技術問題之上，還有一個人性問題：玩家可能會試圖在最後一刻更改他的出價。交易桌的防禦只需一行程式碼：<strong>任一方出價的任何變更，都會解除雙方的鎖定</strong>。一旦某位玩家按下確認，從他看過之後就沒有任何東西移動過，因為任何移動都會解除他的鎖定。第二個步驟——最終確認——只有在雙方都已鎖定時才存在，這就完全封住了空檔。</p>
+<p>有三個較小的決定讓它更完整。交易桌放在遊戲伺服器上而不是閘道上，因為交易需要彼此靠近，因此在同一張地圖，因此在結構上就在同一台伺服器上。每個動作都會重新檢查距離，所以走開就是離開交易桌最自然的方式。而只有玩家身上攜帶的東西能交易，不包括他們船上的貨艙：貨艙的容量取決於存活的船體，如果有人在交易中射擊這艘船，容量可能會縮小；而透過交易清空貨艙，會繞過貨艙門與牽引光束，而它們是遊戲玩法的一部分。一方為空是合法的，程式碼也明確地這樣說，免得有人去「修正」慷慨：雙重鎖定防的是詐騙，不是禮物。</p></div>
 </section>
 
 <section class="sec" id="takeaways">
@@ -176,6 +216,13 @@
 <li>Séquestrer les biens dans la même écriture que celle qui rend une offre visible, et tout relire sous le verrou avant de décider.</li>
 <li>Concevoir les protocoles d'échange pour que toute modification invalide chaque validation antérieure.</li>
 </ul></div>
+<div lang="zh-TW"><h2>重點整理</h2><ul>
+<li>以擁有者為單位，讓物品的讀取－修改－寫入依序執行，載入要在鎖內，並記錄鎖的限制。</li>
+<li>在記憶體中完成所有工作，只提交一次；這樣拒絕時就沒有任何東西要復原。</li>
+<li>以一個全域順序取得多個鎖，讓死結變成不可能，而不只是罕見。</li>
+<li>在讓出價變得可見的同一次寫入中託管貨物，並在做決定之前，於鎖內重新讀取一切。</li>
+<li>把交易協定設計成任何變更都會讓先前的每一次確認失效。</li>
+</ul></div>
 </div>
 </section>
 
@@ -188,6 +235,7 @@
 <footer class="site-footer" id="mq-footer"></footer>
 <script src="assets/js/site-data.js" defer></script>
 <script src="assets/js/glossary-data.js" defer></script>
+<script src="assets/js/ui-zh.js" defer></script>
 <script src="assets/js/app.js" defer></script>
 <script src="assets/js/widgets.js" defer></script>
 </body>

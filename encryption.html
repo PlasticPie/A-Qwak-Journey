@@ -7,12 +7,12 @@
 <meta name="description" content="An X25519 key exchange, HKDF, one AES-GCM key per direction, and a clear list of what it does not protect.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Chakra+Petch:wght@500;600&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Chakra+Petch:wght@500;600&family=JetBrains+Mono:wght@400;500;600&family=Noto+Sans+TC:wght@400;700&display=swap">
 <link rel="stylesheet" href="assets/css/site.css">
-<script>(function(){var r=document.documentElement,l,t;try{l=localStorage.getItem("mq-lang");t=localStorage.getItem("mq-theme");}catch(e){}if(l!=="en"&&l!=="fr"){l=(navigator.language||"").toLowerCase().indexOf("fr")===0?"fr":"en";}r.setAttribute("data-lang",l);r.setAttribute("lang",l);if(t==="light"||t==="dark")r.setAttribute("data-theme",t);})();</script>
+<script>(function(){var r=document.documentElement,l,t,n;try{l=localStorage.getItem("mq-lang");t=localStorage.getItem("mq-theme");}catch(e){}if(l!=="en"&&l!=="fr"&&l!=="zh"){n=(navigator.language||"").toLowerCase();l=n.indexOf("fr")===0?"fr":n.indexOf("zh")===0?"zh":"en";}r.setAttribute("data-lang",l);r.setAttribute("lang",l==="zh"?"zh-TW":l);if(t==="light"||t==="dark")r.setAttribute("data-theme",t);})();</script>
 </head>
 <body data-page="encryption">
-<a class="skip-link" href="#main"><span lang="en">Skip to content</span><span lang="fr">Aller au contenu</span></a>
+<a class="skip-link" href="#main"><span lang="en">Skip to content</span><span lang="fr">Aller au contenu</span><span lang="zh-TW">跳到主要內容</span></a>
 <header class="site-header" id="mq-header"></header>
 <div class="layout">
 <aside class="sidebar" id="mq-sidebar"></aside>
@@ -20,8 +20,8 @@
 <article>
 <header class="chapter-head">
   <div class="eyebrow" data-auto></div>
-  <h1><span lang="en">Encrypting the session</span><span lang="fr">Chiffrer la session</span></h1>
-  <p class="dek"><span lang="en">An X25519 key exchange, HKDF, one AES-GCM key per direction, and a clear list of what it does not protect.</span><span lang="fr">Un échange de clés X25519, HKDF, une clé AES-GCM par sens, et la liste claire de ce que ça ne protège pas.</span></p>
+  <h1><span lang="en">Encrypting the session</span><span lang="fr">Chiffrer la session</span><span lang="zh-TW">加密連線階段</span></h1>
+  <p class="dek"><span lang="en">An X25519 key exchange, HKDF, one AES-GCM key per direction, and a clear list of what it does not protect.</span><span lang="fr">Un échange de clés X25519, HKDF, une clé AES-GCM par sens, et la liste claire de ce que ça ne protège pas.</span><span lang="zh-TW">X25519 金鑰交換、HKDF、每個方向一把 AES-GCM 金鑰，以及一份清楚列出它不保護什麼的清單。</span></p>
   <div class="meta-row" data-auto></div>
 </header>
 
@@ -38,6 +38,10 @@
 <p>Le trafic du jeu transporte les mots de passe au login, les jetons de session, le chat et chaque action d'un joueur. N'importe qui sur le même réseau que le joueur pourrait le lire ou le modifier s'il voyageait en clair. Les objectifs étaient modestes et précis : la <strong>confidentialité</strong> (personne sur le chemin ne lit le trafic), l'<strong>intégrité</strong> (personne ne modifie un paquet sans que ce soit détecté), des clés neuves pour chaque connexion, un faible coût CPU, et quelque chose qui tourne aussi dans Unity.</p>
 <div class="note beginner"><p class="note-label">Pour débuter</p><p>Le chiffrement protège le trafic entre le client et le serveur. Il ne rend pas le client digne de confiance : un joueur contrôle sa machine et peut envoyer n'importe quoi. C'est le rôle de l'autorité du serveur (chapitre <a href="receiving.html">1.5</a>). Les deux sont complémentaires, et aucun ne remplace l'autre.</p></div>
 </div>
+<div lang="zh-TW">
+<h2>加密是為了什麼</h2>
+<p>遊戲流量在登入時攜帶密碼，還有連線階段權杖、聊天內容，以及玩家的每一個動作。如果以明文傳送，任何與玩家位於同一網路的人都能讀取或竄改。目標既保守又明確：<strong>機密性</strong>（路徑上沒有人能讀取流量）、<strong>完整性</strong>（沒有人能竄改封包而不被察覺）、每條連線都有新的金鑰、CPU 成本低，而且也要能在 Unity 中執行。</p>
+<div class="note beginner"><p class="note-label">新手須知</p><p>加密保護的是用戶端與伺服器之間的流量。它並不會讓用戶端變得可信：玩家掌控自己的機器，想送什麼都可以。這正是伺服器權威存在的目的（第 <a href="receiving.html">1.5</a> 章）。兩者互補，任一方都無法取代另一方。</p></div></div>
 </section>
 
 <section class="sec" id="handshake">
@@ -61,37 +65,46 @@
 <li>Le client chiffre avec la clé client-vers-serveur et déchiffre avec l'autre ; le serveur fait l'inverse. À partir de là, chaque paquet dans les deux sens est chiffré et authentifié.</li>
 </ol>
 </div>
+<div lang="zh-TW">
+<h2>交握</h2>
+<p>傳輸層連線一開啟，雙方就以明文送出自己的公開金鑰，作為第一則可靠訊息。接著雙方算出同一個共享秘密，而且從不傳送它。</p>
+<ol>
+<li>用戶端為這條連線產生一組全新的 <a class="term" data-term="x25519">X25519</a> 金鑰對。伺服器則有一組長期使用的金鑰對，在第一次啟動時建立並保存在檔案中。</li>
+<li>雙方各自送出公開金鑰。每一方把自己的私密金鑰與對方的公開金鑰結合，得到同一個 32 位元組的共享秘密：這就是 Diffie-Hellman 的特性。</li>
+<li>共享秘密經過以 SHA-256 為基礎的 <a class="term" data-term="hkdf">HKDF</a>：先以一個 <em>extract</em> 步驟把它轉成均勻分布的金鑰，再以標籤 <code>"C2S"</code> 與 <code>"S2C"</code> 進行兩個 <em>expand</em> 步驟，衍生出兩把彼此獨立的 32 位元組金鑰。</li>
+<li>用戶端以「用戶端到伺服器」的金鑰加密，用另一把解密；伺服器則相反。從這一刻起，雙向的每個封包都經過加密與認證。</li>
+</ol></div>
 <figure class="fig fig-scroll">
 <svg viewBox="0 0 760 300" role="img" aria-label="Key schedule: both sides exchange public keys, compute the same X25519 shared secret, run HKDF extract, then expand into a client-to-server key and a server-to-client key">
   <defs><marker id="en-arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="currentColor" opacity="0.6"/></marker></defs>
   <rect x="20" y="20" width="200" height="56" rx="8" class="dg-hot"/>
-  <text class="dg-text" x="120" y="44" text-anchor="middle" font-weight="700"><tspan lang="en">Client</tspan><tspan lang="fr">Client</tspan></text>
-  <text class="dg-small" x="120" y="62" text-anchor="middle"><tspan lang="en">fresh key pair per connection</tspan><tspan lang="fr">paire neuve à chaque connexion</tspan></text>
+  <text class="dg-text" x="120" y="44" text-anchor="middle" font-weight="700"><tspan lang="en">Client</tspan><tspan lang="fr">Client</tspan><tspan lang="zh-TW">用戶端</tspan></text>
+  <text class="dg-small" x="120" y="62" text-anchor="middle"><tspan lang="en">fresh key pair per connection</tspan><tspan lang="fr">paire neuve à chaque connexion</tspan><tspan lang="zh-TW">每條連線一組新金鑰對</tspan></text>
   <rect x="540" y="20" width="200" height="56" rx="8" class="dg-box-2"/>
-  <text class="dg-text" x="640" y="44" text-anchor="middle" font-weight="700"><tspan lang="en">Server</tspan><tspan lang="fr">Serveur</tspan></text>
-  <text class="dg-small" x="640" y="62" text-anchor="middle"><tspan lang="en">long-lived key pair, in a file</tspan><tspan lang="fr">paire longue durée, dans un fichier</tspan></text>
+  <text class="dg-text" x="640" y="44" text-anchor="middle" font-weight="700"><tspan lang="en">Server</tspan><tspan lang="fr">Serveur</tspan><tspan lang="zh-TW">伺服器</tspan></text>
+  <text class="dg-small" x="640" y="62" text-anchor="middle"><tspan lang="en">long-lived key pair, in a file</tspan><tspan lang="fr">paire longue durée, dans un fichier</tspan><tspan lang="zh-TW">長期金鑰對，存於檔案</tspan></text>
   <line x1="222" y1="38" x2="536" y2="38" class="dg-line" marker-end="url(#en-arr)"/>
-  <text class="dg-small" x="380" y="32" text-anchor="middle"><tspan lang="en">client public key (clear)</tspan><tspan lang="fr">clé publique client (en clair)</tspan></text>
+  <text class="dg-small" x="380" y="32" text-anchor="middle"><tspan lang="en">client public key (clear)</tspan><tspan lang="fr">clé publique client (en clair)</tspan><tspan lang="zh-TW">用戶端公開金鑰（明文）</tspan></text>
   <line x1="538" y1="62" x2="224" y2="62" class="dg-line" marker-end="url(#en-arr)"/>
-  <text class="dg-small" x="380" y="78" text-anchor="middle"><tspan lang="en">server public key (clear)</tspan><tspan lang="fr">clé publique serveur (en clair)</tspan></text>
+  <text class="dg-small" x="380" y="78" text-anchor="middle"><tspan lang="en">server public key (clear)</tspan><tspan lang="fr">clé publique serveur (en clair)</tspan><tspan lang="zh-TW">伺服器公開金鑰（明文）</tspan></text>
   <rect x="250" y="104" width="260" height="40" rx="8" class="dg-box"/>
   <text class="dg-mono" x="380" y="129" text-anchor="middle">X25519(own private, peer public)</text>
   <line x1="120" y1="76" x2="252" y2="120" class="dg-line" marker-end="url(#en-arr)"/>
   <line x1="640" y1="76" x2="508" y2="120" class="dg-line" marker-end="url(#en-arr)"/>
-  <text class="dg-small" x="380" y="160" text-anchor="middle"><tspan lang="en">same 32-byte secret on both sides, never sent</tspan><tspan lang="fr">même secret de 32 octets des deux côtés, jamais envoyé</tspan></text>
+  <text class="dg-small" x="380" y="160" text-anchor="middle"><tspan lang="en">same 32-byte secret on both sides, never sent</tspan><tspan lang="fr">même secret de 32 octets des deux côtés, jamais envoyé</tspan><tspan lang="zh-TW">雙方得到相同的 32 位元組秘密，從不傳送</tspan></text>
   <rect x="270" y="170" width="220" height="36" rx="8" class="dg-box"/>
   <text class="dg-mono" x="380" y="193" text-anchor="middle">HKDF-Extract(SHA-256)</text>
   <line x1="380" y1="144" x2="380" y2="168" class="dg-line" marker-end="url(#en-arr)"/>
   <rect x="120" y="236" width="220" height="44" rx="8" class="dg-hot"/>
   <text class="dg-mono" x="230" y="256" text-anchor="middle">Expand("C2S", 32)</text>
-  <text class="dg-small" x="230" y="272" text-anchor="middle"><tspan lang="en">client → server AES-256-GCM</tspan><tspan lang="fr">AES-256-GCM client → serveur</tspan></text>
+  <text class="dg-small" x="230" y="272" text-anchor="middle"><tspan lang="en">client → server AES-256-GCM</tspan><tspan lang="fr">AES-256-GCM client → serveur</tspan><tspan lang="zh-TW">用戶端 → 伺服器 AES-256-GCM</tspan></text>
   <rect x="420" y="236" width="220" height="44" rx="8" class="dg-hot"/>
   <text class="dg-mono" x="530" y="256" text-anchor="middle">Expand("S2C", 32)</text>
-  <text class="dg-small" x="530" y="272" text-anchor="middle"><tspan lang="en">server → client AES-256-GCM</tspan><tspan lang="fr">AES-256-GCM serveur → client</tspan></text>
+  <text class="dg-small" x="530" y="272" text-anchor="middle"><tspan lang="en">server → client AES-256-GCM</tspan><tspan lang="fr">AES-256-GCM serveur → client</tspan><tspan lang="zh-TW">伺服器 → 用戶端 AES-256-GCM</tspan></text>
   <line x1="340" y1="206" x2="252" y2="234" class="dg-line" marker-end="url(#en-arr)"/>
   <line x1="420" y1="206" x2="508" y2="234" class="dg-line" marker-end="url(#en-arr)"/>
 </svg>
-<figcaption><span lang="en"><strong>The key schedule.</strong> Two public keys cross the network; two direction keys come out, one for each way.</span><span lang="fr"><strong>La dérivation des clés.</strong> Deux clés publiques traversent le réseau ; deux clés de sens en sortent, une pour chaque direction.</span></figcaption>
+<figcaption><span lang="en"><strong>The key schedule.</strong> Two public keys cross the network; two direction keys come out, one for each way.</span><span lang="fr"><strong>La dérivation des clés.</strong> Deux clés publiques traversent le réseau ; deux clés de sens en sortent, une pour chaque direction.</span><span lang="zh-TW"><strong>金鑰排程。</strong>兩把公開金鑰穿越網路；產生兩把方向金鑰，每個方向一把。</span></figcaption>
 </figure>
 <div class="code"><div class="code-head"><span class="file">Network/Peer.cs · deriving the session keys</span></div><pre><code data-lang="cs">internal void HandshakeReceived(byte[] remotePublic, byte[] selfPrivate)
 {
@@ -116,13 +129,17 @@
 <p>AES-GCM est un chiffrement <a class="term" data-term="aead">AEAD</a> : il chiffre les données et produit une étiquette (tag) de 16 octets qui prouve que le chiffré n'a pas été modifié. Le déchiffrement vérifie l'étiquette d'abord ; un seul bit modifié fait échouer tout le paquet, qui est jeté.</p>
 <p>GCM a une règle absolue : ne jamais chiffrer deux messages avec la même clé et le même nonce. MoonQwak construit le nonce de 12 octets à partir d'un compteur de 64 bits que chaque pair incrémente de façon atomique à chaque envoi, suivi d'un octet de sens. Le compteur garantit l'unicité pendant toute la vie de la connexion, et l'octet de sens sépare les deux directions alors qu'elles utilisent déjà des clés distinctes. Le compteur voyage devant le chiffré sous forme de varint, pour que le récepteur puisse reconstruire le nonce.</p>
 </div>
+<div lang="zh-TW">
+<h2>每個封包都經過認證</h2>
+<p>AES-GCM 是一種 <a class="term" data-term="aead">AEAD</a> 加密法：它加密資料，並產生一個 16 位元組的標籤，證明密文沒有被修改。解密時會先檢查標籤；只要改動一個位元，整個封包就會失敗並被丟棄。</p>
+<p>GCM 有一條絕對規則：絕不能用同一把金鑰和同一個 nonce 加密兩則訊息。MoonQwak 用一個 64 位元計數器加上一個代表方向的位元組，組成 12 位元組的 nonce；每個端點在每次傳送時以不可分割的方式遞增計數器。計數器保證在連線的整個生命週期中不會重複，方向位元組則把兩個方向區隔開來，即使它們已經使用不同的金鑰。計數器以 varint 形式放在密文前面傳送，讓接收端能重建 nonce。</p></div>
 <div data-bytes>
 <div class="bytes">
-  <div class="byte-field" data-en="GCM tag (16 bytes): proves the ciphertext and nonce were not altered. Checked before anything is decrypted." data-fr="Étiquette GCM (16 octets) : prouve que le chiffré et le nonce n'ont pas été modifiés. Vérifiée avant tout déchiffrement."><b>Tag</b><span>16 B</span></div>
-  <div class="byte-field" data-en="Nonce counter (varint): incremented atomically for every packet sent on this connection. The receiver rebuilds the 12-byte nonce as counter (8 bytes) + direction byte + 3 zero bytes." data-fr="Compteur de nonce (varint) : incrémenté de façon atomique pour chaque paquet envoyé sur cette connexion. Le récepteur reconstruit le nonce de 12 octets : compteur (8 octets) + octet de sens + 3 octets à zéro."><b>Nonce</b><span>1–9 B</span></div>
-  <div class="byte-field cipher grow" data-en="Ciphertext: the complete frame from chapter 1.2 (header and payload), encrypted. Same length as the plaintext; GCM adds no padding." data-fr="Chiffré : la trame complète du chapitre 1.2 (en-tête et charge utile), chiffrée. Même longueur que le clair ; GCM n'ajoute aucun remplissage."><b>Ciphertext</b><span>[version · type · rsv · length · payload]</span></div>
+  <div class="byte-field" data-en="GCM tag (16 bytes): proves the ciphertext and nonce were not altered. Checked before anything is decrypted." data-fr="Étiquette GCM (16 octets) : prouve que le chiffré et le nonce n'ont pas été modifiés. Vérifiée avant tout déchiffrement." data-zh="GCM 標籤（16 位元組）：證明密文與 nonce 沒有被修改。在解密任何東西之前先檢查。"><b>Tag</b><span>16 B</span></div>
+  <div class="byte-field" data-en="Nonce counter (varint): incremented atomically for every packet sent on this connection. The receiver rebuilds the 12-byte nonce as counter (8 bytes) + direction byte + 3 zero bytes." data-fr="Compteur de nonce (varint) : incrémenté de façon atomique pour chaque paquet envoyé sur cette connexion. Le récepteur reconstruit le nonce de 12 octets : compteur (8 octets) + octet de sens + 3 octets à zéro." data-zh="Nonce 計數器（varint）：在這條連線上每送出一個封包就以不可分割的方式遞增。接收端以計數器（8 位元組）+ 方向位元組 + 3 個零位元組，重建 12 位元組的 nonce。"><b>Nonce</b><span>1–9 B</span></div>
+  <div class="byte-field cipher grow" data-en="Ciphertext: the complete frame from chapter 1.2 (header and payload), encrypted. Same length as the plaintext; GCM adds no padding." data-fr="Chiffré : la trame complète du chapitre 1.2 (en-tête et charge utile), chiffrée. Même longueur que le clair ; GCM n'ajoute aucun remplissage." data-zh="密文：第 1.2 章的完整訊框（標頭與酬載），經過加密。長度與明文相同；GCM 不會加入填充。"><b>Ciphertext</b><span>[version · type · rsv · length · payload]</span></div>
 </div>
-<p class="byte-legend"><span lang="en">The datagram on the wire. Overhead per packet: 16 bytes of tag plus 1 to 4 bytes of counter in practice.</span><span lang="fr">Le datagramme sur le fil. Surcoût par paquet : 16 octets d'étiquette plus 1 à 4 octets de compteur en pratique.</span></p>
+<p class="byte-legend"><span lang="en">The datagram on the wire. Overhead per packet: 16 bytes of tag plus 1 to 4 bytes of counter in practice.</span><span lang="fr">Le datagramme sur le fil. Surcoût par paquet : 16 octets d'étiquette plus 1 à 4 octets de compteur en pratique.</span><span lang="zh-TW">線路上的資料包。每個封包的額外負擔：16 位元組的標籤，加上實務上 1 到 4 位元組的計數器。</span></p>
 </div>
 <div class="code"><div class="code-head"><span class="file">Network/Peer.cs · sending one packet</span></div><pre><code data-lang="cs">public void SendRaw(byte[] plain, int length, DeliveryMethod method)
 {
@@ -150,6 +167,8 @@
 <div lang="fr">
 <div class="note pitfall"><p class="note-label">Piège rencontré</p><p>L'envoi réutilise un seul writer par pair pour ne pas en allouer un neuf à chaque paquet. Or le même pair reçoit légitimement des envois de deux threads à la fois : le thread des snapshots envoie l'état du tick pendant que le thread réseau répond à une requête. Sans le verrou, les deux charges utiles s'entrelacent dans le writer partagé et produisent un datagramme corrompu, qui échoue à la vérification de son étiquette de l'autre côté. Le verrou n'est presque jamais contendu et coûte quelques nanosecondes.</p></div>
 </div>
+<div lang="zh-TW">
+<div class="note pitfall"><p class="note-label">我踩過的坑</p><p>傳送時，每個端點重複使用一個寫入器，以免每個封包都配置一個新的。但同一個端點確實可能同時被兩條執行緒傳送：快照執行緒在送出該 tick 的狀態，而網路執行緒在回應一個請求。沒有鎖的話，兩份酬載會在共用的寫入器中交錯，產生一個損壞的資料包，在另一端無法通過標籤檢查。這個鎖幾乎從不發生競爭，只花幾奈秒。</p></div></div>
 </section>
 
 <section class="sec" id="unity">
@@ -163,12 +182,18 @@
 <p>Le serveur tourne sur .NET 10 et utilise la classe <code>AesGcm</code> de la plateforme. Le client Unity cible une surface d'API plus ancienne (netstandard 2.1) où cette classe n'existe pas. La bibliothèque réseau partagée se compile donc de deux façons : avec la vraie implémentation côté serveur, et avec un petit polyfill côté client : AES en mode compteur à partir du compteur 2, le polynôme GHASH, une comparaison d'étiquette en temps constant, et HKDF au-dessus de HMAC-SHA256.</p>
 <div class="note tradeoff"><p class="note-label">Compromis</p><p>La cryptographie écrite à la main est une surface de risque. La construction suit la spécification de GCM et interopère avec l'implémentation standard du serveur à chaque paquet, ce qui attrape la plupart des erreurs, mais l'interopérabilité n'est pas un audit de sécurité. C'est la première chose à remplacer par une bibliothèque éprouvée si la plateforme du client le permet. Le serveur écrit une fois au démarrage quelle implémentation il utilise : on ne doute jamais de qui utilise quoi.</p></div>
 </div>
+<div lang="zh-TW">
+<h2>Unity 與手寫的 AES-GCM</h2>
+<p>伺服器在 .NET 10 上執行，使用平台的 <code>AesGcm</code> 類別。Unity 用戶端的目標是較舊的 API（netstandard 2.1），其中沒有這個類別。因此共用網路函式庫有兩種編譯方式：在伺服器上使用真正的實作，在用戶端上使用一個小型的替代實作（polyfill）：從計數器 2 開始的 CTR 模式 AES、GHASH 多項式、常數時間的標籤比對，以及建立在 HMAC-SHA256 之上的 HKDF。</p>
+<div class="note tradeoff"><p class="note-label">取捨</p><p>手寫的密碼學是一個風險面。這套構造遵循 GCM 規格，而且每個封包都與伺服器的標準實作互通，這能抓到大部分的錯誤，但互通並不等於安全審查。如果用戶端平台允許，這是第一個該換成經過審核的函式庫的東西。伺服器在啟動時會記錄一次它使用的是哪一種實作，所以永遠不會搞不清楚哪一端用的是什麼。</p></div></div>
 <div lang="en">
 <div class="note measured"><p class="note-label">Measured</p><p>That startup line used to be printed on every handshake, on both sides. With 500 bots opening two connections each, it produced 2,000 identical synchronous console writes on the network thread, during the one phase where that thread is busiest. It now prints once per process.</p></div>
 </div>
 <div lang="fr">
 <div class="note measured"><p class="note-label">Mesuré</p><p>Cette ligne de démarrage était autrefois écrite à chaque poignée de main, des deux côtés. Avec 500 robots ouvrant deux connexions chacun, ça faisait 2 000 écritures console identiques et synchrones sur le thread réseau, pendant la seule phase où ce thread est le plus occupé. Elle ne s'écrit plus qu'une fois par processus.</p></div>
 </div>
+<div lang="zh-TW">
+<div class="note measured"><p class="note-label">實測</p><p>那行啟動訊息過去在每次交握時都會印出，兩端皆然。500 個機器人各開兩條連線，就在網路執行緒上產生了 2,000 次相同的同步主控台寫入，而且偏偏發生在這條執行緒最忙碌的階段。現在它每個程序只印一次。</p></div></div>
 </section>
 
 <section class="sec" id="limits">
@@ -192,12 +217,23 @@
 <li><strong>Les serveurs de jeu s'authentifient autrement auprès de la gateway.</strong> Ils signent leur annonce avec une clé RSA (chapitre <a href="gateway.html">2.1</a>), une relation de confiance distincte de celle du client.</li>
 </ul>
 </div>
+<div lang="zh-TW">
+<h2>它不保護什麼</h2>
+<p>資安層只有在它的限制被寫下來時才有用。以下是目前的限制：</p>
+<ul>
+<li><strong>伺服器沒有經過認證。</strong>用戶端接受最先到達的任何公開金鑰。這能擋住被動竊聽，但一個位於網路路徑上的攻擊者，可以和用戶端進行一次交握、和伺服器進行另一次，然後在兩者之間轉送。標準的解法是把伺服器的公開金鑰內建在用戶端組建中並拒絕其他任何金鑰（「pinning」，金鑰釘選），或是用用戶端知道的長期金鑰為交握簽章。兩者都是小改動；目前都還沒做。</li>
+<li><strong>這一層不會拒絕重送攻擊。</strong>接收端從封包中的計數器重建 nonce，但不會記得自己已經看過哪些計數器。強化版會像 DTLS 與 QUIC 一樣，維護一個最近計數器的滑動視窗，丟棄任何較舊或重複的封包。</li>
+<li><strong>傳輸層的連線金鑰不是秘密。</strong>LiteNetLib 的連線金鑰是一個常數字串。它能過濾掉其他程式誤連的連線；它不認證任何東西。</li>
+<li><strong>遊戲伺服器向閘道認證的方式不同。</strong>它們用 RSA 金鑰為自己的宣告簽章（第 <a href="gateway.html">2.1</a> 章），這是一段與用戶端不同的信任關係。</li>
+</ul></div>
 <div lang="en">
 <div class="note rule"><p class="note-label">Rule</p><p>Write down what your security layer does not protect, next to what it does.</p><p>A list of limits turns vague unease into a backlog of small, specific fixes, and it stops anyone from assuming a guarantee the code never made.</p></div>
 </div>
 <div lang="fr">
 <div class="note rule"><p class="note-label">Règle</p><p>Écrire ce que votre couche de sécurité ne protège pas, à côté de ce qu'elle protège.</p><p>Une liste de limites transforme un malaise vague en une liste de petites corrections précises, et empêche quiconque de supposer une garantie que le code n'a jamais donnée.</p></div>
 </div>
+<div lang="zh-TW">
+<div class="note rule"><p class="note-label">規則</p><p>把資安層不保護的東西，寫在它保護的東西旁邊。</p><p>一份限制清單，能把模糊的不安變成一串小而具體的待修項目，也能阻止任何人假設程式碼從未提供過的保證。</p></div></div>
 </section>
 
 <section class="sec" id="takeaways">
@@ -216,6 +252,13 @@
 <li>Réutiliser les tampons d'envoi en vaut la peine, mais un tampon partagé entre threads demande un verrou.</li>
 <li>Lister les limites : l'authentification du serveur et une fenêtre anti-rejeu sont les prochaines étapes ici.</li>
 </ul></div>
+<div lang="zh-TW"><h2>重點整理</h2><ul>
+<li>X25519 交換加上 HKDF，讓每條連線都有新的金鑰，而不必在網路上傳送任何秘密。</li>
+<li>每個方向使用一把金鑰，並使用在同一把金鑰下永不重複的 nonce；每個端點一個不可分割遞增的計數器就能做到。</li>
+<li>AEAD 標籤讓竄改可被偵測：被修改的封包會整個失敗並被丟棄。</li>
+<li>重複使用傳送緩衝區是值得的，但被多條執行緒共用的緩衝區需要鎖。</li>
+<li>列出限制：伺服器認證與重送視窗是這裡的下一步。</li>
+</ul></div>
 </div>
 </section>
 
@@ -228,6 +271,7 @@
 <footer class="site-footer" id="mq-footer"></footer>
 <script src="assets/js/site-data.js" defer></script>
 <script src="assets/js/glossary-data.js" defer></script>
+<script src="assets/js/ui-zh.js" defer></script>
 <script src="assets/js/app.js" defer></script>
 <script src="assets/js/widgets.js" defer></script>
 </body>

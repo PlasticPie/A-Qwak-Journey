@@ -7,12 +7,12 @@
 <meta name="description" content="Wall time versus CPU time, periodic photos versus thresholds, and a monitor built to be pasted into a bug report.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Chakra+Petch:wght@500;600&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Chakra+Petch:wght@500;600&family=JetBrains+Mono:wght@400;500;600&family=Noto+Sans+TC:wght@400;700&display=swap">
 <link rel="stylesheet" href="assets/css/site.css">
-<script>(function(){var r=document.documentElement,l,t;try{l=localStorage.getItem("mq-lang");t=localStorage.getItem("mq-theme");}catch(e){}if(l!=="en"&&l!=="fr"){l=(navigator.language||"").toLowerCase().indexOf("fr")===0?"fr":"en";}r.setAttribute("data-lang",l);r.setAttribute("lang",l);if(t==="light"||t==="dark")r.setAttribute("data-theme",t);})();</script>
+<script>(function(){var r=document.documentElement,l,t,n;try{l=localStorage.getItem("mq-lang");t=localStorage.getItem("mq-theme");}catch(e){}if(l!=="en"&&l!=="fr"&&l!=="zh"){n=(navigator.language||"").toLowerCase();l=n.indexOf("fr")===0?"fr":n.indexOf("zh")===0?"zh":"en";}r.setAttribute("data-lang",l);r.setAttribute("lang",l==="zh"?"zh-TW":l);if(t==="light"||t==="dark")r.setAttribute("data-theme",t);})();</script>
 </head>
 <body data-page="observability">
-<a class="skip-link" href="#main"><span lang="en">Skip to content</span><span lang="fr">Aller au contenu</span></a>
+<a class="skip-link" href="#main"><span lang="en">Skip to content</span><span lang="fr">Aller au contenu</span><span lang="zh-TW">跳到主要內容</span></a>
 <header class="site-header" id="mq-header"></header>
 <div class="layout">
 <aside class="sidebar" id="mq-sidebar"></aside>
@@ -20,8 +20,8 @@
 <article>
 <header class="chapter-head">
   <div class="eyebrow" data-auto></div>
-  <h1><span lang="en">Instruments that tell the truth</span><span lang="fr">Des instruments qui disent vrai</span></h1>
-  <p class="dek"><span lang="en">Wall time versus CPU time, periodic photos versus thresholds, and a monitor built to be pasted into a bug report.</span><span lang="fr">Temps mural contre temps CPU, photos périodiques contre seuils, et un moniteur conçu pour être collé dans un rapport de bug.</span></p>
+  <h1><span lang="en">Instruments that tell the truth</span><span lang="fr">Des instruments qui disent vrai</span><span lang="zh-TW">說真話的量測工具</span></h1>
+  <p class="dek"><span lang="en">Wall time versus CPU time, periodic photos versus thresholds, and a monitor built to be pasted into a bug report.</span><span lang="fr">Temps mural contre temps CPU, photos périodiques contre seuils, et un moniteur conçu pour être collé dans un rapport de bug.</span><span lang="zh-TW">牆鐘時間與 CPU 時間、定期快照與門檻觸發，以及一個專為貼進 bug 回報而設計的監控器。</span></p>
   <div class="meta-row" data-auto></div>
 </header>
 
@@ -40,6 +40,11 @@
 <p>Ce chapitre parle de construire des instruments qui ne peuvent pas tromper de cette façon, et du danger moins évident : des instruments qui <em>deviennent</em> le problème qu'ils mesurent.</p>
 <div class="note rule"><p class="note-label">Règle</p><p>Avant d'optimiser, se demander ce que mesure vraiment le chiffre qu'on regarde, et quand il est relevé.</p></div>
 </div>
+<div lang="zh-TW">
+<h2>昂貴的 bug 都是讀錯的數字</h2>
+<p>回顧這個專案的效能工作，代價最高的錯誤很少是慢的程式碼。而是那些看起來正確、意思卻是別的的數字：一段被當成工作量測的等待、一個只在意外時才被量測的穩定狀態、一個被當成時間長度讀取的間隔、一個被當成典型成本讀取的最壞情況平均值。每一個都讓調查朝錯誤的方向走了好幾天。</p>
+<p>本章談的是如何打造不會那樣誤導人的量測工具，以及一個比較不明顯的危險：<em>變成</em>它所量測之問題的量測工具。</p>
+<div class="note rule"><p class="note-label">規則</p><p>在最佳化之前，先問你正在看的數字實際上量的是什麼，以及它是在什麼時候被記錄的。</p></div></div>
 </section>
 
 <section class="sec" id="pulse">
@@ -53,6 +58,10 @@
 <p>La première chose à savoir d'un serveur de jeu est sa cadence réelle. Pas combien de temps dure un tick, mais à quelle fréquence les ticks <em>commencent</em> : un tick de 5 ms lancé toutes les 200 ms, c'est un monde à 5 ticks par seconde, et sa durée seule le dirait en pleine forme. L'instrument de cadence relève donc des intervalles, et publie deux nombres : le <strong>rythme moyen</strong> sur quelques secondes, et un <strong>rythme minimal</strong> tiré du plus long intervalle de cette fenêtre. Un gel de 400 ms au milieu de cinq secondes saines bouge à peine la moyenne et se voit immédiatement dans le minimum.</p>
 <p>Un instrument dans la boucle de jeu tourne 25 fois par seconde pour toujours, et mesure précisément la chose qu'il ralentirait. Il doit être gratuit, pas bon marché. La règle qui le rend possible tient en une ligne : <strong>le tick ne mesure pas, il compte.</strong> L'horodatage lui est <em>donné</em> par la boucle, qui lit déjà l'horloge pour ses propres comptes : le travail ajouté est une soustraction, une comparaison et trois écritures de champ. Aucune lecture d'horloge, aucune allocation, aucun verrou, aucune instruction atomique.</p>
 </div>
+<div lang="zh-TW">
+<h2>在 tick 裡計數；在別處量測</h2>
+<p>關於遊戲伺服器，第一件要知道的事是它真正的節奏。不是一個 tick 花多久，而是 tick 多常<em>開始</em>：一個每 200 ms 才啟動一次、每次 5 ms 的 tick，是一個每秒只跑 5 個 tick 的世界，而光看它的時間長度，會說它完全健康。所以節奏量測工具記錄的是間隔，並發布兩個數字：幾秒鐘內的<strong>平均頻率</strong>，以及由該時間窗中最長間隔推導出來的<strong>最低頻率</strong>。在五秒健康的時間中出現一次 400 ms 的凍結，幾乎不會改變平均值，卻會立刻顯示在最低值上。</p>
+<p>遊戲迴圈中的量測工具每秒執行 25 次，永不停止，而且量測的正是它會拖慢的東西。它必須是免費的，而不只是便宜。讓這成為可能的規則只有一行：<strong>tick 不量測，它只計數。</strong>時間戳記是由迴圈<em>交給</em>它的，迴圈本來就為了自己的簿記而讀取時鐘，所以增加的工作只是一次減法、一次比較與三次欄位寫入：不讀時鐘、不配置記憶體、不上鎖、沒有不可分割的指令。</p></div>
 <div class="code"><div class="code-head"><span class="file">GameServer/Services/TickPulse.cs · Beat and Sample, simplified</span></div><pre><code data-lang="cs">// Tick thread only. Called first thing in every tick, with the loop's own timestamp.
 public void Beat(long wallStart)
 {
@@ -79,6 +88,9 @@ tpsMin = worst &gt; 0 ? Math.Min(Stopwatch.Frequency / (double)worst, tpsAvg) : 
 <p>Deux threads partagent ces champs sans verrou, et c'est sûr par construction. Le compteur de ticks a un seul écrivain et n'est jamais remis à zéro : le publicateur garde la valeur précédente et soustrait, aucun incrément ne peut donc se perdre. Le pire intervalle est remis à zéro par le publicateur, une fois par fenêtre, avec un échange atomique qui lit et efface d'un seul geste (lire puis effacer en deux temps perdrait précisément le gros intervalle tombé entre les deux). Un tick qui écrit à l'instant exact de l'échange perd un échantillon toutes les cinq secondes sur une statistique de pire cas, et sauver cet échantillon coûterait à la boucle de jeu, ce que la conception refuse justement.</p>
 <div class="note rule"><p class="note-label">Règle</p><p>Un instrument dans la boucle chaude doit être gratuit, pas bon marché. Si une nouvelle statistique demande une lecture d'horloge, une allocation ou une opération atomique dans la boucle, la réponse est non.</p></div>
 </div>
+<div lang="zh-TW">
+<p>兩條執行緒在不上鎖的情況下共用這些欄位，而這在結構上就是安全的。tick 計數器只有單一寫入者，而且從不重設：發布者記住上一個值並相減，所以不可能遺失任何一次遞增。最壞間隔由發布者在每個時間窗重設一次，使用一次「讀取並清除」一氣呵成的不可分割交換（分兩步先讀再清，恰恰會遺失落在兩者之間的那個大間隔）。一個剛好在交換那一瞬間寫入的 tick，會在一個最壞情況的統計上每五秒遺失一個樣本，而保住這個樣本的代價會落在遊戲迴圈上，這正是這個設計所拒絕的。</p>
+<div class="note rule"><p class="note-label">規則</p><p>熱迴圈中的量測工具必須是免費的，而不只是便宜。如果一項新的統計需要在迴圈中讀取時鐘、配置記憶體或進行不可分割的操作，答案就是不。</p></div></div>
 </section>
 
 <section class="sec" id="silence">
@@ -104,6 +116,16 @@ tpsMin = worst &gt; 0 ? Math.Min(Stopwatch.Frequency / (double)worst, tpsAvg) : 
 <li><strong>Une plainte, puis le silence.</strong> Une base injoignable imprimerait sinon une ligne toutes les cinq secondes pour toujours, noyant le journal là où l'on cherche autre chose.</li>
 </ul>
 </div>
+<div lang="zh-TW">
+<h2>讓沉默成為一種訊號</h2>
+<p>操作者的監控器從資料庫讀取叢集的狀況，而不是從每台伺服器：一次查詢就能顯示每台伺服器，不需要對每一台開啟連線。所以每台遊戲伺服器每五秒把自己的節奏寫進自己的資料列。<em>由誰</em>寫入的選擇就是全部的重點：當伺服器寫入自己的資料列時，<strong>沉默就成了一種訊號</strong>。一台 tick 執行緒卡住的伺服器會停止寫入，它資料列的時間戳記就不再移動，監控器會顯示它凍結了。如果由另一個元件從快取中代為發布，一台死掉的伺服器看起來會完全健康，而這正是這個顯示存在所要抓到的失敗。</p>
+<p>回報器本身的設計，讓它永遠不可能變成問題：</p>
+<ul>
+<li><strong>使用自己的執行緒，而不是執行緒集區。</strong>在寫回報器的時候，世界迴圈是從共用的執行緒集區取得它的平行工作執行緒。一個寫入資料庫的計時器回呼，會在整個資料庫延遲期間佔住一條集區執行緒：如果資料庫停頓一秒，tick 就有一秒少一個工作執行緒，而那恰恰是機器負載最重、這個數字最重要的時候。迴圈後來改用了專屬的工作執行緒（第 <a href="threading.html">3.3</a> 章），而原則依然成立：量測工具不能借用它所量測的東西。一條專屬的執行緒睡眠、醒來、寫入、再睡眠，優先權低於一般，作為一條永遠不會讓程序繼續存活的背景執行緒。</li>
+<li><strong>對具名欄位的原始 UPDATE。</strong>其他元件（節點代理程式、閘道）會寫入同一列的<em>其他</em>欄位。把整列載入成物件、改三個欄位再儲存，會改寫所有被讀取的東西，用一份過時的副本覆蓋它們的工作。</li>
+<li><strong>頻率除以真正經過的時間</strong>，而不是名義上的五秒：低優先權的執行緒恰恰在機器忙碌時醒得晚，而把七秒的流量除以五，會在最重要的時刻灌水頻率。第一輪不發布任何東西，因為頻率需要兩個點。</li>
+<li><strong>抱怨一次，然後沉默。</strong>否則一個連不上的資料庫會每五秒印一行，永無止境，把你正在找別的東西的日誌淹沒。</li>
+</ul></div>
 </section>
 
 <section class="sec" id="wall-vs-cpu">
@@ -119,25 +141,30 @@ tpsMin = worst &gt; 0 ? Math.Min(Stopwatch.Frequency / (double)worst, tpsAvg) : 
 <p>Mesurer le CPU correctement a demandé deux tentatives. La première lisait le temps CPU total du processus, qui a deux défauts rédhibitoires à cette échelle, tous deux visibles sur une seule ligne de sortie : « construction des snapshots : 2,1 ms de mur, 297 ms de CPU ». 297, c'est 19 × 15,625 : tout le <em>processus</em> était mesuré (ouvriers, réseau, thread des snapshots), à la granularité du quantum de l'ordonnanceur Windows, et dix-neuf threads avaient chacun été crédités d'un quantum pendant une section de deux millisecondes. Le nombre était réel et ne voulait rien dire.</p>
 <p>La seconde tentative utilise le <strong>compteur de cycles</strong> par thread (<code>QueryThreadCycleTime</code> sous Windows) : un compte matériel des cycles consommés par le thread appelant, sans arrondi au quantum. Et elle ne convertit jamais des cycles en millisecondes, parce que la fréquence varie avec le turbo et les économies d'énergie : toute constante de conversion serait fausse la moitié du temps. Elle ne compare que des cycles à des cycles, sous forme de <strong>parts</strong> : la part d'une section dans le temps mural du tick contre sa part dans le CPU du thread. Un rapport n'a pas d'unité, donc pas de constante à se tromper.</p>
 </div>
+<div lang="zh-TW">
+<h2>牆鐘時間與 CPU 時間</h2>
+<p>tick 中一個花了 26 ms 牆鐘時間的區段，可能是在運算 26 ms，也可能其中 25 ms 都在等它的工作執行緒、某個鎖或某個 socket。兩者需要完全相反的修正，而光看牆鐘時間無法區分。有一份報告把這一點具體化了：一個 tick 有 738 ms 的牆鐘工作時間，而八個被量測的階段只佔約 40 ms，CPU 只有 78 ms。這個 tick 在<em>等待</em>，在某個階段沒有涵蓋到的地方。之後 tick 被拆成幾個具名的區段，每個區段讀兩次時鐘，而一個慢的 tick 現在會用白話印出它的拆解（「players tick 690 ms」），而不是留給人去猜。</p>
+<p>正確地量測 CPU 花了兩次嘗試。第一次讀取的是程序的總 CPU 時間，在這個尺度下它有兩個致命的缺陷，在一行輸出中就都看得出來：「snapshot build: 2.1 ms wall, 297 ms CPU」。297 是 19 × 15.625：量到的是整個<em>程序</em>（工作執行緒、網路、快照執行緒），以 Windows 排程器時間片的粒度計算，而在一個兩毫秒的區段中，十九條執行緒各被記了一個時間片。這個數字是真實的，卻毫無意義。</p>
+<p>第二次嘗試使用每條執行緒的<strong>週期計數器</strong>（Windows 上的 <code>QueryThreadCycleTime</code>）：由硬體計算的、呼叫端執行緒所消耗的週期數，沒有任何時間片的進位。而且它從不把週期換算成毫秒，因為頻率會隨著加速與省電而改變，任何換算常數都會有一半的時間是錯的。它只拿週期與週期比較，以<strong>比例</strong>呈現：一個區段佔 tick 牆鐘時間的比例，對比它佔該執行緒 CPU 的比例。比值沒有單位，所以沒有任何常數可能出錯。</p></div>
 <figure class="fig">
 <div data-chart>
 <script type="application/json">
 {
   "type": "hbar",
   "labelWidth": 190,
-  "cats": { "en": ["Computes (verdict: CPU)", "Mixed", "Waits (verdict: WAIT)"], "fr": ["Calcule (verdict : CPU)", "Mixte", "Attend (verdict : ATTENTE)"] },
+  "cats": { "en": ["Computes (verdict: CPU)", "Mixed", "Waits (verdict: WAIT)"], "fr": ["Calcule (verdict : CPU)", "Mixte", "Attend (verdict : ATTENTE)"], "zh": ["在運算（判定：CPU）","混合","在等待（判定：WAIT）"] },
   "series": [
-    { "name": { "en": "Share of the tick's wall time", "fr": "Part du temps mural du tick" }, "values": [60, 30, 68] },
-    { "name": { "en": "Share of the thread's CPU cycles", "fr": "Part des cycles CPU du thread" }, "values": [60, 15, 7] }
+    { "name": { "en": "Share of the tick's wall time", "fr": "Part du temps mural du tick", "zh": "佔 tick 牆鐘時間的比例" }, "values": [60, 30, 68] },
+    { "name": { "en": "Share of the thread's CPU cycles", "fr": "Part des cycles CPU du thread", "zh": "佔執行緒 CPU 週期的比例" }, "values": [60, 15, 7] }
   ],
   "unit": "%",
   "decimals": 0,
-  "unitLabel": { "en": "share of the tick, %", "fr": "part du tick, %" },
-  "aria": { "en": "Three example sections: one at 60 percent of wall time and 60 percent of CPU computes; one at 30 percent of wall and 15 percent of CPU is mixed; one at 68 percent of wall and 7 percent of CPU is waiting", "fr": "Trois sections d'exemple : l'une à 60 % du temps mural et 60 % du CPU calcule ; l'une à 30 % du mur et 15 % du CPU est mixte ; l'une à 68 % du mur et 7 % du CPU attend" }
+  "unitLabel": { "en": "share of the tick, %", "fr": "part du tick, %", "zh": "佔 tick 的比例，%" },
+  "aria": { "en": "Three example sections: one at 60 percent of wall time and 60 percent of CPU computes; one at 30 percent of wall and 15 percent of CPU is mixed; one at 68 percent of wall and 7 percent of CPU is waiting", "fr": "Trois sections d'exemple : l'une à 60 % du temps mural et 60 % du CPU calcule ; l'une à 30 % du mur et 15 % du CPU est mixte ; l'une à 68 % du mur et 7 % du CPU attend", "zh": "三個區段範例：佔牆鐘時間 60 %、CPU 60 % 的在運算；佔牆鐘時間 30 %、CPU 15 % 的是混合；佔牆鐘時間 68 %、CPU 7 % 的在等待" }
 }
 </script>
 </div>
-<figcaption><span lang="en"><strong>Three example readings.</strong> When a section's CPU share is at least 80 % of its wall share, it computes on this thread; below 30 %, it spent its time waiting for workers, a lock or a socket; in between, it did both.</span><span lang="fr"><strong>Trois lectures d'exemple.</strong> Quand la part CPU d'une section vaut au moins 80 % de sa part murale, elle calcule sur ce thread ; sous 30 %, elle a passé son temps à attendre des ouvriers, un verrou ou une socket ; entre les deux, elle a fait les deux.</span></figcaption>
+<figcaption><span lang="en"><strong>Three example readings.</strong> When a section's CPU share is at least 80 % of its wall share, it computes on this thread; below 30 %, it spent its time waiting for workers, a lock or a socket; in between, it did both.</span><span lang="fr"><strong>Trois lectures d'exemple.</strong> Quand la part CPU d'une section vaut au moins 80 % de sa part murale, elle calcule sur ce thread ; sous 30 %, elle a passé son temps à attendre des ouvriers, un verrou ou une socket ; entre les deux, elle a fait les deux.</span><span lang="zh-TW"><strong>三個讀數範例。</strong>當一個區段的 CPU 比例至少達到其牆鐘比例的 80 % 時，它是在這條執行緒上運算；低於 30 % 時，它把時間花在等待工作執行緒、某個鎖或某個 socket；介於兩者之間，則兩者都有。</span></figcaption>
 </figure>
 <div class="code"><div class="code-head"><span class="file">GameServer/GameHost.cs · the verdict, simplified</span></div><pre><code data-lang="cs">// Shares, never milliseconds: cycles are only ever compared to cycles.
 var wallShare = sectionMs[worst] / totalMs;
@@ -152,6 +179,8 @@ var verdict = cpuShare &gt;= 0.8 * wallShare ? "COMPUTING on this thread"
 <div lang="fr">
 <div class="note beginner"><p class="note-label">Pour débuter</p><p>Le <strong>temps mural</strong> (ou temps écoulé) est ce que mesure un chronomètre. Le <strong>temps CPU</strong> est la durée pendant laquelle un processeur a réellement exécuté votre thread. Un temps mural très supérieur au temps CPU veut dire que le thread attendait : des entrées-sorties, un verrou, d'autres threads, ou simplement de ne pas être ordonnancé. Les profileurs qui n'échantillonnent que le CPU ne voient pas du tout l'attente, et c'est pourquoi un verrou peut coûter cher à un serveur sans jamais apparaître dans un profil CPU (chapitre <a href="threading.html">3.3</a>).</p></div>
 </div>
+<div lang="zh-TW">
+<div class="note beginner"><p class="note-label">新手須知</p><p><strong>牆鐘時間</strong>（或經過時間）是碼錶量到的時間。<strong>CPU 時間</strong>是處理器實際執行你的執行緒的時間。牆鐘時間遠大於 CPU 時間，代表執行緒在等待：等 I/O、等鎖、等其他執行緒，或單純沒有被排程。只取樣 CPU 的效能分析器完全看不到等待，這就是為什麼一個鎖可能讓伺服器付出慘痛的代價，卻從不出現在 CPU 效能分析中（第 <a href="threading.html">3.3</a> 章）。</p></div></div>
 </section>
 
 <section class="sec" id="photos">
@@ -177,6 +206,16 @@ var verdict = cpuShare &gt;= 0.8 * wallShare ? "COMPUTING on this thread"
 <div class="note rule"><p class="note-label">Règle</p><p>Un instrument qui ne se déclenche qu'au-dessus du normal ne mesure que les accidents.</p><p>Toujours échantillonner aussi le régime établi, et étiqueter laquelle des deux choses dit une ligne.</p></div>
 <p>Le même banc a révélé une troisième erreur de lecture, du chiffre le plus visible de tous. La valeur « world tick » en tête du moniteur était l'<em>intervalle</em> entre deux débuts de tick. À 25 ticks par seconde, elle reste près de 40 ms quel que soit le travail, par construction. Elle affichait 41,78 ms, et on l'a comprise comme « le tick coûte 41,7 ms, on est au budget ». La photo périodique montrait environ 20 ms de travail réel. La photo imprime maintenant le travail à côté de son budget (« 22,5 ms de travail sur 40 (56 %) »), parce qu'une durée sans son budget ne se lit pas.</p>
 </div>
+<div lang="zh-TW">
+<h2>定期快照，而不只是門檻</h2>
+<p>加入一行診斷最自然的方式是一個門檻：「當這個階段超過 20 ms 時印出拆解」。它讓主控台保持安靜，卻藏著一個讓這個專案<strong>栽了兩次</strong>的陷阱。</p>
+<ol class="timeline">
+<li><span class="tl-tag">第一次</span><div><h3>物件成本只在意外時被量測</h3><p>每個物件的拆解在物件階段超過 20 ms 時才印出。在穩定狀態下，這個階段花 3 到 10 ms，所以從未越過門檻，而讀過的每一行都來自異常的 tick：在那次測試台上，是 400 個機器人的連線爬升期。好幾輪迭代都花在 NPC 與太空站的成本上，讀到的是 2,553 與 6,548 µs。在穩定狀態下量測，它們只花 71 與 92 µs。</p></div></li>
+<li><span class="tl-tag">第二次</span><div><h3>唯一有用的拆解從未印出</h3><p>區段拆解在超過 100 ms 時才印出，那是預算的兩倍半。400 位玩家測試台最差的 tick 是 54.6 ms，所以唯一一個能說出 tick 的時間花在哪裡的量測工具，在整次測試台中一行都沒寫過。</p></div></li>
+</ol>
+<p>兩次的修正都一樣：一張<strong>定期快照</strong>，不論慢不慢，每隔幾秒（預設十秒）一張，標記為「photo」，放在標記為「SLOW」的門檻那一行旁邊。快照說的是正常成本；門檻說的是意外。兩者共用一個兩秒的防護，讓一連串慢 tick 不會淹沒主控台。</p>
+<div class="note rule"><p class="note-label">規則</p><p>一個只在超出正常時才觸發的量測工具，量到的只有意外。</p><p>一定也要取樣穩定狀態，並標記每一行屬於兩者中的哪一個。</p></div>
+<p>同一次測試台還揭露了第三個誤讀，而且是最顯眼的那個數字。監控器的標題數字「世界 tick」是兩個 tick 開始之間的<em>間隔</em>。在每秒 25 個 tick 時，依結構它不論工作量多少都會停在 40 ms 附近。它顯示 41.78 ms，被理解為「tick 花了 41.7 ms，我們已經碰到預算了」。定期快照顯示實際的工作大約只有 20 ms。現在快照會把工作印在它的預算旁邊（「40 ms 中有 22.5 ms 的工作（56 %）」），因為沒有預算的時間長度是無法解讀的。</p></div>
 </section>
 
 <section class="sec" id="console">
@@ -206,6 +245,18 @@ var verdict = cpuShare &gt;= 0.8 * wallShare ? "COMPUTING on this thread"
 <div class="note pitfall"><p class="note-label">Piège rencontré</p><p>La console asynchrone a d'abord vécu dans le seul serveur de jeu. Un banc à 500 bots a montré ce que cela laissait dehors. La gateway écrit une dizaine de lignes par bot qui se connecte, en synchrone, depuis le thread réseau qui doit aussi répondre aux validations de session des serveurs de jeu : 500 bots qui arrivent, c'était 5 000 écritures noyau sur le chemin critique de l'authentification. L'outil de test de charge avait le même problème sur les quelques threads qui lisent toutes ses sockets, où une écriture lente gelait 140 connexions d'un coup. La correction vit maintenant dans le projet de configuration partagé, utilisé par les trois processus.</p></div>
 <div class="note rule"><p class="note-label">Règle</p><p>Une correction qui n'a pas atteint ses jumeaux n'est pas terminée.</p><p>Quand on corrige une classe de bug dans un processus, chercher le même motif dans chaque processus frère avant de clore le sujet.</p></div>
 </div>
+<div lang="zh-TW">
+<h2>主控台可以讓你的伺服器停下來</h2>
+<p>Windows 排程器造成了第 <a href="tick-loop.html">3.1</a> 章描述的三個計時 bug。主控台則提供了第四個，同一個家族的。<code>Console.WriteLine</code> 是同步的，由整個程序共用的一個鎖保護，最後以一個寫入主控台視窗的核心呼叫結束。當視窗在捲動、捲動緩衝區很大、輸出被重新導向到一條慢的管道時，一行就要花好幾毫秒。而在最糟的情況下——在主控台視窗中用滑鼠選取（Windows 的「快速編輯」模式）——這個呼叫<em>直到下一次點擊</em>才會返回。整個程序無限期地停住，只因為有人反白了一行想要複製它。</p>
+<p>修正方式是把程序的標準輸出換成一個把字串放進佇列後立即返回的寫入器；一條低優先權的背景執行緒以自己的步調寫到真正的主控台。有三個特性必須成立：</p>
+<ul>
+<li><strong>順序。</strong>一個佇列、一個消費者：每一行都以進去的順序出來。一份會打亂順序的日誌，比一份慢的日誌更糟。</li>
+<li><strong>上限。</strong>如果主控台真的凍結了，佇列會一直長大，直到吃光記憶體。它有上限，多出來的會被丟棄，而被丟棄的行數會在寫入恢復時被<em>宣告</em>出來。日誌中無聲的空洞會說謊；被宣告的空洞則提供資訊。</li>
+<li><strong>結尾。</strong>背景執行緒會隨著程序一起死掉，所以沒有最後一次清空的話，最後幾行就會遺失，而那恰恰是你在當機後要讀的那幾行。一個程序結束掛勾會清空佇列。</li>
+</ul>
+<p>替換標準輸出，而不是引入一個日誌類別，才讓這個變更變得可行：大約 440 個既有的呼叫位置以及未來的每一個，都在沒有任何人遷移任何東西的情況下被涵蓋，包括那些根本沒有參考到修正所在專案的函式庫。快速編輯模式被刻意保留：現在選取只會凍結日誌的<em>顯示</em>，而絕不會凍結模擬。</p>
+<div class="note pitfall"><p class="note-label">我踩過的坑</p><p>非同步主控台一開始只存在於遊戲伺服器中。一次 500 個機器人的測試台顯示了它遺漏了什麼。閘道為每個連線中的機器人寫大約十行，同步地，從同時還必須回應遊戲伺服器連線階段驗證的網路執行緒寫入：500 個到達的機器人，意味著在認證的關鍵路徑上有 5,000 次核心寫入。負載測試工具在讀取它所有 socket 的那幾條執行緒上也有同樣的問題，一次慢的寫入就同時凍結了 140 條連線。現在這個修正放在共用的設定專案中，三個程序都在使用。</p></div>
+<div class="note rule"><p class="note-label">規則</p><p>一個沒有送達它的雙胞胎的修正，就還沒有完成。</p><p>當你在一個程序中修正了一類 bug 時，在結案之前，先到每一個兄弟程序中搜尋相同的模式。</p></div></div>
 </section>
 
 <section class="sec" id="monitor">
@@ -227,6 +278,14 @@ var verdict = cpuShare &gt;= 0.8 * wallShare ? "COMPUTING on this thread"
 <div class="note measured"><p class="note-label">Mesuré</p><p>Le rapport dit à voix haute ce que sont ses chiffres. Les durées de phase qu'un serveur diffuse sont le <em>pire</em> de chaque seconde, pas des échantillons instantanés : une moyenne sur la fenêtre est une moyenne des pires cas par seconde, stable et utile, mais pas le coût typique d'un tick. Une statistique dont il faut se rappeler le sens est une statistique qui sera mal lue.</p></div>
 <p>Quelques règles plus petites gardent les écrans honnêtes. Les débits s'affichent en octets, jamais en bits, comme tous les compteurs du code : mélanger les deux dans une même fenêtre, c'est un facteur huit que personne ne voit. La vue du parc considère un serveur comme périmé au bout de 120 secondes, le même délai que l'agent de machine et la gateway, parce que trois composants qui jugeraient la fraîcheur différemment se contrediraient à l'écran. Et ses jauges tirent leurs repères d'alerte des mêmes lignes de base que lisent les décisions de montée en charge (chapitre <a href="capacity.html">7.2</a>) : un repère dessiné ailleurs que là où la décision se prend ferait mentir la jauge sur la seule chose qu'elle existe pour montrer.</p>
 </div>
+<div lang="zh-TW">
+<h2>為 bug 回報而打造的監控器</h2>
+<p>監控器是一個獨立的桌面應用程式。它連到遊戲伺服器的除錯埠，每秒大約收到一個樣本；它的叢集檢視讀取資料庫，在一個畫面上顯示每台伺服器，每一台都是通往其詳細檢視的一扇門。有三個設計決定比任何圖表都重要。</p>
+<p><strong>身分與設定優先。</strong>透過環境變數傳遞的設定不會留下任何痕跡。沒有任何東西能區分「這個設定被讀取並套用了」、「名稱拼錯了」、「一個真正的環境變數覆蓋了檔案」，或「這段程式碼從不讀取這個鍵」。一次用來驗證某個假設的測試台，如果用來測試它的設定沒有被套用，就什麼都驗證不了，而事後你無從得知。這真的發生過。所以每一次設定讀取都會被記錄（鍵、生效的值，以及它來自哪裡），在啟動時印出，並在連線時連同伺服器的身分（伺服器 ID、世界、機器、程序 ID）送給監控器一次。一台機器上有好幾台伺服器時，「我在看的是哪一台？」就是第一個問題。設定只送一次，因為它在程序的生命週期中不可能改變，而這正是它能當作證據的原因。</p>
+<p><strong>秘密在源頭就被遮蔽</strong>，依鍵名判斷，而過濾器預設是封閉的：任何看起來像秘密的東西都會被遮蔽，即使這會遮掉一個不幸被叫做「…KEY」的無害設定。長度仍然可見（「•••，62 個字元」），這回答了人們對秘密唯一會問的問題：它設定了嗎？</p>
+<p><strong>一個「複製報告」按鈕。</strong>一張即時數字的截圖是很糟的 bug 回報：它只顯示一個瞬間，卻沒說那是正常情況、最壞情況，還是有人連上的那一秒。監控器保留一個約五分鐘的滾動樣本時間窗，加上歷來的峰值，以及在那一刻擷取的<em>完整樣本</em>（有用的問題很少是「它衝到多高」，而是「它衝高時還發生了什麼」）。按鈕會把這一切轉成文字。它是一個手動按鈕，而不是定時寫入的檔案，因為有用的報告是在做完某件事之後立刻取得的那一份，而只有做那件事的人知道是什麼時候。</p>
+<div class="note measured"><p class="note-label">實測</p><p>報告會大聲說出它的數字是什麼。伺服器廣播的階段計時是每一秒的<em>最壞值</em>，而不是瞬間樣本，所以在時間窗上的平均，是每秒最壞情況的平均：穩定而有用，但不是一個 tick 的典型成本。一個必須記住其意義的統計數字，就是一個會被誤讀的統計數字。</p></div>
+<p>還有幾條較小的規則讓畫面保持誠實。頻率以位元組顯示，從不用位元，就像程式碼中的每一個計數器一樣：在同一個視窗中混用兩者，就是一個沒有人看得到的八倍差距。叢集檢視在 120 秒後就認為一台伺服器已經過時，與節點代理程式和閘道使用的延遲相同，因為三個元件以不同的方式判斷新鮮度，會在畫面上互相矛盾。而它的量表上的警告標記，來自擴展決策所讀取的同一批資料庫資料列（第 <a href="capacity.html">7.2</a> 章）：畫在決策所在之處以外任何地方的標記，都會讓量表在它唯一要呈現的那件事上說謊。</p></div>
 </section>
 
 <section class="sec" id="takeaways">
@@ -249,6 +308,15 @@ var verdict = cpuShare &gt;= 0.8 * wallShare ? "COMPUTING on this thread"
 <li>Sortir la console du chemin critique, garder des journaux ordonnés, bornés et vidés, et appliquer la correction à chaque processus frère.</li>
 <li>Construire le moniteur pour les rapports de bug : identité, configuration effective, secrets masqués, et une fenêtre copiable avec le pic dans son contexte.</li>
 </ul></div>
+<div lang="zh-TW"><h2>重點整理</h2><ul>
+<li>量測 tick 開始之間的間隔，而不只是 tick 的時間長度，並在平均值旁邊發布最壞的間隔。</li>
+<li>熱迴圈中的量測工具只計數；時鐘、記憶體配置與不可分割操作都在另一條執行緒上進行。</li>
+<li>讓每台伺服器從自己的執行緒發布自己的健康狀態，讓沉默代表某種意義。</li>
+<li>比較牆鐘時間比例與每條執行緒的 CPU 比例，以區分運算與等待；絕不把週期換算成時間。</li>
+<li>在每一個門檻旁邊加入定期快照，並把時間長度印在它的預算旁邊。</li>
+<li>把主控台移出關鍵路徑，讓日誌保持有序、有上限、會被清空，並把修正套用到每一個兄弟程序。</li>
+<li>為 bug 回報打造監控器：身分、生效的設定、遮蔽的秘密，以及一個附帶峰值情境、可以複製的時間窗。</li>
+</ul></div>
 </div>
 </section>
 
@@ -261,6 +329,7 @@ var verdict = cpuShare &gt;= 0.8 * wallShare ? "COMPUTING on this thread"
 <footer class="site-footer" id="mq-footer"></footer>
 <script src="assets/js/site-data.js" defer></script>
 <script src="assets/js/glossary-data.js" defer></script>
+<script src="assets/js/ui-zh.js" defer></script>
 <script src="assets/js/app.js" defer></script>
 <script src="assets/js/widgets.js" defer></script>
 </body>

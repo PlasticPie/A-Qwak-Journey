@@ -7,12 +7,12 @@
 <meta name="description" content="Map transitions, reconnecting to another process, session takeover, and the ordering that keeps a group together.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Chakra+Petch:wght@500;600&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Chakra+Petch:wght@500;600&family=JetBrains+Mono:wght@400;500;600&family=Noto+Sans+TC:wght@400;700&display=swap">
 <link rel="stylesheet" href="assets/css/site.css">
-<script>(function(){var r=document.documentElement,l,t;try{l=localStorage.getItem("mq-lang");t=localStorage.getItem("mq-theme");}catch(e){}if(l!=="en"&&l!=="fr"){l=(navigator.language||"").toLowerCase().indexOf("fr")===0?"fr":"en";}r.setAttribute("data-lang",l);r.setAttribute("lang",l);if(t==="light"||t==="dark")r.setAttribute("data-theme",t);})();</script>
+<script>(function(){var r=document.documentElement,l,t,n;try{l=localStorage.getItem("mq-lang");t=localStorage.getItem("mq-theme");}catch(e){}if(l!=="en"&&l!=="fr"&&l!=="zh"){n=(navigator.language||"").toLowerCase();l=n.indexOf("fr")===0?"fr":n.indexOf("zh")===0?"zh":"en";}r.setAttribute("data-lang",l);r.setAttribute("lang",l==="zh"?"zh-TW":l);if(t==="light"||t==="dark")r.setAttribute("data-theme",t);})();</script>
 </head>
 <body data-page="handover">
-<a class="skip-link" href="#main"><span lang="en">Skip to content</span><span lang="fr">Aller au contenu</span></a>
+<a class="skip-link" href="#main"><span lang="en">Skip to content</span><span lang="fr">Aller au contenu</span><span lang="zh-TW">跳到主要內容</span></a>
 <header class="site-header" id="mq-header"></header>
 <div class="layout">
 <aside class="sidebar" id="mq-sidebar"></aside>
@@ -20,8 +20,8 @@
 <article>
 <header class="chapter-head">
   <div class="eyebrow" data-auto></div>
-  <h1><span lang="en">Moving between servers</span><span lang="fr">Passer d'un serveur à l'autre</span></h1>
-  <p class="dek"><span lang="en">Map transitions, reconnecting to another process, session takeover, and the ordering that keeps a group together.</span><span lang="fr">Transitions de carte, reconnexion vers un autre processus, reprise de session, et l'ordre qui garde un groupe uni.</span></p>
+  <h1><span lang="en">Moving between servers</span><span lang="fr">Passer d'un serveur à l'autre</span><span lang="zh-TW">在伺服器之間移動</span></h1>
+  <p class="dek"><span lang="en">Map transitions, reconnecting to another process, session takeover, and the ordering that keeps a group together.</span><span lang="fr">Transitions de carte, reconnexion vers un autre processus, reprise de session, et l'ordre qui garde un groupe uni.</span><span lang="zh-TW">切換地圖、重新連線到另一個程序、連線階段接管，以及讓隊伍不會走散的順序。</span></p>
   <div class="meta-row" data-auto></div>
 </header>
 
@@ -48,6 +48,15 @@
 </div>
 <p>MoonQwak utilise la troisième, avec une optimisation décrite plus bas : quand la carte de destination est sur le même serveur, il n'y a aucune reconnexion.</p>
 </div>
+<div lang="zh-TW">
+<h2>跨越邊界的三種方式</h2>
+<p>世界是一片由六角形地圖組成的網格，而每張地圖都恰好存在於一台遊戲伺服器上。當一艘船飛出地圖邊緣，或跳躍到好幾張地圖之外時，它的目的地可能由另一個程序託管，甚至可能在另一台機器上。讓玩家跨過去，常見的方式有三種：</p>
+<div class="compare">
+<div><h4>前置代理</h4><p>用戶端只與一台前端伺服器保持一條連線，由它把流量轉送到託管該玩家的遊戲伺服器。不需要重新連線，但每個封包都多跳一次，而代理會成為最熱路徑上的瓶頸。</p></div>
+<div><h4>伺服器對伺服器交接</h4><p>來源伺服器把船艦序列化後送給目的地，由目的地接手。速度快，但兩台伺服器必須彼此信任並約定格式，而且中途當機會讓船艦哪裡都不在。</p></div>
+<div class="pick"><h4>先寫入，再重新連線</h4><p>來源伺服器把船艦寫入資料庫，用戶端重新連到目的地，由目的地載入它。多一個載入畫面，但每台伺服器都保持獨立，而資料庫是船艦所在位置的唯一紀錄。</p></div>
+</div>
+<p>MoonQwak 採用第三種，加上下面會描述的一項最佳化：當目的地地圖在同一台伺服器上時，完全不需要重新連線。</p></div>
 </section>
 
 <section class="sec" id="two-halves">
@@ -63,39 +72,44 @@
 <div class="note measured"><p class="note-label">Mesuré</p><p>Le Monitor a montré un tick de 178 ms pour sept objets, ramasse-miettes hors de cause : 25 ms par objet, ce qui n'est pas du calcul mais de l'attente. Tous les joueurs de toutes les cartes de ce serveur se figeaient parce qu'un joueur franchissait une frontière. Le même motif dans le code des sauts avait produit un pire tick de 121,7 ms pour six objets : 19,9 ms par objet.</p></div>
 <p>Une transition est maintenant coupée le long de la ligne qu'impose le tick (chapitre <a href="no-db-in-tick.html">3.4</a>) :</p>
 </div>
+<div lang="zh-TW">
+<h2>分成兩半的切換</h2>
+<p>第一版在 tick 之內一次做完所有事：儲存船艦的零件、改寫船艦的資料列、解析（有時還要建立）目的地地圖的資料列。每個物件的更新中就有四次資料庫往返。</p>
+<div class="note measured"><p class="note-label">實測</p><p>監控器顯示一個 tick 花了 178 ms，只有七個物件，而垃圾回收器是清白的：每個物件 25 ms，這不是運算，而是等待。只因為一位玩家越過邊界，那台伺服器所有地圖上的每一位玩家都凍住了。跳躍程式碼中同樣的模式，曾在只有六個物件時造成最差 121.7 ms 的 tick：每個物件 19.9 ms。</p></div>
+<p>現在，切換沿著 tick 所劃下的界線被拆成兩半（第 <a href="no-db-in-tick.html">3.4</a> 章）：</p></div>
 <figure class="fig fig-scroll">
 <svg viewBox="0 0 780 250" role="img" aria-label="Transition timeline: the tick half reads RAM and detaches the ship; the background half writes the database; only after the write succeeds does the server either keep the player in place or hand over to the gateway and disconnect">
   <defs><marker id="ho-arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="currentColor" opacity="0.6"/></marker></defs>
-  <text class="dg-label" x="20" y="22"><tspan lang="en">Tick thread</tspan><tspan lang="fr">Thread du tick</tspan></text>
-  <text class="dg-label" x="270" y="22"><tspan lang="en">Background worker</tspan><tspan lang="fr">Ouvrier de fond</tspan></text>
-  <text class="dg-label" x="540" y="22"><tspan lang="en">Only if the write succeeded</tspan><tspan lang="fr">Seulement si l'écriture a réussi</tspan></text>
+  <text class="dg-label" x="20" y="22"><tspan lang="en">Tick thread</tspan><tspan lang="fr">Thread du tick</tspan><tspan lang="zh-TW">Tick 執行緒</tspan></text>
+  <text class="dg-label" x="270" y="22"><tspan lang="en">Background worker</tspan><tspan lang="fr">Ouvrier de fond</tspan><tspan lang="zh-TW">背景工作執行緒</tspan></text>
+  <text class="dg-label" x="540" y="22"><tspan lang="en">Only if the write succeeded</tspan><tspan lang="fr">Seulement si l'écriture a réussi</tspan><tspan lang="zh-TW">只有在寫入成功時</tspan></text>
   <rect x="20" y="34" width="220" height="200" rx="8" class="dg-box"/>
-  <text class="dg-small" x="34" y="60"><tspan lang="en">1. capture the pilot's posture</tspan><tspan lang="fr">1. capturer la posture du pilote</tspan></text>
-  <text class="dg-small" x="34" y="82"><tspan lang="en">2. collect the crew on board</tspan><tspan lang="fr">2. relever l'équipage à bord</tspan></text>
-  <text class="dg-small" x="34" y="104"><tspan lang="en">3. take the ammunition debt (RAM)</tspan><tspan lang="fr">3. prendre la dette de munitions (RAM)</tspan></text>
-  <text class="dg-small" x="34" y="126"><tspan lang="en">4. remove the ship from the map</tspan><tspan lang="fr">4. retirer le vaisseau de la carte</tspan></text>
-  <text class="dg-small" x="34" y="148"><tspan lang="en">5. queue the background job</tspan><tspan lang="fr">5. mettre le travail de fond en file</tspan></text>
-  <text class="dg-small" x="34" y="200" style="fill:var(--good-ink)"><tspan lang="en">no database, no waiting</tspan><tspan lang="fr">aucune base, aucune attente</tspan></text>
+  <text class="dg-small" x="34" y="60"><tspan lang="en">1. capture the pilot's posture</tspan><tspan lang="fr">1. capturer la posture du pilote</tspan><tspan lang="zh-TW">1. 記下駕駛員的姿態</tspan></text>
+  <text class="dg-small" x="34" y="82"><tspan lang="en">2. collect the crew on board</tspan><tspan lang="fr">2. relever l'équipage à bord</tspan><tspan lang="zh-TW">2. 集合船上的船員</tspan></text>
+  <text class="dg-small" x="34" y="104"><tspan lang="en">3. take the ammunition debt (RAM)</tspan><tspan lang="fr">3. prendre la dette de munitions (RAM)</tspan><tspan lang="zh-TW">3. 取出彈藥欠帳（RAM）</tspan></text>
+  <text class="dg-small" x="34" y="126"><tspan lang="en">4. remove the ship from the map</tspan><tspan lang="fr">4. retirer le vaisseau de la carte</tspan><tspan lang="zh-TW">4. 把船艦從地圖移除</tspan></text>
+  <text class="dg-small" x="34" y="148"><tspan lang="en">5. queue the background job</tspan><tspan lang="fr">5. mettre le travail de fond en file</tspan><tspan lang="zh-TW">5. 排入背景工作</tspan></text>
+  <text class="dg-small" x="34" y="200" style="fill:var(--good-ink)"><tspan lang="en">no database, no waiting</tspan><tspan lang="fr">aucune base, aucune attente</tspan><tspan lang="zh-TW">沒有資料庫，沒有等待</tspan></text>
   <rect x="270" y="34" width="240" height="200" rx="8" class="dg-box-2"/>
-  <text class="dg-small" x="284" y="60"><tspan lang="en">resolve or create the destination map</tspan><tspan lang="fr">résoudre ou créer la carte d'arrivée</tspan></text>
-  <text class="dg-small" x="284" y="82"><tspan lang="en">save the hull's parts (damage too)</tspan><tspan lang="fr">sauver les pièces (dégâts compris)</tspan></text>
-  <text class="dg-small" x="284" y="104"><tspan lang="en">rewrite the ship row: map, position</tspan><tspan lang="fr">réécrire la ligne : carte, position</tspan></text>
-  <text class="dg-small" x="284" y="126"><tspan lang="en">write the ammunition debt</tspan><tspan lang="fr">écrire la dette de munitions</tspan></text>
+  <text class="dg-small" x="284" y="60"><tspan lang="en">resolve or create the destination map</tspan><tspan lang="fr">résoudre ou créer la carte d'arrivée</tspan><tspan lang="zh-TW">解析或建立目的地地圖</tspan></text>
+  <text class="dg-small" x="284" y="82"><tspan lang="en">save the hull's parts (damage too)</tspan><tspan lang="fr">sauver les pièces (dégâts compris)</tspan><tspan lang="zh-TW">儲存船體零件（包括損傷）</tspan></text>
+  <text class="dg-small" x="284" y="104"><tspan lang="en">rewrite the ship row: map, position</tspan><tspan lang="fr">réécrire la ligne : carte, position</tspan><tspan lang="zh-TW">改寫船艦資料列：地圖、位置</tspan></text>
+  <text class="dg-small" x="284" y="126"><tspan lang="en">write the ammunition debt</tspan><tspan lang="fr">écrire la dette de munitions</tspan><tspan lang="zh-TW">寫入彈藥欠帳</tspan></text>
   <rect x="540" y="34" width="220" height="92" rx="8" class="dg-hot"/>
-  <text class="dg-text" x="554" y="58" font-weight="700"><tspan lang="en">Destination is local</tspan><tspan lang="fr">Destination locale</tspan></text>
-  <text class="dg-small" x="554" y="80"><tspan lang="en">tell the client "in place",</tspan><tspan lang="fr">dire au client « sur place »,</tspan></text>
-  <text class="dg-small" x="554" y="98"><tspan lang="en">run the arrival phase again</tspan><tspan lang="fr">rejouer la phase d'arrivée</tspan></text>
-  <text class="dg-small" x="554" y="116"><tspan lang="en">no reconnection</tspan><tspan lang="fr">aucune reconnexion</tspan></text>
+  <text class="dg-text" x="554" y="58" font-weight="700"><tspan lang="en">Destination is local</tspan><tspan lang="fr">Destination locale</tspan><tspan lang="zh-TW">目的地在本機</tspan></text>
+  <text class="dg-small" x="554" y="80"><tspan lang="en">tell the client "in place",</tspan><tspan lang="fr">dire au client « sur place »,</tspan><tspan lang="zh-TW">告訴用戶端「原地切換」，</tspan></text>
+  <text class="dg-small" x="554" y="98"><tspan lang="en">run the arrival phase again</tspan><tspan lang="fr">rejouer la phase d'arrivée</tspan><tspan lang="zh-TW">再跑一次抵達階段</tspan></text>
+  <text class="dg-small" x="554" y="116"><tspan lang="en">no reconnection</tspan><tspan lang="fr">aucune reconnexion</tspan><tspan lang="zh-TW">不重新連線</tspan></text>
   <rect x="540" y="142" width="220" height="92" rx="8" class="dg-box"/>
-  <text class="dg-text" x="554" y="166" font-weight="700"><tspan lang="en">Destination elsewhere</tspan><tspan lang="fr">Destination ailleurs</tspan></text>
-  <text class="dg-small" x="554" y="188"><tspan lang="en">MapTransition to the gateway,</tspan><tspan lang="fr">MapTransition à la gateway,</tspan></text>
-  <text class="dg-small" x="554" y="206"><tspan lang="en">tell the client, disconnect</tspan><tspan lang="fr">prévenir le client, déconnecter</tspan></text>
-  <text class="dg-small" x="554" y="224"><tspan lang="en">after a 300 ms grace</tspan><tspan lang="fr">après une grâce de 300 ms</tspan></text>
+  <text class="dg-text" x="554" y="166" font-weight="700"><tspan lang="en">Destination elsewhere</tspan><tspan lang="fr">Destination ailleurs</tspan><tspan lang="zh-TW">目的地在別處</tspan></text>
+  <text class="dg-small" x="554" y="188"><tspan lang="en">MapTransition to the gateway,</tspan><tspan lang="fr">MapTransition à la gateway,</tspan><tspan lang="zh-TW">送 MapTransition 給閘道，</tspan></text>
+  <text class="dg-small" x="554" y="206"><tspan lang="en">tell the client, disconnect</tspan><tspan lang="fr">prévenir le client, déconnecter</tspan><tspan lang="zh-TW">通知用戶端，斷線</tspan></text>
+  <text class="dg-small" x="554" y="224"><tspan lang="en">after a 300 ms grace</tspan><tspan lang="fr">après une grâce de 300 ms</tspan><tspan lang="zh-TW">經過 300 ms 寬限之後</tspan></text>
   <line x1="240" y1="148" x2="268" y2="148" class="dg-line" marker-end="url(#ho-arr)"/>
   <line x1="510" y1="100" x2="538" y2="82" class="dg-line" marker-end="url(#ho-arr)"/>
   <line x1="510" y1="140" x2="538" y2="186" class="dg-line" marker-end="url(#ho-arr)"/>
 </svg>
-<figcaption><span lang="en"><strong>The tick half only reads memory and detaches the ship.</strong> Everything slow moves to the background thread, and the client is released last, once everything is written.</span><span lang="fr"><strong>La moitié tick ne fait que lire la mémoire et détacher le vaisseau.</strong> Tout ce qui est lent part sur le thread de fond, et le client n'est lâché qu'en dernier, une fois tout écrit.</span></figcaption>
+<figcaption><span lang="en"><strong>The tick half only reads memory and detaches the ship.</strong> Everything slow moves to the background thread, and the client is released last, once everything is written.</span><span lang="fr"><strong>La moitié tick ne fait que lire la mémoire et détacher le vaisseau.</strong> Tout ce qui est lent part sur le thread de fond, et le client n'est lâché qu'en dernier, une fois tout écrit.</span><span lang="zh-TW"><strong>tick 這一半只讀取記憶體並把船艦分離出來。</strong>所有慢的事都移到背景執行緒，而用戶端最後才被放行，在一切都寫入之後。</span></figcaption>
 </figure>
 <div lang="en">
 <p>The order of the background half is the contract. <strong>The disconnection is the last line.</strong> If the client were released before the parts were saved, it could reconnect on the other side and load a hull that had not been written yet: every transition would repair the ship for free, which is exactly what saving the parts exists to prevent. And if the background work throws, its continuation never runs, so the player stays connected where they are instead of arriving somewhere with half-written state.</p>
@@ -103,12 +117,16 @@
 <div lang="fr">
 <p>L'ordre de la moitié de fond est le contrat. <strong>La déconnexion est la dernière ligne.</strong> Si le client était lâché avant la sauvegarde des pièces, il pourrait se reconnecter de l'autre côté et charger une coque pas encore écrite : chaque transition réparerait le vaisseau gratuitement, ce que la sauvegarde des pièces existe précisément pour empêcher. Et si le travail de fond lève une exception, sa suite ne s'exécute jamais : le joueur reste connecté là où il est plutôt que d'arriver quelque part avec un état à moitié écrit.</p>
 </div>
+<div lang="zh-TW">
+<p>背景那一半的順序就是契約。<strong>斷線是最後一行。</strong>如果在零件儲存之前就放行用戶端，它可能會在另一端重新連線，並載入一個還沒寫入的船體：每次切換都會免費修好船艦，而這正是儲存零件所要防止的事。如果背景工作拋出例外，它的後續動作永遠不會執行，所以玩家會留在原地保持連線，而不是帶著寫了一半的狀態抵達某個地方。</p></div>
 <div lang="en">
 <div class="note pitfall"><p class="note-label">Pitfall I hit</p><p>Ammunition fired is counted in RAM and written down later. The end-of-session settlement looked for "the player's current ship", and the transition code had already set that to null before disconnecting. The debt was thrown away, the inventory kept its pre-flight quantities, and the player found full magazines on the other side. Empty your guns, cross a border, repeat. The debt is now taken in the tick half, while the ship still exists, and written in the background half.</p></div>
 </div>
 <div lang="fr">
 <div class="note pitfall"><p class="note-label">Piège rencontré</p><p>Les munitions tirées sont comptées en RAM et écrites plus tard. Le règlement de fin de session cherchait « le vaisseau courant du joueur », et le code de transition l'avait déjà mis à nul avant de déconnecter. La dette partait à la poubelle, l'inventaire gardait ses quantités d'avant le vol, et le joueur retrouvait des magasins pleins de l'autre côté. Vider ses armes, passer une frontière, recommencer. La dette est maintenant prise dans la moitié tick, tant que le vaisseau existe, et écrite dans la moitié de fond.</p></div>
 </div>
+<div lang="zh-TW">
+<div class="note pitfall"><p class="note-label">我踩過的坑</p><p>發射掉的彈藥在 RAM 中計數，之後才寫下。連線階段結束時的結算會去找「玩家目前的船艦」，而切換程式碼在斷線之前就已經把它設成 null 了。欠帳被丟掉，庫存保持出發前的數量，玩家在另一頭發現彈匣是滿的。打光彈藥、越過邊界、重複。現在欠帳在 tick 那一半、船艦還存在時就被取出，再在背景那一半寫入。</p></div></div>
 </section>
 
 <section class="sec" id="in-place">
@@ -124,6 +142,11 @@
 <div class="note measured"><p class="note-label">Mesuré</p><p>Avec 700 robots, chaque vague de franchissements divisait par cent le débit des pompes réseau, des deux côtés de la connexion.</p></div>
 <p>Le serveur vérifie donc d'abord s'il héberge déjà la destination. Il peut en décider seul sans risque : une carte n'est dans la table d'un serveur que parce que la gateway la lui a assignée, donc répondre « oui » ne peut pas créer une seconde copie d'une carte hébergée ailleurs. Et la gateway n'a rien à apprendre : elle retient sur quel <em>serveur</em> vit une session, pas sur quelle carte, donc le jeton du joueur reste valide et le chat, les groupes et la guilde continuent sans interruption. Le serveur dit au client « cette transition est sur place » avant d'envoyer la description de la nouvelle carte, pour que le client ne ferme pas sa socket par réflexe, puis la phase d'arrivée du chapitre <a href="login-flow.html#arrival">2.2</a> se rejoue.</p>
 </div>
+<div lang="zh-TW">
+<h2>常見情況：不重新連線</h2>
+<p>一台伺服器託管數十張地圖，所以大多數邊界通往的是同一個程序上的地圖。在這種情況下還走完整的重新連線路徑，代價是關閉再重開一個 socket、一次新的金鑰交換、一次經過閘道的往返、建立一個新的連線階段並丟掉舊的，以及一段 300 ms、玩家哪裡都不在的空窗。</p>
+<div class="note measured"><p class="note-label">實測</p><p>在 700 個機器人的情況下，每一波越界都會讓網路泵的吞吐量在連線兩端都掉到百分之一。</p></div>
+<p>所以伺服器會先檢查自己是否已經託管目的地。這項檢查可以單獨進行而不出問題：一張地圖之所以會出現在某台伺服器的表中，只是因為閘道把它指派到那裡，所以回答「是」不可能造成另一處已託管地圖的第二份副本。而閘道也沒有什麼需要知道的：它記錄的是連線階段位於哪台<em>伺服器</em>，而不是哪張地圖，所以玩家的權杖仍然有效，聊天、隊伍與公會都能不中斷地繼續運作。伺服器在送出新地圖的描述之前，會先告訴用戶端「這次切換是原地進行的」，讓用戶端不會出於習慣關閉 socket，接著第 <a href="login-flow.html#arrival">2.2</a> 章的抵達階段再跑一次。</p></div>
 </section>
 
 <section class="sec" id="gateway-side">
@@ -139,12 +162,19 @@
 <div class="note pitfall"><p class="note-label">Piège rencontré</p><p>La gateway ne créait autrefois la nouvelle session qu'une fois la destination hébergée. Pour une carte déjà chargée, c'était immédiat. Pour une carte qu'il fallait d'abord assigner, comme toute salle d'instance visitée pour la première fois, ça prenait le temps de charger la salle. Pendant ce temps, le serveur de départ, qui déconnecte 300 ms après avoir envoyé la transition, annonçait l'ancienne session fermée. Pendant un instant le personnage était « hors ligne » : il quittait son groupe, et le groupe se dissolvait. Le chef entrait dans le donjon sans plus personne à attendre.</p></div>
 <p>La session est maintenant créée à l'instant où la transition arrive. L'index de présence pointe déjà vers la nouvelle session quand le message « fermée » de l'ancienne tombe, et le retrait est gardé par identité : retirer une session ne l'enlève de l'index que si l'index pointe encore vers cette session précise. Si la destination ne peut jamais être hébergée, la gateway retire elle-même la nouvelle session, et alors seulement le joueur est vraiment parti.</p>
 </div>
+<div lang="zh-TW">
+<h2>在閘道上：新的連線階段先建立</h2>
+<p>當目的地在別處時，閘道收到切換後會做三件事：建立下一個遊戲連線階段、確保有伺服器託管目的地地圖（必要時按需載入），然後透過用戶端與閘道的連線，把新的位址與權杖送給它。</p>
+<div class="note pitfall"><p class="note-label">我踩過的坑</p><p>閘道過去只在目的地被託管之後，才建立新的連線階段。對已經載入的地圖來說，這是立即的。對必須先被指派的地圖來說，例如第一次進入的任何副本房間，就要花上載入那個房間的時間。在此同時，在送出切換 300 ms 後就會斷線的來源伺服器，回報舊的連線階段已關閉。有那麼一下子，角色是「離線」的：他離開了隊伍，而隊伍就此解散。隊長走進地下城時，已經沒有任何人要等了。</p></div>
+<p>現在，連線階段在切換到達的那一刻就建立。當舊連線階段的「已關閉」訊息抵達時，上線狀態索引已經指向新的連線階段，而移除動作受身分保護：移除一個連線階段時，只有在索引仍然指向那個確切的連線階段時，才會從索引中移除它。如果目的地永遠無法被託管，閘道會自己移除新的連線階段，直到那時玩家才算真的離開。</p></div>
 <div lang="en">
 <div class="note rule"><p class="note-label">Rule</p><p>When a replacement and a removal can arrive in either order, create the replacement first and make the removal conditional on identity.</p><p>"Remove whatever is there for this character" deletes the newcomer when the old goodbye arrives late. "Remove it if it is still the one I am closing" cannot.</p></div>
 </div>
 <div lang="fr">
 <div class="note rule"><p class="note-label">Règle</p><p>Quand un remplacement et un retrait peuvent arriver dans n'importe quel ordre, créer le remplacement d'abord et rendre le retrait conditionnel à l'identité.</p><p>« Retirer ce qu'il y a pour ce personnage » supprime le nouveau venu quand l'ancien au revoir arrive en retard. « Le retirer s'il est encore celui que je ferme » ne le peut pas.</p></div>
 </div>
+<div lang="zh-TW">
+<div class="note rule"><p class="note-label">規則</p><p>當替換與移除可能以任一順序到達時，先建立替換者，並讓移除以身分為條件。</p><p>「移除這個角色目前的任何東西」會在舊的道別晚到時刪掉新來的。「如果它仍然是我正在關閉的那一個就移除」則不會。</p></div></div>
 </section>
 
 <section class="sec" id="takeover">
@@ -156,12 +186,17 @@
 <h2>Reprise de session : la connexion la plus récente gagne</h2>
 <p>La même garde d'identité rend la reprise sûre. Quand un personnage est choisi alors qu'une session plus ancienne est vivante (un client planté, une seconde machine), la gateway envoie une éjection au serveur qui héberge l'ancienne session. Ce serveur envoie d'abord à l'ancien client un avis « remplacé par une nouvelle connexion », puis le déconnecte après une courte grâce, pour que l'avis ait une chance d'atteindre le câble et que le joueur voie une explication plutôt qu'une coupure sèche. La fermeture de l'ancienne session est ensuite nettoyée par le chemin normal, et la garde d'identité protège la nouvelle session, qui vit de toute façon souvent sur un autre serveur.</p>
 </div>
+<div lang="zh-TW">
+<h2>接管：最新的連線獲勝</h2>
+<p>同樣的身分保護也讓接管變得安全。當一個角色在較舊的連線階段仍然存活時被選擇（當掉的用戶端、第二台機器），閘道會送一個踢除指令給託管舊連線階段的伺服器。那台伺服器先送給舊用戶端一則「已被新的登入取代」的通知，經過短暫寬限後再讓它斷線，讓通知有機會送上線路，玩家看到的是一段說明，而不是光禿禿的斷線。舊連線階段的關閉接著由正常路徑清理，而身分保護會守住新的連線階段——它通常反正也在另一台伺服器上。</p></div>
 <div lang="en">
 <div class="note tradeoff"><p class="note-label">Trade-off</p><p>"Send, then wait 300 ms, then disconnect" is an admission that the transport has no "flush, then close". It appears in several places (transitions, respawns, kicks). It works, but if a fourth case appears, the right move is to look for a proper flush-then-close in the library rather than a fifth delay.</p></div>
 </div>
 <div lang="fr">
 <div class="note tradeoff"><p class="note-label">Compromis</p><p>« Envoyer, attendre 300 ms, puis déconnecter » est l'aveu que le transport n'a pas de « vider puis fermer ». On le retrouve à plusieurs endroits (transitions, réapparitions, éjections). Ça marche, mais si un quatrième cas apparaît, le bon geste sera de chercher un vrai vider-puis-fermer dans la bibliothèque plutôt qu'un cinquième délai.</p></div>
 </div>
+<div lang="zh-TW">
+<div class="note tradeoff"><p class="note-label">取捨</p><p>「送出，等 300 ms，再斷線」等於承認傳輸層沒有「先清空，再關閉」。它出現在好幾個地方（切換、重生、踢除）。它能運作，但如果出現第四種情況，正確的做法是在函式庫中找一個真正的「先清空再關閉」，而不是加第五個延遲。</p></div></div>
 </section>
 
 <section class="sec" id="context">
@@ -181,6 +216,13 @@
 <li><strong>L'équipage.</strong> Les joueurs debout sur un vaisseau qui saute, ou à ses postes, voyagent avec lui. Chacun fait sa propre transition avec sa propre session, marquée « à bord du vaisseau N à l'hex (q, r) ». La gateway recopie cette marque sur la nouvelle session et la remet au serveur d'arrivée avec la réponse de validation, qui installe chacun sur le bon vaisseau.</li>
 </ul>
 </div>
+<div lang="zh-TW">
+<h2>透過閘道攜帶情境</h2>
+<p>重新連線會失去來源伺服器對玩家所知的一切，只剩下資料庫與連線階段所攜帶的東西。有兩項情境會被明確地攜帶過去：</p>
+<ul>
+<li><strong>姿態。</strong>站在自己船體上、或坐在某座砲塔上的駕駛員，會以相同的姿態抵達，而不是被放回駕駛座。姿態在 tick 那一半被記下，並隨著切換一起傳遞。</li>
+<li><strong>船員。</strong>站在一艘跳躍中的船上或在船上操作崗位的玩家，會隨船一起移動。每個人各自以自己的連線階段進行切換，並被標記為「位於船艦 N 的六角格 (q, r)」。閘道把這個標記複製到新的連線階段上，並連同驗證答覆一起交給目的地伺服器，由它把他們安置在正確的船上。</li>
+</ul></div>
 </section>
 
 <section class="sec" id="disconnects">
@@ -194,6 +236,10 @@
 <p>Une déconnexion est une transition vers nulle part, et elle suit la même discipline : l'état de session (position du vaisseau, posture du pilote, points de vie) est capturé sur le thread du tick tant que les objets existent encore, puis écrit. La même capture tourne pour chaque joueur une fois par minute en guise de point de sauvegarde : un serveur qui tombe perd au plus une minute de progression au lieu d'une session entière.</p>
 <p>Elle a aussi un aspect de game design que rencontre tout jeu à JcJ : si un vaisseau disparaît à l'instant où sa socket meurt, débrancher le câble réseau devient la réponse universelle à un combat perdu. MoonQwak garde dans le monde, vingt secondes de plus, une coque touchée dans les deux dernières minutes, inerte : ses intentions sont vidées, elle dérive sur son élan sans tirer ni sauter. Une déconnexion au calme ne laisse rien derrière. Le retrait se fait dans un balayage après que toutes les cartes ont tické, sur le thread du tick, parce que retirer un objet d'une carte pendant que cette carte se simule sur un autre thread est exactement la course que la destruction différée existe pour éviter.</p>
 </div>
+<div lang="zh-TW">
+<h2>離開遊戲，但不能藉此逃離戰鬥</h2>
+<p>斷線是一次通往「無處」的切換，遵循同樣的紀律：連線階段的狀態（船艦位置、駕駛員姿態、生命值）在物件仍然存在時於 tick 執行緒上記下，然後寫入。同樣的記錄每分鐘會為每位玩家執行一次，作為檢查點，所以伺服器當機最多只損失一分鐘的進度，而不是一整個連線階段。</p>
+<p>它還有一個每款 PvP 遊戲都會遇到的遊戲設計面向：如果 socket 一斷船艦就立刻消失，拔掉網路線就會成為輸掉戰鬥時的萬用解。MoonQwak 會把過去兩分鐘內被擊中的船體在世界中再保留二十秒，處於無動作狀態：它的意圖被清除，所以它會靠著慣性漂流，既不開火也不跳躍。平靜地斷線則不會留下任何東西。移除發生在所有地圖都 tick 完之後的一次掃除中，在 tick 執行緒上進行，因為在一張地圖正於另一條執行緒上模擬時把物件從中移除，恰好就是延後摧毀所要防止的競爭條件。</p></div>
 </section>
 
 <section class="sec" id="takeaways">
@@ -212,6 +258,13 @@
 <li>Créer la session de remplacement avant que l'ancienne puisse être retirée, et retirer par identité.</li>
 <li>Transporter le contexte (posture, équipage) explicitement ; tout le reste est perdu à la reconnexion, par conception.</li>
 </ul></div>
+<div lang="zh-TW"><h2>重點整理</h2><ul>
+<li>在程序之間移動玩家，可以透過代理、直接交接，或先寫入再重新連線；最後一種讓伺服器保持獨立，代價是一個載入畫面。</li>
+<li>把每次切換拆成 tick 那一半（只用記憶體）與背景那一半（資料庫），並且最後才放行用戶端。</li>
+<li>當目的地已經在本機時，跳過重新連線：這是常見情況，也是昂貴的路徑。</li>
+<li>在舊的連線階段可能被移除之前，先建立替換的連線階段，並依身分移除。</li>
+<li>明確地攜帶情境（姿態、船員）；其他一切在重新連線時依設計就會遺失。</li>
+</ul></div>
 </div>
 </section>
 
@@ -224,6 +277,7 @@
 <footer class="site-footer" id="mq-footer"></footer>
 <script src="assets/js/site-data.js" defer></script>
 <script src="assets/js/glossary-data.js" defer></script>
+<script src="assets/js/ui-zh.js" defer></script>
 <script src="assets/js/app.js" defer></script>
 <script src="assets/js/widgets.js" defer></script>
 </body>

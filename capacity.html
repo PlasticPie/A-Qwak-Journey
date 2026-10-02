@@ -7,12 +7,12 @@
 <meta name="description" content="A desired server count per world, rules to grow and shrink, placement scoring, draining and pardons.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Chakra+Petch:wght@500;600&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Chakra+Petch:wght@500;600&family=JetBrains+Mono:wght@400;500;600&family=Noto+Sans+TC:wght@400;700&display=swap">
 <link rel="stylesheet" href="assets/css/site.css">
-<script>(function(){var r=document.documentElement,l,t;try{l=localStorage.getItem("mq-lang");t=localStorage.getItem("mq-theme");}catch(e){}if(l!=="en"&&l!=="fr"){l=(navigator.language||"").toLowerCase().indexOf("fr")===0?"fr":"en";}r.setAttribute("data-lang",l);r.setAttribute("lang",l);if(t==="light"||t==="dark")r.setAttribute("data-theme",t);})();</script>
+<script>(function(){var r=document.documentElement,l,t,n;try{l=localStorage.getItem("mq-lang");t=localStorage.getItem("mq-theme");}catch(e){}if(l!=="en"&&l!=="fr"&&l!=="zh"){n=(navigator.language||"").toLowerCase();l=n.indexOf("fr")===0?"fr":n.indexOf("zh")===0?"zh":"en";}r.setAttribute("data-lang",l);r.setAttribute("lang",l==="zh"?"zh-TW":l);if(t==="light"||t==="dark")r.setAttribute("data-theme",t);})();</script>
 </head>
 <body data-page="capacity">
-<a class="skip-link" href="#main"><span lang="en">Skip to content</span><span lang="fr">Aller au contenu</span></a>
+<a class="skip-link" href="#main"><span lang="en">Skip to content</span><span lang="fr">Aller au contenu</span><span lang="zh-TW">跳到主要內容</span></a>
 <header class="site-header" id="mq-header"></header>
 <div class="layout">
 <aside class="sidebar" id="mq-sidebar"></aside>
@@ -20,8 +20,8 @@
 <article>
 <header class="chapter-head">
   <div class="eyebrow" data-auto></div>
-  <h1><span lang="en">The capacity controller</span><span lang="fr">Le contrôleur de capacité</span></h1>
-  <p class="dek"><span lang="en">A desired server count per world, rules to grow and shrink, placement scoring, draining and pardons.</span><span lang="fr">Un nombre de serveurs désiré par monde, des règles pour monter et descendre, un score de placement, des retraits et des grâces.</span></p>
+  <h1><span lang="en">The capacity controller</span><span lang="fr">Le contrôleur de capacité</span><span lang="zh-TW">容量控制器</span></h1>
+  <p class="dek"><span lang="en">A desired server count per world, rules to grow and shrink, placement scoring, draining and pardons.</span><span lang="fr">Un nombre de serveurs désiré par monde, des règles pour monter et descendre, un score de placement, des retraits et des grâces.</span><span lang="zh-TW">每個世界的期望伺服器數、擴增與縮減的規則、配置評分、排空與赦免。</span></p>
   <div class="meta-row" data-auto></div>
 </header>
 
@@ -40,6 +40,11 @@
 <p>Toutes les cinq secondes, la gateway calcule donc un nombre par monde, <strong>Desired</strong>, et l'écrit dans une table. C'est tout ce qu'elle fait. Elle ne lance aucun processus et ne s'adresse à aucune machine ; les agents de machine lisent le nombre et convergent vers lui (chapitre <a href="node-agents.html">7.3</a>). Ce partage a retiré le lancement de processus au seul composant exposé à Internet, et il fait que la boucle de capacité n'a jamais besoin de savoir quelles machines existent, ni si l'une d'elles vient de tomber.</p>
 <div class="note beginner"><p class="note-label">Pour débuter</p><p>C'est le motif de l'<em>état désiré</em> sur lequel sont bâtis des orchestrateurs comme Kubernetes. Au lieu d'envoyer des commandes (« démarre un serveur sur la machine B »), un contrôleur publie ce qui devrait être vrai (« le monde 1 a besoin de 4 serveurs »), et des ouvriers indépendants comparent sans cesse la réalité à cet énoncé et comblent l'écart. Un message perdu, un message en double, ou un ouvrier qui redémarre en plein milieu ne peut rien casser : la comparaison suivante répare tout.</p></div>
 </div>
+<div lang="zh-TW">
+<h2>閘道寫下一個數字，但不下任何命令</h2>
+<p>一個世界現在需要幾台遊戲伺服器？只有閘道能回答，因為只有它同時看得到兩邊：每台伺服器實際託管的地圖，以及等待主機的地圖。節點代理程式只看得到自己的機器；伺服器只看得到自己。</p>
+<p>所以每五秒，閘道為每個世界計算一個數字，<strong>Desired</strong>（期望值），並把它寫進一張資料表。它就只做這件事。它不啟動任何程序，也不對任何機器下指令；節點代理程式讀取這個數字並朝它收斂（第 <a href="node-agents.html">7.3</a> 章）。這種拆分，把啟動程序的權力從唯一一個暴露在網際網路上的元件手中拿走，也代表容量迴圈永遠不需要知道有哪些機器存在，或是其中一台是否剛剛死掉。</p>
+<div class="note beginner"><p class="note-label">新手須知</p><p>這就是 Kubernetes 這類編排系統所建立在其上的<em>期望狀態</em>模式。控制器不送出命令（「在機器 B 上啟動一台伺服器」），而是發布應該成立的事（「世界 1 需要 4 台伺服器」），由獨立的工作者不斷比較現實與這份聲明，並縮小差距。一則遺失的訊息、一則重複的訊息，或一個中途重新啟動的工作者，都無法弄壞它：下一次比較會修復一切。</p></div></div>
 </section>
 
 <section class="sec" id="grow">
@@ -65,6 +70,16 @@
 <div class="note measured"><p class="note-label">Mesuré</p><p>Sept cents bots ont chargé leurs 111 cartes en vingt secondes, et un serveur de jeu met environ quinze secondes à démarrer. Le premier serveur avait tout avant que le deuxième n'existe ; les suivants sont nés vides et le sont restés, pendant que le seuil de joueurs continuait de crier (363 joueurs sur un serveur). Le parc est monté à six serveurs, dont cinq inutiles. Une garde refuse maintenant d'en demander davantage tant qu'un serveur vivant porte zéro carte depuis trente secondes : ce serveur prouve que le parc ne sait pas quoi lui donner, et un de plus ne serait qu'un processus de plus dans le même état.</p></div>
 <div class="note rule"><p class="note-label">Règle</p><p>Un contrôleur réactif sur un placement irréversible agit toujours après que la charge s'est fixée quelque part.</p><p>Quand la demande arrive plus vite que les serveurs ne démarrent, seule la capacité posée d'avance peut la répartir. Les règles réactives ne peuvent qu'éviter de s'agiter en attendant, et elles doivent le dire dans les journaux plutôt que se taire.</p></div>
 </div>
+<div lang="zh-TW">
+<h2>擴增：看對伺服器</h2>
+<p>下面的每一條規則，都是在一次測試台證明前一條錯了之後寫下的，而每一次修正都來自同一個事實：<strong>已載入的地圖從不遷移，它的玩家也不會跟著搬家</strong>。</p>
+<ul>
+<li><strong>地圖：由最空的伺服器決定。</strong>第一版計算的是 ⌈地圖總數 / MapsPerServer⌉。它假設地圖可以重新分配，但它們不能。一個 106 / 86 / 85 張地圖的叢集算出 ⌈277 / 90⌉ = 4，並啟動了一次支援，而當時沒有任何一台伺服器達到門檻，最空的那台還有 35 個空位。既然新地圖會去負載最輕的伺服器，只要那台伺服器還有空間，叢集就還有空間。只有當最空的那台本身也達到門檻時，才需要多一台伺服器。</li>
+<li><strong>玩家：由最忙的伺服器決定。</strong>出於類比，我一開始在這裡也取了最小值，而類比在這裡失效了：地圖是被<em>配置</em>的，玩家不是；他們跟著自己的地圖走。在一台伺服器上有 600 位玩家、另一台只有 99 位時，最小值說「不擁擠」，而有一台伺服器承載了門檻的六倍。問題不是「最空的那台還有沒有空間」，而是「有沒有哪一台正在下沉」，而最大值能回答它。</li>
+<li><strong>等待中的地圖就是證據。</strong>一張現有伺服器都接不下的地圖，會強制多一台伺服器，不論門檻怎麼說。</li>
+</ul>
+<div class="note measured"><p class="note-label">實測</p><p>七百個機器人在二十秒內載入了它們的 111 張地圖，而一台遊戲伺服器的啟動約需十五秒。第一台伺服器在第二台存在之前就拿走了一切；接下來的幾台誕生時是空的，也一直保持空的，而玩家門檻持續在叫（一台伺服器上有 363 位玩家）。叢集爬升到六台伺服器，其中五台毫無用處。現在有一道防護：只要任何一台存活的伺服器已經零地圖持續了三十秒，就拒絕要求更多：那台伺服器就證明了叢集不知道該給它什麼，所以多一台只會是另一個處於同樣狀態的程序。</p></div>
+<div class="note rule"><p class="note-label">規則</p><p>建立在不可逆配置之上的反應式控制器，永遠是在負載已經落腳某處之後才行動。</p><p>當需求來得比伺服器啟動還快時，只有預先就位的容量能把它分散開來。反應式規則在這段期間只能避免手忙腳亂，而且它們應該在日誌中這樣說，而不是保持沉默。</p></div></div>
 </section>
 
 <section class="sec" id="shrink">
@@ -88,6 +103,15 @@
 </ul>
 <div class="note measured"><p class="note-label">Mesuré</p><p>Les joueurs en pleine transition de carte ne sont sur aucun serveur : ils ont quitté l'ancien et ne sont pas encore arrivés sur le nouveau. Sur un banc à 2 500 bots, une vague de transitions simultanées a laissé la gateway tenir 2 504 sessions pendant que les serveurs en portaient 1 586 : 918 joueurs en vol. La décrue a divisé 1 586 par neuf, trouvé 176, comparé à une marge de 240, et condamné un serveur. Avec le vrai total, le chiffre valait 278 : il n'y avait aucun surplus, et le parc s'est délesté d'un serveur juste avant de recevoir la vague. C'est la pire erreur possible pour ce calcul, parce qu'elle survient précisément quand la charge est la plus forte. La décrue compte maintenant le plus grand de « joueurs sur des serveurs » et « sessions tenues par la gateway ».</p></div>
 </div>
+<div lang="zh-TW">
+<h2>縮減：少了它，控制器就是一個棘輪</h2>
+<p>第一版從目前的伺服器數開始，只能往上走。一次十九分鐘的測試台清楚地顯示了這一點：在人口不變的情況下，地圖從 415 張降到 175 張，而叢集一直維持五台伺服器，其中三台已經變得毫無用處。這個數字不只是無法達成，它根本是錯的：它宣稱了一個已經不存在的需求。</p>
+<p>縮減的問題也不能是「讓我們重新分配」，因為地圖不會移動。它關乎的是<em>總量</em>：這些負載，少一台伺服器裝得下嗎？有兩道保護讓答案保持穩定：</p>
+<ul>
+<li><strong>20 % 的餘裕。</strong>只有當負載在少一台伺服器時仍能<em>寬裕地</em>裝下（低於門檻的 0.8），才會移除一台伺服器。沒有這個餘裕，叢集會剛好停在門檻上，而下一輪因為門檻已達到，又會要回它剛剛還回去的那台伺服器。擴增要快，縮減要謹慎：兩種錯誤的代價不一樣（白白擴增只花一個程序，該擴增卻沒擴增則會犧牲玩家）。</li>
+<li><strong>每輪一步。</strong>每一輪五秒的評估，都會在已經有一台伺服器正要離開的情況下重新評估，所以一次短暫的低谷不可能讓叢集少掉一半。</li>
+</ul>
+<div class="note measured"><p class="note-label">實測</p><p>正在切換地圖的玩家不在任何伺服器上：他們已經離開舊的，還沒到達新的。在一個 2,500 個機器人的測試台中，一波同時發生的切換，讓閘道持有 2,504 個連線階段，而各伺服器只承載 1,586 位：有 918 位玩家正在傳送中。縮減把 1,586 除以九，得到 176，與 240 的餘裕比較後，判定一台伺服器退役。以真實的總數計算，數字是 278：根本沒有多餘，而叢集就在迎接那一波之前丟掉了一台伺服器。對這項計算來說，這是最糟的錯誤，因為它恰恰發生在負載最高的時候。現在縮減會採用「伺服器上的玩家數」與「閘道持有的連線階段數」兩者中較大的那一個。</p></div></div>
 </section>
 
 <section class="sec" id="retire">
@@ -113,6 +137,16 @@
 </ul>
 <div class="note pitfall"><p class="note-label">Piège rencontré</p><p>Le code de placement lit un miroir en mémoire de chaque serveur, pas les lignes en base. Le drapeau « en retrait » du miroir est donc recopié depuis les lignes à chaque tour, et pas seulement au moment de la décision : une gateway qui redémarre trouve des lignes condamnées et des enregistrements en mémoire tout neufs où « en retrait » est faux. Elle continuerait d'alimenter un serveur que personne ne pourrait plus gracier (une condamnation en cours bloque les nouvelles) : un parc figé, pour une raison visible nulle part.</p></div>
 </div>
+<div lang="zh-TW">
+<h2>判定一台退役，赦免全部</h2>
+<p>一個較低的數字並沒有讓叢集變小。代理程式只知道如何<em>啟動</em>：它們填補缺口，而一個全域數字並沒有指名任何一台。叢集爬升到峰值後就停在那裡；一次十五分鐘的測試台顯示六台伺服器、負載下降了十分鐘，卻完全沒有任何變化。缺少的環節是一個具名的決定：閘道把一台伺服器標記為排空中，藉此<strong>判定它退役</strong>。</p>
+<p>被判定退役的伺服器不會收到新的地圖（第 <a href="map-hosting.html#placement">7.1</a> 章）。它的地圖會隨著玩家離開而自行關閉，而一旦它什麼都不承載，它的代理程式就會停止它（第 <a href="node-agents.html#retire">7.3</a> 章）。在那之前，這個決定是可以撤回的。</p>
+<ul>
+<li><strong>由誰判定：看得到的那一個。</strong>我一開始把這個決定放在代理程式中，並用一個資料庫鎖讓它們依序執行。這解決的是一個我剛剛自己製造出來的問題：代理程式既看不到地圖也看不到玩家，所以它會根據不屬於自己的數字做決定，而且因為代理程式有很多個，它還需要一個分散式鎖。閘道沒有這兩個問題：它只有一個，每一輪是循序的，而兩個數字都是它自己的。放錯地方的決定一移開，鎖就跟著消失了。</li>
+<li><strong>選哪一台：人口最少的。</strong>我一開始選的是地圖最少的伺服器，理由是一台伺服器以它的地圖減少的速度清空。錯了，而一次測試台在三分鐘內就證明了這一點：有玩家的地圖從不卸載，所以決定一台伺服器何時能死的是玩家，而不是地圖。因為只有 22 張地圖而被判定退役的伺服器承載了 116 位玩家，三分鐘後只失去了空地圖；而它那台有 32 張地圖、69 位玩家的鄰居，會死得快得多。更糟的是，排空中的伺服器會失去空地圖、保留滿的地圖，所以它的密度會上升，而依地圖排序會漂向那些死得最慢的伺服器。現在地圖數只在人口相等時用來決定平手。</li>
+<li><strong>多餘一消失就赦免。</strong>當負載在排空期間回來時，每一台被判定退役的伺服器都會立刻被赦免。否則回來的峰值會發現一台沒人要的存活伺服器，而控制器看到容量太少，會在一台完全可用的伺服器旁邊再啟動一台。</li>
+</ul>
+<div class="note pitfall"><p class="note-label">我踩過的坑</p><p>配置程式碼讀取的是每台伺服器在記憶體中的鏡像，而不是資料庫的資料列。因此鏡像的「排空中」旗標每一輪都會從資料列複製過來，而不只是在做決定時：一個重新啟動的閘道會發現被判定退役的資料列，以及「排空中」為 false 的全新記憶體紀錄。它會持續餵一台再也沒人能赦免的伺服器（一個待處理的判定會擋住新的判定）：一個凍結的叢集，而原因在任何地方都看不到。</p></div></div>
 </section>
 
 <section class="sec" id="levers">
@@ -124,6 +158,9 @@
 <h2>Min est le levier, Max est la ceinture</h2>
 <p>Chaque monde porte un nombre minimal et maximal de serveurs. Ils ne sont pas symétriques. Le <strong>minimum</strong> est le levier principal : de la capacité posée <em>avant</em> la population, pour que les cartes chargées se répartissent entre les serveurs dès leur naissance, ce qu'aucune règle réactive ne peut faire après coup. Le <strong>maximum</strong> est une ceinture de sécurité : quoi que calculent les règles, le parc ne le dépasse jamais. Essayez les deux décisions de la gateway avec ses vraies formules :</p>
 </div>
+<div lang="zh-TW">
+<h2>Min 是槓桿，Max 是安全帶</h2>
+<p>每個世界都帶著最小與最大伺服器數。它們並不對稱。<strong>最小值</strong>是主要的槓桿：在人口到來<em>之前</em>就先就位的容量，讓繁忙的地圖在誕生時就分散在不同的伺服器上，這是任何反應式規則事後都做不到的。<strong>最大值</strong>是一條安全帶：無論規則算出什麼，叢集都絕不會超過它。用閘道真正的公式，試試它的兩個決策：</p></div>
 <div data-widget="fleet"></div>
 <div lang="en">
 <p>The calculator simplifies two things: it assumes a minimum of one server and a maximum of eight, and it leaves out the idle-server guard described above. Everything else (the placement score, the 110-map barrier, the order of fallbacks, the 0.8 shrink margin, the forced growth when a map is waiting) follows the gateway's code.</p>
@@ -131,6 +168,8 @@
 <div lang="fr">
 <p>Le calculateur simplifie deux choses : il suppose un minimum d'un serveur et un maximum de huit, et il omet la garde du serveur inactif décrite plus haut. Tout le reste (le score de placement, la barrière des 110 cartes, l'ordre des replis, la marge de décrue de 0,8, la montée forcée quand une carte attend) suit le code de la gateway.</p>
 </div>
+<div lang="zh-TW">
+<p>這個計算器簡化了兩件事：它假設最少一台、最多八台伺服器，並省略了上面描述的閒置伺服器防護。其餘的一切（配置分數、110 張地圖的屏障、後備選項的順序、0.8 的縮減餘裕、有地圖在等待時的強制擴增）都依照閘道的程式碼。</p></div>
 </section>
 
 <section class="sec" id="takeaways">
@@ -149,6 +188,13 @@
 <li>Désigner le serveur à retirer (le moins peuplé), et gracier chaque condamné dès que le surplus disparaît.</li>
 <li>Poser la capacité d'avance avec le minimum ; garder le maximum comme ceinture de sécurité.</li>
 </ul></div>
+<div lang="zh-TW"><h2>重點整理</h2><ul>
+<li>發布一個期望的數量，讓獨立的工作者朝它收斂；絕不對機器下命令。</li>
+<li>當最空的伺服器在地圖上已滿，或最忙的伺服器在玩家上已擁擠，以及每當有地圖在等待時，就擴增。</li>
+<li>依總量縮減，一次一步，保留餘裕，並把傳送中的玩家算進去。</li>
+<li>指名要退役的伺服器（人口最少的那台），並在多餘消失的那一刻赦免每一台被判定退役的伺服器。</li>
+<li>以最小值預先放置容量；把最大值當作安全帶。</li>
+</ul></div>
 </div>
 </section>
 
@@ -161,6 +207,7 @@
 <footer class="site-footer" id="mq-footer"></footer>
 <script src="assets/js/site-data.js" defer></script>
 <script src="assets/js/glossary-data.js" defer></script>
+<script src="assets/js/ui-zh.js" defer></script>
 <script src="assets/js/app.js" defer></script>
 <script src="assets/js/widgets.js" defer></script>
 </body>

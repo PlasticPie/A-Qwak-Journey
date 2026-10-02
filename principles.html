@@ -7,12 +7,12 @@
 <meta name="description" content="Invariants held by code instead of comments: exhaustive switches, coverage tests, and compiler warnings promoted from real incidents.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Chakra+Petch:wght@500;600&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Chakra+Petch:wght@500;600&family=JetBrains+Mono:wght@400;500;600&family=Noto+Sans+TC:wght@400;700&display=swap">
 <link rel="stylesheet" href="assets/css/site.css">
-<script>(function(){var r=document.documentElement,l,t;try{l=localStorage.getItem("mq-lang");t=localStorage.getItem("mq-theme");}catch(e){}if(l!=="en"&&l!=="fr"){l=(navigator.language||"").toLowerCase().indexOf("fr")===0?"fr":"en";}r.setAttribute("data-lang",l);r.setAttribute("lang",l);if(t==="light"||t==="dark")r.setAttribute("data-theme",t);})();</script>
+<script>(function(){var r=document.documentElement,l,t,n;try{l=localStorage.getItem("mq-lang");t=localStorage.getItem("mq-theme");}catch(e){}if(l!=="en"&&l!=="fr"&&l!=="zh"){n=(navigator.language||"").toLowerCase();l=n.indexOf("fr")===0?"fr":n.indexOf("zh")===0?"zh":"en";}r.setAttribute("data-lang",l);r.setAttribute("lang",l==="zh"?"zh-TW":l);if(t==="light"||t==="dark")r.setAttribute("data-theme",t);})();</script>
 </head>
 <body data-page="principles">
-<a class="skip-link" href="#main"><span lang="en">Skip to content</span><span lang="fr">Aller au contenu</span></a>
+<a class="skip-link" href="#main"><span lang="en">Skip to content</span><span lang="fr">Aller au contenu</span><span lang="zh-TW">跳到主要內容</span></a>
 <header class="site-header" id="mq-header"></header>
 <div class="layout">
 <aside class="sidebar" id="mq-sidebar"></aside>
@@ -20,8 +20,8 @@
 <article>
 <header class="chapter-head">
   <div class="eyebrow" data-auto></div>
-  <h1><span lang="en">Making mistakes impossible</span><span lang="fr">Rendre les erreurs impossibles</span></h1>
-  <p class="dek"><span lang="en">Invariants held by code instead of comments: exhaustive switches, coverage tests, and compiler warnings promoted from real incidents.</span><span lang="fr">Des invariants tenus par le code plutôt que par des commentaires : switchs exhaustifs, tests de couverture, et avertissements promus en erreurs à partir de vrais incidents.</span></p>
+  <h1><span lang="en">Making mistakes impossible</span><span lang="fr">Rendre les erreurs impossibles</span><span lang="zh-TW">讓錯誤不可能發生</span></h1>
+  <p class="dek"><span lang="en">Invariants held by code instead of comments: exhaustive switches, coverage tests, and compiler warnings promoted from real incidents.</span><span lang="fr">Des invariants tenus par le code plutôt que par des commentaires : switchs exhaustifs, tests de couverture, et avertissements promus en erreurs à partir de vrais incidents.</span><span lang="zh-TW">由程式碼而非註解守住的不變條件：窮舉式 switch、涵蓋率測試，以及從真實事故升級為錯誤的編譯器警告。</span></p>
   <div class="meta-row" data-auto></div>
 </header>
 
@@ -50,6 +50,16 @@
 <p>Aucun de ces cas n'était le fait de gens négligents écrivant de mauvais commentaires. Les commentaires étaient justes quand ils ont été écrits. Ce qui échoue, c'est l'hypothèse que la personne suivante, ou la même trois mois plus tard, lira le bon commentaire au bon moment.</p>
 <div class="note rule"><p class="note-label">Règle</p><p>Un invariant tenu de mémoire casse en silence. Un invariant tenu par le code casse tout de suite, et là où il est violé.</p></div>
 </div>
+<div lang="zh-TW">
+<h2>註解守不住不變條件</h2>
+<p>遊戲伺服器充滿了跨越多個檔案的規則：「每一個從太空站倉庫取用的地方，也都必須顯示它」、「這份清單在平行階段之前，每個 tick 填入一次」、「這個時間戳記以毫秒為單位」。記錄這類規則最自然的方式，是在程式碼旁邊寫一行註解。這個專案的歷史說這是不夠的，而且附上了收據：</p>
+<ul>
+<li>一份列出能存取太空站倉庫之互動點的清單，帶著一行「把你自己加到這裡」的註解。它被遺忘了兩次，一模一樣：先是市場櫃檯，然後是郵局。每一次的症狀都是整個遊戲中最令人驚慌的：一個在完好的倉庫上宣告「倉庫是空的」的畫面，而當玩家走到儲存終端機時，一切又「回來了」。</li>
+<li>快照程式碼中的三則註解，宣稱的正是一個競爭條件在 780 位玩家時所違反的那個不變條件（第 <a href="bench-journal.html#scaling">10.4</a> 章）。它們讀起來像是一份證明；沒有任何東西檢查過其中任何一則。</li>
+<li>一則註解記錄了一個網路差量的安全前提。專案以兩個毫不相關的變更，讓那個前提失效了兩次，卻沒有任何人重新打開那則註解（第 <a href="deltas.html">4.4</a> 章）。</li>
+</ul>
+<p>這些都不是粗心的人寫了不好的註解。這些註解在寫下時都是對的。會失敗的，是那個假設：下一個人，或是三個月後的同一個人，會在對的時刻讀到對的註解。</p>
+<div class="note rule"><p class="note-label">規則</p><p>靠記憶守住的不變條件會無聲地壞掉。靠程式碼守住的不變條件會立刻壞掉，而且就壞在被違反的地方。</p></div></div>
 </section>
 
 <section class="sec" id="ladder">
@@ -61,43 +71,46 @@
 <h2>Une échelle de contrainte</h2>
 <p>Entre « un commentaire » et « impossible à écrire », il y a plusieurs barreaux, et chacun échoue plus tôt et plus fort que celui du dessous. La question pratique, pour chaque règle, est : quel est le barreau le plus haut que je peux me permettre pour elle ?</p>
 </div>
+<div lang="zh-TW">
+<h2>一道強制力的階梯</h2>
+<p>在「一則註解」與「根本寫不出來」之間，還有好幾階，每一階都比下一階更早、更大聲地失敗。對任何一條規則來說，實際的問題是：我負擔得起的最高一階是哪一階？</p></div>
 <figure class="fig fig-scroll">
 <svg viewBox="0 0 760 350" role="img" aria-label="Enforcement ladder from weakest to strongest: comment, name, runtime guard, test, boot check, compiler error, structure; each rung fails earlier and louder">
   <defs><marker id="pr-arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="currentColor" opacity="0.7"/></marker></defs>
   <line x1="34" y1="332" x2="34" y2="22" class="dg-line" marker-end="url(#pr-arr)"/>
-  <text class="dg-small" x="24" y="176" text-anchor="middle" transform="rotate(-90 24 176)"><tspan lang="en">fails earlier and louder</tspan><tspan lang="fr">échoue plus tôt et plus fort</tspan></text>
+  <text class="dg-small" x="24" y="176" text-anchor="middle" transform="rotate(-90 24 176)"><tspan lang="en">fails earlier and louder</tspan><tspan lang="fr">échoue plus tôt et plus fort</tspan><tspan lang="zh-TW">越早越大聲地失敗</tspan></text>
   <g class="dg-small">
     <rect x="54" y="14" width="690" height="38" rx="6" class="dg-hot"/>
-    <text x="70" y="38" class="dg-text" font-weight="700"><tspan lang="en">Structure</tspan><tspan lang="fr">Structure</tspan></text>
-    <text x="230" y="38"><tspan lang="en">the API cannot express the wrong order</tspan><tspan lang="fr">l'API ne peut pas exprimer le mauvais ordre</tspan></text>
-    <text x="732" y="38" text-anchor="end"><tspan lang="en">cannot be written</tspan><tspan lang="fr">ne s'écrit pas</tspan></text>
+    <text x="70" y="38" class="dg-text" font-weight="700"><tspan lang="en">Structure</tspan><tspan lang="fr">Structure</tspan><tspan lang="zh-TW">結構</tspan></text>
+    <text x="230" y="38"><tspan lang="en">the API cannot express the wrong order</tspan><tspan lang="fr">l'API ne peut pas exprimer le mauvais ordre</tspan><tspan lang="zh-TW">API 無法表達錯誤的順序</tspan></text>
+    <text x="732" y="38" text-anchor="end"><tspan lang="en">cannot be written</tspan><tspan lang="fr">ne s'écrit pas</tspan><tspan lang="zh-TW">根本寫不出來</tspan></text>
     <rect x="54" y="60" width="690" height="38" rx="6" class="dg-box"/>
-    <text x="70" y="84" class="dg-text" font-weight="700"><tspan lang="en">Compiler error</tspan><tspan lang="fr">Erreur de compilation</tspan></text>
-    <text x="230" y="84"><tspan lang="en">warnings promoted, nullability, types</tspan><tspan lang="fr">avertissements promus, nullabilité, types</tspan></text>
-    <text x="732" y="84" text-anchor="end"><tspan lang="en">the build fails</tspan><tspan lang="fr">la build échoue</tspan></text>
+    <text x="70" y="84" class="dg-text" font-weight="700"><tspan lang="en">Compiler error</tspan><tspan lang="fr">Erreur de compilation</tspan><tspan lang="zh-TW">編譯器錯誤</tspan></text>
+    <text x="230" y="84"><tspan lang="en">warnings promoted, nullability, types</tspan><tspan lang="fr">avertissements promus, nullabilité, types</tspan><tspan lang="zh-TW">升級的警告、可空性、型別</tspan></text>
+    <text x="732" y="84" text-anchor="end"><tspan lang="en">the build fails</tspan><tspan lang="fr">la build échoue</tspan><tspan lang="zh-TW">建置失敗</tspan></text>
     <rect x="54" y="106" width="690" height="38" rx="6" class="dg-box"/>
-    <text x="70" y="130" class="dg-text" font-weight="700"><tspan lang="en">Boot check</tspan><tspan lang="fr">Contrôle au démarrage</tspan></text>
-    <text x="230" y="130"><tspan lang="en">exhaustive switch verified at startup</tspan><tspan lang="fr">switch exhaustif vérifié au démarrage</tspan></text>
-    <text x="732" y="130" text-anchor="end"><tspan lang="en">the server refuses to start</tspan><tspan lang="fr">le serveur refuse de démarrer</tspan></text>
+    <text x="70" y="130" class="dg-text" font-weight="700"><tspan lang="en">Boot check</tspan><tspan lang="fr">Contrôle au démarrage</tspan><tspan lang="zh-TW">啟動檢查</tspan></text>
+    <text x="230" y="130"><tspan lang="en">exhaustive switch verified at startup</tspan><tspan lang="fr">switch exhaustif vérifié au démarrage</tspan><tspan lang="zh-TW">在啟動時驗證的窮舉式 switch</tspan></text>
+    <text x="732" y="130" text-anchor="end"><tspan lang="en">the server refuses to start</tspan><tspan lang="fr">le serveur refuse de démarrer</tspan><tspan lang="zh-TW">伺服器拒絕啟動</tspan></text>
     <rect x="54" y="152" width="690" height="38" rx="6" class="dg-box"/>
-    <text x="70" y="176" class="dg-text" font-weight="700"><tspan lang="en">Test</tspan><tspan lang="fr">Test</tspan></text>
-    <text x="230" y="176"><tspan lang="en">coverage guards found by reflection</tspan><tspan lang="fr">gardes de couverture trouvées par réflexion</tspan></text>
-    <text x="732" y="176" text-anchor="end"><tspan lang="en">before the change lands</tspan><tspan lang="fr">avant que le changement n'entre</tspan></text>
+    <text x="70" y="176" class="dg-text" font-weight="700"><tspan lang="en">Test</tspan><tspan lang="fr">Test</tspan><tspan lang="zh-TW">測試</tspan></text>
+    <text x="230" y="176"><tspan lang="en">coverage guards found by reflection</tspan><tspan lang="fr">gardes de couverture trouvées par réflexion</tspan><tspan lang="zh-TW">以反射找出的涵蓋率守衛</tspan></text>
+    <text x="732" y="176" text-anchor="end"><tspan lang="en">before the change lands</tspan><tspan lang="fr">avant que le changement n'entre</tspan><tspan lang="zh-TW">在變更合併之前</tspan></text>
     <rect x="54" y="198" width="690" height="38" rx="6" class="dg-box"/>
-    <text x="70" y="222" class="dg-text" font-weight="700"><tspan lang="en">Runtime guard</tspan><tspan lang="fr">Garde à l'exécution</tspan></text>
-    <text x="230" y="222"><tspan lang="en">a database call on the tick thread, reported by name</tspan><tspan lang="fr">un appel en base sur le thread de tick, dénoncé par son nom</tspan></text>
-    <text x="732" y="222" text-anchor="end"><tspan lang="en">the first time it happens</tspan><tspan lang="fr">la première fois que ça arrive</tspan></text>
+    <text x="70" y="222" class="dg-text" font-weight="700"><tspan lang="en">Runtime guard</tspan><tspan lang="fr">Garde à l'exécution</tspan><tspan lang="zh-TW">執行時守衛</tspan></text>
+    <text x="230" y="222"><tspan lang="en">a database call on the tick thread, reported by name</tspan><tspan lang="fr">un appel en base sur le thread de tick, dénoncé par son nom</tspan><tspan lang="zh-TW">tick 執行緒上的資料庫呼叫，依名稱回報</tspan></text>
+    <text x="732" y="222" text-anchor="end"><tspan lang="en">the first time it happens</tspan><tspan lang="fr">la première fois que ça arrive</tspan><tspan lang="zh-TW">第一次發生時</tspan></text>
     <rect x="54" y="244" width="690" height="38" rx="6" class="dg-box-2"/>
-    <text x="70" y="268" class="dg-text" font-weight="700"><tspan lang="en">Name</tspan><tspan lang="fr">Nom</tspan></text>
-    <text x="230" y="268"><tspan lang="en">the unit written into the field's name</tspan><tspan lang="fr">l'unité écrite dans le nom du champ</tspan></text>
-    <text x="732" y="268" text-anchor="end"><tspan lang="en">at every write, if read</tspan><tspan lang="fr">à chaque écriture, si on lit</tspan></text>
+    <text x="70" y="268" class="dg-text" font-weight="700"><tspan lang="en">Name</tspan><tspan lang="fr">Nom</tspan><tspan lang="zh-TW">名稱</tspan></text>
+    <text x="230" y="268"><tspan lang="en">the unit written into the field's name</tspan><tspan lang="fr">l'unité écrite dans le nom du champ</tspan><tspan lang="zh-TW">把單位寫進欄位的名稱裡</tspan></text>
+    <text x="732" y="268" text-anchor="end"><tspan lang="en">at every write, if read</tspan><tspan lang="fr">à chaque écriture, si on lit</tspan><tspan lang="zh-TW">每次寫入時，只要有人讀</tspan></text>
     <rect x="54" y="290" width="690" height="38" rx="6" class="dg-box-2" style="opacity:0.75"/>
-    <text x="70" y="314" class="dg-text" font-weight="700"><tspan lang="en">Comment</tspan><tspan lang="fr">Commentaire</tspan></text>
-    <text x="230" y="314"><tspan lang="en">"add yourself here"</tspan><tspan lang="fr">« il faut s'ajouter ici »</tspan></text>
-    <text x="732" y="314" text-anchor="end"><tspan lang="en">only if someone reads it</tspan><tspan lang="fr">seulement si quelqu'un le lit</tspan></text>
+    <text x="70" y="314" class="dg-text" font-weight="700"><tspan lang="en">Comment</tspan><tspan lang="fr">Commentaire</tspan><tspan lang="zh-TW">註解</tspan></text>
+    <text x="230" y="314"><tspan lang="en">"add yourself here"</tspan><tspan lang="fr">« il faut s'ajouter ici »</tspan><tspan lang="zh-TW">「把你自己加到這裡」</tspan></text>
+    <text x="732" y="314" text-anchor="end"><tspan lang="en">only if someone reads it</tspan><tspan lang="fr">seulement si quelqu'un le lit</tspan><tspan lang="zh-TW">只有在有人讀它時</tspan></text>
   </g>
 </svg>
-<figcaption><span lang="en"><strong>Climb as high as the rule allows.</strong> Each rung is an example from this project; the right column says when a mistake gets caught.</span><span lang="fr"><strong>Monter aussi haut que la règle le permet.</strong> Chaque barreau est un exemple tiré de ce projet ; la colonne de droite dit quand une erreur est attrapée.</span></figcaption>
+<figcaption><span lang="en"><strong>Climb as high as the rule allows.</strong> Each rung is an example from this project; the right column says when a mistake gets caught.</span><span lang="fr"><strong>Monter aussi haut que la règle le permet.</strong> Chaque barreau est un exemple tiré de ce projet ; la colonne de droite dit quand une erreur est attrapée.</span><span lang="zh-TW"><strong>在規則允許的範圍內爬得越高越好。</strong>每一階都是這個專案中的一個例子；右欄說明錯誤在何時被抓到。</span></figcaption>
 </figure>
 <div lang="en">
 <p>The lowest rung above a comment costs almost nothing: <strong>put the rule in the name</strong>. The costliest bug of the freshness budget (chapter <a href="freshness-budget.html">4.5</a>) was a field written in ticks and read in milliseconds. The fix renamed it to end in <code>AtMs</code> and made the current time a parameter of the method that writes it: you cannot write into that field without holding, in your hand, the unit its reader expects. A comment explains a unit; a name imposes it.</p>
@@ -105,6 +118,8 @@
 <div lang="fr">
 <p>Le barreau le plus bas au-dessus du commentaire ne coûte presque rien : <strong>mettre la règle dans le nom</strong>. Le bug le plus cher du budget de fraîcheur (chapitre <a href="freshness-budget.html">4.5</a>) était un champ écrit en ticks et relu en millisecondes. La correction l'a renommé pour qu'il finisse par <code>AtMs</code> et a fait de l'heure courante un paramètre de la méthode qui l'écrit : on ne peut plus écrire dans ce champ sans tenir en main l'unité qu'attend son lecteur. Un commentaire explique une unité ; un nom l'impose.</p>
 </div>
+<div lang="zh-TW">
+<p>註解之上最低的那一階幾乎不花成本：<strong>把規則放進名稱裡</strong>。新鮮度預算中代價最高的 bug（第 <a href="freshness-budget.html">4.5</a> 章），是一個以 tick 寫入、以毫秒讀取的欄位。修正方式是把它改名為以 <code>AtMs</code> 結尾，並把目前時間變成寫入它的方法的一個參數：你無法在手上沒有握著讀取端所期望之單位的情況下，寫入這個欄位。註解解釋一個單位；名稱則強制它。</p></div>
 </section>
 
 <section class="sec" id="warnings">
@@ -116,6 +131,9 @@
 <h2>Des avertissements promus à partir de vrais incidents</h2>
 <p>Le compilateur C# détecte déjà plusieurs classes de bugs que ce projet a livrées. Le problème n'a jamais été que la vérification n'existait pas ; c'est que le constat arrivait sous forme d'avertissement, parmi des dizaines d'avertissements, et défilait sans être lu. Un fichier à la racine du dépôt, importé automatiquement par chaque projet, transforme une <strong>liste choisie</strong> d'avertissements en erreurs, et chaque entrée y est à cause d'un incident :</p>
 </div>
+<div lang="zh-TW">
+<h2>從真實事故升級的警告</h2>
+<p>C# 編譯器本來就能偵測出這個專案曾經出貨的好幾類 bug。問題從來不是檢查不存在；而是發現以警告的形式出現，夾在幾十個警告之中，然後捲過去了。程式庫根目錄的一個檔案，會被每個專案自動匯入，它把一份<strong>精選的清單</strong>中的警告變成錯誤，而每一個項目都是因為一次事故才在那裡：</p></div>
 <div class="code"><div class="code-head"><span class="file">Directory.Build.props</span></div><pre><code data-lang="xml">&lt;!-- Every code below is a bug that actually shipped. When a bug turns out to have been
      visible as a compiler warning, add its code here instead of only fixing the instance. --&gt;
 &lt;PropertyGroup&gt;
@@ -146,6 +164,17 @@
 <div class="note tradeoff"><p class="note-label">Compromis</p><p>Le « tous les avertissements en erreurs » global n'a volontairement pas été utilisé. Sur une base de code existante, il produit un mur instantané d'échecs sans moyen de continuer à travailler : il est désactivé dans la journée et ne rapporte rien. Une liste choisie de codes qui ont réellement mordu est applicable aujourd'hui et le reste. La porte de sortie est explicite : un <code>#pragma</code> limité à un endroit, avec un commentaire qui dit pourquoi, jamais un retrait de la liste.</p></div>
 <div class="note rule"><p class="note-label">Règle</p><p>Quand un bug se révèle avoir été visible comme avertissement du compilateur, promouvoir cet avertissement. La liste doit grandir à partir des incidents, pas d'un guide de style.</p></div>
 </div>
+<div lang="zh-TW">
+<div class="table-wrap"><table>
+<thead><tr><th>代碼</th><th>它抓到什麼</th><th>事故</th></tr></thead>
+<tbody>
+<tr><td><code>CS0114</code>、<code>CS0108</code></td><td>一個<em>隱藏</em>了基底成員、而不是覆寫它的成員</td><td>玩家船艦的每 tick 方法在宣告時沒有加 <code>override</code>。地圖透過一個介面呼叫它，而該介面的實作是基底類別的空方法，所以每一個玩家輸入都被無聲地丟掉了，而有覆寫的 NPC 則繼續正常運作。它能編譯，只帶著一個警告。症狀是「完全沒有任何互動有用」。</td></tr>
+<tr><td><code>CS0162</code></td><td>無法到達的程式碼</td><td>一個給半徑為零之飛彈的分支，包含一次長度為零、永遠不可能擊中任何東西的射線投射：看起來像一條規則的死程式碼。</td></tr>
+<tr><td><code>CS0649</code>、<code>CS0169</code></td><td>從未被指派、或從未被使用的欄位</td><td>一次做到一半的重構所留下的東西，也是下一位讀者會當成刻意設計之狀態的東西。</td></tr>
+<tr><td><code>CS8600</code>…<code>CS8625</code></td><td>可空性</td><td>大約有 45 個可空性警告被回報卻被忽略，而真正的問題就是這樣藏起來的。那一堆裡有兩個是活生生的缺陷：一個從並行字典的移除，結果在釋放之前沒被檢查（並行斷線時當機），以及一個網路接收回呼，解參考了一個關機剛剛清除的端點。其餘的都是型別沒有說明的真實不變條件，現在以 <code>required</code>、可空性註記或具名的守衛寫了出來。</td></tr>
+</tbody></table></div>
+<div class="note tradeoff"><p class="note-label">取捨</p><p>刻意沒有使用全面性的「把所有警告都當成錯誤」。在一個既有的程式庫上，它會立刻產生一堵失敗之牆，讓人無法繼續工作，所以一天之內就會被再次關掉，什麼都換不到。一份真正咬過人的代碼精選清單，今天就能強制執行，而且會一直保持可強制執行。逃生口是明確的：在單一位置使用一個有範圍的 <code>#pragma</code>，附上一行說明原因的註解，絕不從清單中移除。</p></div>
+<div class="note rule"><p class="note-label">規則</p><p>當一個 bug 原來早就以編譯器警告的形式可見時，就把那個警告升級。這份清單應該從事故中長出來，而不是從風格指南中。</p></div></div>
 </section>
 
 <section class="sec" id="exhaustive">
@@ -157,6 +186,9 @@
 <h2>Des réponses exhaustives, vérifiées au démarrage</h2>
 <p>La liste de l'entrepôt oubliée deux fois est maintenant une fonction qui répond, pour <em>chaque</em> type de point d'interaction, s'il atteint l'entrepôt. Chaque valeur de l'énumération a sa propre ligne, réponses « non » comprises, et chaque « non » est justifié par un court commentaire : c'est la justification qui force à se poser la question quand un nouveau type est ajouté.</p>
 </div>
+<div lang="zh-TW">
+<h2>窮舉式的答案，在啟動時檢查</h2>
+<p>那份被遺忘了兩次的倉庫清單，現在是一個函式，為<em>每一種</em>互動點回答它是否能到達倉庫。列舉的每一個值都有自己的一行，包括回答「否」的那些，而每一個「否」都附上一行簡短註解說明理由：正是這份理由，迫使人在新增一種互動點時提出這個問題。</p></div>
 <div class="code"><div class="code-head"><span class="file">SharedData/Props/InteractionRules.cs · abridged</span></div><pre><code data-lang="cs">public static bool ReachesWarehouse(InteractionType interaction) =&gt; interaction switch
 {
     InteractionType.Storage    =&gt; true,   // the terminal itself
@@ -185,6 +217,10 @@ public static void AssertCatalogueIsSane()
 <p>Le test ne vérifie pas que les réponses sont <em>justes</em> ; seule une relecture peut le dire. Il vérifie que chaque réponse <em>existe</em>. C'est tout le principe : on ne peut plus oublier, on peut seulement décider, et une mauvaise décision est une ligne visible à la relecture.</p>
 <div class="note rule"><p class="note-label">Règle</p><p>Pour toute règle de la forme « chaque X doit déclarer Y », faire de l'absence de Y un échec au démarrage. L'oubli devient impossible ; il ne reste que la décision.</p></div>
 </div>
+<div lang="zh-TW">
+<p>最後一個分支很重要，C# 的一個細微之處也是。對列舉而言，一旦 switch 運算式有了一個捨棄分支，就會被視為完整，所以編譯器永遠不會指出一個<em>新的</em>成員沒有對應的那一行。因此檢查發生在啟動時：伺服器走訪列舉的每一個值並提出這個問題，而一個缺少的答案會讓啟動停止，並附上一則點名該值的訊息。一個測試會呼叫同樣的檢查，所以測試套件在伺服器啟動之前就會失敗。</p>
+<p>這個測試不驗證答案是否<em>正確</em>；只有審查能說明這一點。它驗證的是每一個答案都<em>存在</em>。這就是全部的訣竅：你再也無法忘記，你只能做決定，而一個錯誤的決定，在審查中就是看得見的一行。</p>
+<div class="note rule"><p class="note-label">規則</p><p>對任何形式為「每一個 X 都必須宣告 Y」的規則，讓缺少 Y 成為啟動失敗。遺忘變得不可能；剩下的只有決定。</p></div></div>
 </section>
 
 <section class="sec" id="coverage">
@@ -198,6 +234,10 @@ public static void AssertCatalogueIsSane()
 <p>Une suite de tests qu'il faut penser à étendre protège exactement jusqu'au jour où l'on oublie. La suite d'aller-retour du protocole réseau (chapitre <a href="protocol-testing.html#round-trip">1.6</a>) n'a donc pas le droit d'être facultative. Ses tests de couverture découvrent les types de paquets par réflexion sur l'assembly du protocole et échouent quand l'un d'eux n'a pas d'échantillon, en le nommant. Ils vérifient aussi l'autre sens (un échantillon qui nomme un type qui n'existe plus ne testerait rien, en silence) et que chaque échantillon construit bien le type qu'il annonce (une entrée copiée-collée laisserait un type sans couverture et un autre testé deux fois).</p>
 <p>Le message d'échec porte lui-même une règle : remplir chaque champ avec une valeur <em>non par défaut</em>. Un champ laissé à zéro fait un aller-retour parfait même quand rien ne l'écrit ni ne le lit : un échantillon paresseux est un test qui annonce un succès sur un champ qu'il n'a jamais vérifié. La même idée protège les drapeaux d'entrée. Un octet de drapeaux n'est pas un champ mais huit, attribués un par un à mesure que les fonctionnalités arrivent : un seul échantillon ne vérifie que la combinaison que quelqu'un a pensé à écrire. Le test parcourt les 65 536 combinaisons des deux octets de drapeaux du paquet d'entrée en moins d'une seconde, et vérifie aussi les booléens décodés : un bit qui survit au réseau mais se lit avec le mauvais masque est une commande qui fait la mauvaise chose.</p>
 </div>
+<div lang="zh-TW">
+<h2>不會過時的測試</h2>
+<p>一個你必須記得去擴充的測試套件，只能保護你到你忘記的那一天為止。因此線路協定的往返測試套件（第 <a href="protocol-testing.html#round-trip">1.6</a> 章）不允許是選擇性的。它的涵蓋率測試以反射走訪協定組件來找出封包類型，並在某個類型沒有樣本時失敗，指名它。它們也會檢查另一個方向（一個指名了已不存在之類型的樣本，會悄悄地什麼都沒測），以及每個樣本確實建立了它所宣稱的類型（一個複製貼上的項目，會讓一個類型沒被涵蓋，而另一個被測了兩次）。</p>
+<p>失敗訊息本身就帶著一條規則：在每個欄位中填入<em>非預設</em>的值。一個停在零的欄位，即使沒有任何東西寫入或讀取它，也能完美地往返，所以一個偷懶的樣本，就是一個在它從未檢查過的欄位上回報成功的測試。同樣的想法也保護了輸入旗標。一個旗標位元組不是一個欄位，而是八個，隨著功能到來一個一個地分配出去，所以單一一個樣本只會檢查到剛好有人寫下的那一種組合。測試會在一秒之內跑完輸入封包兩個旗標位元組的全部 65,536 種組合，並同時檢查解碼後的布林值：一個能通過線路、卻以錯誤遮罩讀取的位元，就是一個會做錯事的控制項。</p></div>
 </section>
 
 <section class="sec" id="runtime">
@@ -211,6 +251,10 @@ public static void AssertCatalogueIsSane()
 <p>Certaines règles ne peuvent pas être vérifiées avant l'exécution, parce qu'elles dépendent de quel thread appelle quoi. La règle « aucun accès à la base sur le thread de tick » en est l'exemple (chapitre <a href="no-db-in-tick.html#guard">3.4</a>) : un drapeau local au thread marque les threads de tick, la fabrique qui crée les contextes de base le vérifie, et une violation est dénoncée une fois par site d'appel, par son nom. Dès sa première session, le garde a dénoncé quatre balayages périodiques laissés sur le tick parce qu'ils ne tournaient « qu'une fois par minute ». Une saccade toutes les soixante secondes reste une saccade, et une saccade régulière apprend aux joueurs à l'attendre.</p>
 <p>Un garde à l'exécution ne vaut que par sa couverture, et celui-ci a un trou documenté : le drapeau est par thread, et les threads auxiliaires d'une boucle parallèle n'en héritent pas. Écrire le trou à côté du garde fait partie de la discipline ; un garde qui couvre en silence moins qu'il n'y paraît est un commentaire avec des étapes en plus.</p>
 </div>
+<div lang="zh-TW">
+<h2>執行時的守衛</h2>
+<p>有些規則無法在執行之前檢查，因為它們取決於哪條執行緒呼叫了什麼。「tick 執行緒上不存取資料庫」這條規則就是例子（第 <a href="no-db-in-tick.html#guard">3.4</a> 章）：一個執行緒區域的旗標標記 tick 執行緒，建立資料庫內容的工廠會檢查它，而每一次違規都會以每個呼叫位置一次的方式、依名稱回報。在它的第一個工作階段中，這個守衛揭發了四個週期性的掃除，它們因為「只是」每分鐘執行一次而被留在 tick 上。每六十秒一次卡頓，仍然是卡頓，而規律的卡頓會讓玩家學會預期它。</p>
+<p>執行時守衛的好壞取決於它的涵蓋範圍，而這一個有一個有文件記錄的漏洞：旗標是以執行緒為單位的，而平行迴圈的輔助執行緒不會繼承它。把漏洞寫在守衛旁邊，本身就是紀律的一部分；一個悄悄涵蓋得比看起來還少的守衛，只是一則多了幾個步驟的註解。</p></div>
 </section>
 
 <section class="sec" id="shape">
@@ -240,6 +284,18 @@ public static void AssertCatalogueIsSane()
 </ul>
 <div class="note rule"><p class="note-label">Règle</p><p>Une signature qui rend naturelle la mauvaise façon de faire est un bug dans la signature.</p><p>Quand une règle continue d'être enfreinte, la correction est rarement un commentaire plus fort. C'est une forme de code dans laquelle la version fautive ne compile plus, ou n'existe plus.</p></div>
 </div>
+<div lang="zh-TW">
+<h2>塑造程式碼，讓錯誤的東西寫不出來</h2>
+<p>最高的那一階是結構性的：安排型別與簽章，讓錯誤沒有語法可以表達。這個網站的大多數章節都包含一個這樣的例子，而它們很容易被忽略，正是因為它們有效：</p>
+<ul>
+<li><strong>安全的預設值。</strong>玩家狀態列舉的第一個值是「載入中」，所以玩家永遠不可能預設就處於「已抵達」的狀態（第 <a href="login-flow.html#arrival">2.2</a> 章）。</li>
+<li><strong>會自己上鎖的簽章。</strong>為了修改而載入一列庫存資料時，會自己取得它的鎖，所以「先載入，再上鎖」根本寫不出來（第 <a href="transactions.html#locks">6.2</a> 章）。</li>
+<li><strong>一個裁判。</strong>由單一一個函式判斷一條來自網路的路徑是否留在安裝目錄內，由單一一個函式把磁碟路徑轉換成清單路徑（第 <a href="updater.html#trust">8.1</a> 章）。</li>
+<li><strong>一個不可分割的參考。</strong>池化的緩衝區與它的長度作為一個不可變的物件一起移動，所以不可能被讀到不一致的狀態（第 <a href="allocations.html#ownership">10.2</a> 章）。</li>
+<li><strong>一個純函式。</strong>在第 19 次測試台的競爭條件之後，船體的後備序列化被改成純函式：它不再修改共用狀態，所以同時從許多執行緒執行它，在結構上就是無害的（第 <a href="serialize-once.html">4.3</a> 章）。</li>
+<li><strong>結構上的擁有權。</strong>每張地圖的暫存緩衝區放在地圖上，所以兩張平行 tick 的地圖不可能共用同一個（第 <a href="allocations.html#fill">10.2</a> 章）。</li>
+</ul>
+<div class="note rule"><p class="note-label">規則</p><p>一個讓錯誤做法變得自然的函式簽章，就是簽章裡的 bug。</p><p>當一條規則一再被打破時，修正方式很少是一則更大聲的註解。而是一種讓被打破的版本不再能編譯、或不再存在的程式碼形狀。</p></div></div>
 </section>
 
 <section class="sec" id="takeaways">
@@ -262,6 +318,15 @@ public static void AssertCatalogueIsSane()
 <li>Faire découvrir aux suites de tests ce qu'elles couvrent, et remplir les échantillons avec des valeurs non par défaut.</li>
 <li>Documenter les trous des gardes à côté des gardes.</li>
 </ul></div>
+<div lang="zh-TW"><h2>重點整理</h2><ul>
+<li>註解守不住不變條件；對的註解很少在對的時刻被讀到。</li>
+<li>對每一條規則，盡可能往上爬：名稱、執行時守衛、測試、啟動檢查、編譯器錯誤、結構。</li>
+<li>把單位與擁有權放進名稱與簽章裡；名稱會強制註解只能解釋的東西。</li>
+<li>把咬過你的編譯器警告升級，一次一個代碼，並保留一個有範圍的逃生口。</li>
+<li>把「每一個 X 都必須宣告 Y」變成一個窮舉式的答案，在啟動時與在測試中檢查。</li>
+<li>讓測試套件自己找出它所涵蓋的東西，並在樣本中填入非預設的值。</li>
+<li>把守衛的漏洞記錄在守衛旁邊。</li>
+</ul></div>
 </div>
 </section>
 
@@ -274,6 +339,7 @@ public static void AssertCatalogueIsSane()
 <footer class="site-footer" id="mq-footer"></footer>
 <script src="assets/js/site-data.js" defer></script>
 <script src="assets/js/glossary-data.js" defer></script>
+<script src="assets/js/ui-zh.js" defer></script>
 <script src="assets/js/app.js" defer></script>
 <script src="assets/js/widgets.js" defer></script>
 </body>

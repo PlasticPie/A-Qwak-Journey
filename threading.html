@@ -7,12 +7,12 @@
 <meta name="description" content="Maps as islands, deferred mutation, immutable publication, and dedicated workers instead of the thread pool.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Chakra+Petch:wght@500;600&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Chakra+Petch:wght@500;600&family=JetBrains+Mono:wght@400;500;600&family=Noto+Sans+TC:wght@400;700&display=swap">
 <link rel="stylesheet" href="assets/css/site.css">
-<script>(function(){var r=document.documentElement,l,t;try{l=localStorage.getItem("mq-lang");t=localStorage.getItem("mq-theme");}catch(e){}if(l!=="en"&&l!=="fr"){l=(navigator.language||"").toLowerCase().indexOf("fr")===0?"fr":"en";}r.setAttribute("data-lang",l);r.setAttribute("lang",l);if(t==="light"||t==="dark")r.setAttribute("data-theme",t);})();</script>
+<script>(function(){var r=document.documentElement,l,t,n;try{l=localStorage.getItem("mq-lang");t=localStorage.getItem("mq-theme");}catch(e){}if(l!=="en"&&l!=="fr"&&l!=="zh"){n=(navigator.language||"").toLowerCase();l=n.indexOf("fr")===0?"fr":n.indexOf("zh")===0?"zh":"en";}r.setAttribute("data-lang",l);r.setAttribute("lang",l==="zh"?"zh-TW":l);if(t==="light"||t==="dark")r.setAttribute("data-theme",t);})();</script>
 </head>
 <body data-page="threading">
-<a class="skip-link" href="#main"><span lang="en">Skip to content</span><span lang="fr">Aller au contenu</span></a>
+<a class="skip-link" href="#main"><span lang="en">Skip to content</span><span lang="fr">Aller au contenu</span><span lang="zh-TW">跳到主要內容</span></a>
 <header class="site-header" id="mq-header"></header>
 <div class="layout">
 <aside class="sidebar" id="mq-sidebar"></aside>
@@ -20,8 +20,8 @@
 <article>
 <header class="chapter-head">
   <div class="eyebrow" data-auto></div>
-  <h1><span lang="en">Threads without tears</span><span lang="fr">Des threads sans larmes</span></h1>
-  <p class="dek"><span lang="en">Maps as islands, deferred mutation, immutable publication, and dedicated workers instead of the thread pool.</span><span lang="fr">Les cartes comme des îles, la mutation différée, la publication immuable, et des ouvriers dédiés plutôt que le ThreadPool.</span></p>
+  <h1><span lang="en">Threads without tears</span><span lang="fr">Des threads sans larmes</span><span lang="zh-TW">不流淚的多執行緒</span></h1>
+  <p class="dek"><span lang="en">Maps as islands, deferred mutation, immutable publication, and dedicated workers instead of the thread pool.</span><span lang="fr">Les cartes comme des îles, la mutation différée, la publication immuable, et des ouvriers dédiés plutôt que le ThreadPool.</span><span lang="zh-TW">地圖是孤島、延後修改、不可變的發布，以及用專屬工作執行緒取代執行緒集區。</span></p>
   <div class="meta-row" data-auto></div>
 </header>
 
@@ -40,36 +40,41 @@
 <div class="note beginner"><p class="note-label">Pour débuter</p><p>Une <em>course de données</em> survient quand deux threads touchent la même mémoire au même moment et qu'au moins l'un écrit. Le résultat dépend du minutage : le bug apparaît une fois sur mille, en général sous charge, en général en production. On ne se sort pas des courses par les tests ; il faut les rendre impossibles par la structure.</p></div>
 <p>Voici les threads d'un serveur de jeu MoonQwak, et les seuls chemins entre eux :</p>
 </div>
+<div lang="zh-TW">
+<h2>先定擁有權，最後才用鎖</h2>
+<p>不管你想不想，遊戲伺服器都是並行的：封包在網路執行緒上到達，而世界在另一條執行緒上 tick。對我有效的做法不是「哪裡壞了就加鎖」，而是相反：決定每一份狀態由哪條執行緒<strong>擁有</strong>，並讓其他每條執行緒都只能透過少數幾個定義明確的交接點。這樣一來，鎖就變得稀少、短暫，也容易推理。</p>
+<div class="note beginner"><p class="note-label">新手須知</p><p>當兩條執行緒同時碰同一塊記憶體、而且至少有一條在寫入時，就會發生<em>資料競爭</em>。結果取決於時機，所以 bug 一千次才出現一次，通常在高負載下，通常在正式環境。你無法靠測試擺脫競爭條件；你必須在結構上讓它們不可能發生。</p></div>
+<p>以下是一台 MoonQwak 遊戲伺服器的執行緒，以及它們之間唯一的通道：</p></div>
 <figure class="fig fig-scroll">
 <svg viewBox="0 0 760 320" role="img" aria-label="Threads of a game server: the world tick thread in the centre owns the maps; the network pump hands it inputs and queued mutations; tick workers run its parallel loops; the snapshot sender receives one pending packet per player and sends sequentially; the background writer receives database jobs">
   <defs><marker id="th-arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="currentColor" opacity="0.7"/></marker></defs>
   <rect x="20" y="20" width="190" height="56" rx="8" class="dg-box"/>
-  <text class="dg-text" x="115" y="44" text-anchor="middle" font-weight="700"><tspan lang="en">Network pump</tspan><tspan lang="fr">Pompe réseau</tspan></text>
-  <text class="dg-small" x="115" y="63" text-anchor="middle"><tspan lang="en">Normal · one per socket</tspan><tspan lang="fr">Normal · une par socket</tspan></text>
+  <text class="dg-text" x="115" y="44" text-anchor="middle" font-weight="700"><tspan lang="en">Network pump</tspan><tspan lang="fr">Pompe réseau</tspan><tspan lang="zh-TW">網路泵</tspan></text>
+  <text class="dg-small" x="115" y="63" text-anchor="middle"><tspan lang="en">Normal · one per socket</tspan><tspan lang="fr">Normal · une par socket</tspan><tspan lang="zh-TW">Normal · 每個 socket 一條</tspan></text>
   <rect x="550" y="20" width="190" height="56" rx="8" class="dg-box"/>
-  <text class="dg-text" x="645" y="44" text-anchor="middle" font-weight="700"><tspan lang="en">Snapshot sender</tspan><tspan lang="fr">Envoi des snapshots</tspan></text>
-  <text class="dg-small" x="645" y="63" text-anchor="middle"><tspan lang="en">AboveNormal · own 25 Hz clock</tspan><tspan lang="fr">AboveNormal · horloge 25 Hz</tspan></text>
+  <text class="dg-text" x="645" y="44" text-anchor="middle" font-weight="700"><tspan lang="en">Snapshot sender</tspan><tspan lang="fr">Envoi des snapshots</tspan><tspan lang="zh-TW">快照傳送</tspan></text>
+  <text class="dg-small" x="645" y="63" text-anchor="middle"><tspan lang="en">AboveNormal · own 25 Hz clock</tspan><tspan lang="fr">AboveNormal · horloge 25 Hz</tspan><tspan lang="zh-TW">AboveNormal · 自己的 25 Hz 時鐘</tspan></text>
   <rect x="285" y="137" width="190" height="56" rx="8" class="dg-hot"/>
-  <text class="dg-text" x="380" y="161" text-anchor="middle" font-weight="700"><tspan lang="en">World tick</tspan><tspan lang="fr">Tick du monde</tspan></text>
-  <text class="dg-small" x="380" y="180" text-anchor="middle"><tspan lang="en">Highest · owns the maps</tspan><tspan lang="fr">Highest · possède les cartes</tspan></text>
+  <text class="dg-text" x="380" y="161" text-anchor="middle" font-weight="700"><tspan lang="en">World tick</tspan><tspan lang="fr">Tick du monde</tspan><tspan lang="zh-TW">世界 tick</tspan></text>
+  <text class="dg-small" x="380" y="180" text-anchor="middle"><tspan lang="en">Highest · owns the maps</tspan><tspan lang="fr">Highest · possède les cartes</tspan><tspan lang="zh-TW">Highest · 擁有所有地圖</tspan></text>
   <rect x="20" y="254" width="190" height="56" rx="8" class="dg-box-2"/>
-  <text class="dg-text" x="115" y="278" text-anchor="middle" font-weight="700"><tspan lang="en">Tick workers × N</tspan><tspan lang="fr">Ouvriers du tick × N</tspan></text>
-  <text class="dg-small" x="115" y="297" text-anchor="middle"><tspan lang="en">AboveNormal · dedicated</tspan><tspan lang="fr">AboveNormal · dédiés</tspan></text>
+  <text class="dg-text" x="115" y="278" text-anchor="middle" font-weight="700"><tspan lang="en">Tick workers × N</tspan><tspan lang="fr">Ouvriers du tick × N</tspan><tspan lang="zh-TW">Tick 工作執行緒 × N</tspan></text>
+  <text class="dg-small" x="115" y="297" text-anchor="middle"><tspan lang="en">AboveNormal · dedicated</tspan><tspan lang="fr">AboveNormal · dédiés</tspan><tspan lang="zh-TW">AboveNormal · 專屬</tspan></text>
   <rect x="550" y="254" width="190" height="56" rx="8" class="dg-box-2"/>
-  <text class="dg-text" x="645" y="278" text-anchor="middle" font-weight="700"><tspan lang="en">Background writer</tspan><tspan lang="fr">Écrivain de fond</tspan></text>
-  <text class="dg-small" x="645" y="297" text-anchor="middle"><tspan lang="en">Normal · one thread, in order</tspan><tspan lang="fr">Normal · un thread, dans l'ordre</tspan></text>
+  <text class="dg-text" x="645" y="278" text-anchor="middle" font-weight="700"><tspan lang="en">Background writer</tspan><tspan lang="fr">Écrivain de fond</tspan><tspan lang="zh-TW">背景寫入</tspan></text>
+  <text class="dg-small" x="645" y="297" text-anchor="middle"><tspan lang="en">Normal · one thread, in order</tspan><tspan lang="fr">Normal · un thread, dans l'ordre</tspan><tspan lang="zh-TW">Normal · 單一執行緒，依序執行</tspan></text>
   <line x1="172" y1="78" x2="298" y2="135" class="dg-line" marker-end="url(#th-arr)"/>
-  <text class="dg-small" x="228" y="118" text-anchor="end"><tspan lang="en">inputs · queued mutations</tspan><tspan lang="fr">entrées · mutations en file</tspan></text>
+  <text class="dg-small" x="228" y="118" text-anchor="end"><tspan lang="en">inputs · queued mutations</tspan><tspan lang="fr">entrées · mutations en file</tspan><tspan lang="zh-TW">輸入 · 排入佇列的修改</tspan></text>
   <line x1="462" y1="135" x2="588" y2="78" class="dg-line" marker-end="url(#th-arr)"/>
-  <text class="dg-small" x="532" y="118"><tspan lang="en">one packet per player</tspan><tspan lang="fr">un paquet par joueur</tspan></text>
+  <text class="dg-small" x="532" y="118"><tspan lang="en">one packet per player</tspan><tspan lang="fr">un paquet par joueur</tspan><tspan lang="zh-TW">每位玩家一個封包</tspan></text>
   <line x1="548" y1="40" x2="214" y2="40" class="dg-line" marker-end="url(#th-arr)"/>
-  <text class="dg-small" x="380" y="33" text-anchor="middle"><tspan lang="en">sends, sequentially</tspan><tspan lang="fr">envois, séquentiels</tspan></text>
+  <text class="dg-small" x="380" y="33" text-anchor="middle"><tspan lang="en">sends, sequentially</tspan><tspan lang="fr">envois, séquentiels</tspan><tspan lang="zh-TW">依序傳送</tspan></text>
   <line x1="298" y1="195" x2="172" y2="252" class="dg-line" marker-end="url(#th-arr)"/>
-  <text class="dg-small" x="228" y="222" text-anchor="end"><tspan lang="en">parallel loops</tspan><tspan lang="fr">boucles parallèles</tspan></text>
+  <text class="dg-small" x="228" y="222" text-anchor="end"><tspan lang="en">parallel loops</tspan><tspan lang="fr">boucles parallèles</tspan><tspan lang="zh-TW">平行迴圈</tspan></text>
   <line x1="462" y1="195" x2="588" y2="252" class="dg-line" marker-end="url(#th-arr)"/>
-  <text class="dg-small" x="532" y="222"><tspan lang="en">database jobs</tspan><tspan lang="fr">travaux en base</tspan></text>
+  <text class="dg-small" x="532" y="222"><tspan lang="en">database jobs</tspan><tspan lang="fr">travaux en base</tspan><tspan lang="zh-TW">資料庫工作</tspan></text>
 </svg>
-<figcaption><span lang="en"><strong>One owner, five handoffs.</strong> The world thread owns every map. Other threads never touch a map directly: they leave something for it (inputs, queued mutations) or receive something from it (packets, jobs, published read-only data).</span><span lang="fr"><strong>Un propriétaire, cinq passages.</strong> Le thread du monde possède toutes les cartes. Les autres threads ne touchent jamais une carte directement : ils lui laissent quelque chose (entrées, mutations en file) ou reçoivent quelque chose d'elle (paquets, travaux, données publiées en lecture seule).</span></figcaption>
+<figcaption><span lang="en"><strong>One owner, five handoffs.</strong> The world thread owns every map. Other threads never touch a map directly: they leave something for it (inputs, queued mutations) or receive something from it (packets, jobs, published read-only data).</span><span lang="fr"><strong>Un propriétaire, cinq passages.</strong> Le thread du monde possède toutes les cartes. Les autres threads ne touchent jamais une carte directement : ils lui laissent quelque chose (entrées, mutations en file) ou reçoivent quelque chose d'elle (paquets, travaux, données publiées en lecture seule).</span><span lang="zh-TW"><strong>一個擁有者，五個交接點。</strong>世界執行緒擁有每一張地圖。其他執行緒從不直接碰地圖：它們要嘛留東西給它（輸入、排入佇列的修改），要嘛從它那裡接收東西（封包、工作、已發布的唯讀資料）。</span></figcaption>
 </figure>
 </section>
 
@@ -84,12 +89,18 @@
 <p>L'unité de parallélisme est la carte. Chaque carte possède ses objets, son monde Box2D, sa réserve de balles et ses tampons de travail, et son tick rend ses temps au lieu de les ajouter à des compteurs partagés. Deux cartes qui tickent en même temps ne touchent aucun état commun : le thread du monde peut confier les cartes à des ouvriers sans un seul verrou dans la simulation.</p>
 <p>Cette propriété n'est pas venue gratuitement. Les tampons de travail du tick (vitesses d'avant le pas, impacts de balles, détonations) vivaient sur l'objet hôte et servaient à chaque carte à tour de rôle. Correct tant que la boucle des cartes était séquentielle, et c'était la seule chose qui l'empêchait de devenir parallèle. Les déplacer sur la carte a supprimé le partage <em>par construction</em> plutôt que par convention. Les résultats suivent la même idée : chaque carte écrit ses temps dans sa propre case d'un tableau prédimensionné, parce que <code>double +=</code> n'est pas atomique et qu'un <code>List.Add</code> partagé se corrompt en concurrence. Les sommes se font après, de retour sur le thread du monde.</p>
 </div>
+<div lang="zh-TW">
+<h2>地圖是孤島</h2>
+<p>平行化的單位是地圖。每張地圖擁有自己的物件、自己的 Box2D 世界、自己的子彈池與暫存緩衝區，而它的 tick 回傳自己的計時結果，而不是加到共用的計數器上。兩張同時 tick 的地圖不碰任何共同的狀態，所以世界執行緒可以把地圖交給工作執行緒，而模擬中連一個鎖都不需要。</p>
+<p>這個特性並非免費得來。每個 tick 的工作緩衝區（前置步驟的速度、子彈命中、爆炸）過去放在宿主物件上，由每張地圖輪流重複使用。在地圖迴圈是循序執行時這是正確的，而它也是擋在這個迴圈與平行化之間的唯一障礙。把它們移到地圖上，就<em>在結構上</em>移除了共用，而不是靠慣例。結果也依循同樣的想法：每張地圖把自己的計時寫進一個預先配置好大小的陣列中屬於自己的格子，因為 <code>double +=</code> 不是不可分割的，而共用的 <code>List.Add</code> 在並行下會損毀。總和事後再回到世界執行緒上計算。</p></div>
 <div lang="en">
 <div class="note rule"><p class="note-label">Rule</p><p>Remove sharing by construction, not by convention.</p><p>"Only one thread uses this at a time" is a promise nobody re-reads when the loop becomes parallel. An object that belongs to one map cannot be touched by another map's tick, whatever anyone forgets.</p></div>
 </div>
 <div lang="fr">
 <div class="note rule"><p class="note-label">Règle</p><p>Supprimer le partage par construction, pas par convention.</p><p>« Un seul thread s'en sert à la fois » est une promesse que personne ne relit le jour où la boucle devient parallèle. Un objet qui appartient à une carte ne peut pas être touché par le tick d'une autre, quoi que l'on oublie.</p></div>
 </div>
+<div lang="zh-TW">
+<div class="note rule"><p class="note-label">規則</p><p>在結構上移除共用，而不是靠慣例。</p><p>「同一時間只有一條執行緒會用它」是一個在迴圈變成平行時沒有人會重讀的承諾。屬於某張地圖的物件，不可能被另一張地圖的 tick 碰到，無論誰忘了什麼。</p></div></div>
 </section>
 
 <section class="sec" id="handoffs">
@@ -105,6 +116,11 @@
 <h3>1. Des champs où le dernier écrit gagne, lus une fois</h3>
 <p>L'entrée du joueur est un état continu, pas une suite d'événements : « pousser par là, viser là-bas, gâchette tenue ». Le thread réseau écrit la dernière valeur dans quelques champs du vaisseau ; le tick les lit quand il arrive à ce vaisseau. Si deux entrées arrivent entre deux ticks, la plus ancienne est simplement écrasée, ce qui est exactement ce qu'on veut pour un état. La règle est côté lecture : chaque champ de ce genre est lu <strong>une fois</strong> dans une variable locale. Tester un champ puis s'en servir, c'est lire deux valeurs différentes quand un autre thread écrit entre les deux.</p>
 </div>
+<div lang="zh-TW">
+<h2>四條跨越的路</h2>
+<p>伺服器中從一條執行緒跨到另一條的所有東西，都使用四種模式之一。每一種適合不同類型的資料，每一種都有一條讓它安全的規則。</p>
+<h3>1. 最後寫入者獲勝的欄位，只讀一次</h3>
+<p>玩家輸入是連續的狀態，而不是一連串事件：「往這邊推進、瞄準那裡、扳機按住」。網路執行緒把最新的值寫進船艦的幾個欄位；tick 處理到那艘船時再讀取它們。如果兩次 tick 之間到達了兩個輸入，較舊的那個就直接被覆寫，這對狀態來說恰恰正確。規則在讀取端：每一個這樣的欄位都只<strong>讀一次</strong>，存進一個區域變數。先測試一個欄位再使用它，如果中間有另一條執行緒寫入，讀到的就是兩個不同的值。</p></div>
 <div class="code"><div class="code-head"><span class="file">GameServer/Players/Player.cs · network thread</span></div><pre><code data-lang="cs">public bool HandleInput(PlayerInput input)
 {
     var ship = Ship;  // ONE read: a map transition can null Ship at any moment
@@ -125,6 +141,10 @@
 <h3>2. Des mutations en file, appliquées entre deux pas</h3>
 <p>Certains changements doivent se faire sur le thread du monde et nulle part ailleurs : créer ou détruire un corps physique, ajouter un objet à une carte. Les autres threads (une connexion qui aboutit, une demande d'amarrage, une déconnexion) mettent une action en file sur la carte, et le tick vide cette file dans sa phase « appliquer l'attente », entre deux pas physiques. La file est une file concurrente de délégués ; les retraits fréquents du tick lui-même (des dizaines de balles usées par seconde) utilisent de simples listes, parce qu'une fermeture par balle est une allocation par tir et que ces listes ne sont jamais touchées que par le tick.</p>
 </div>
+<div lang="zh-TW">
+<div class="note measured"><p class="note-label">實測</p><p>處理常式過去會先測試 <code>Ship</code> 是否為 null，然後在下一行再讀一次 <code>Ship</code>。在一場 1,200 名玩家、為時一小時的測試台中，數萬次地圖切換中有一次剛好落在測試與使用之間。null 參考在背景執行緒上被拋出，而這會終止 .NET 程序：少了一個區域變數，代價是一整台遊戲伺服器和它的 136 名玩家。第 <a href="receiving.html">1.5</a> 章介紹了第二個修正，也就是分派器中的例外邊界。</p></div>
+<h3>2. 排入佇列的修改，在步驟之間套用</h3>
+<p>有些變更必須在世界執行緒上發生，別無他處：建立或摧毀物理剛體、把物件加入地圖。其他執行緒（完成的連線、停靠請求、斷線）把一個動作排入地圖的佇列，tick 在它的「套用待處理項目」階段、在兩次物理步驟之間清空這個佇列。這個佇列是一個委派的並行佇列；tick 自己頻繁的移除（每秒數十顆用盡的子彈）則改用普通的清單，因為每顆子彈一個閉包，就是每次射擊一次記憶體配置，而那些清單只會被 tick 自己碰到。</p></div>
 <div lang="en">
 <div class="note pitfall"><p class="note-label">Pitfall I hit</p><p>Loading a map creates dozens of Box2D bodies (stations, resource nodes, NPCs). For a long time it did so on the thread that received the gateway's "host this map" message, while the tick was stepping sixty other worlds. The symptom was not an exception I could catch: it was an <code>ExecutionEngineException</code> inside <code>b2CreateBody</code>, native memory corruption, and the runtime stopping dead. Map creation had been the last place in the server that touched Box2D from outside the tick. It is now split in two: the slow part (reading the map and its content from the database) runs on the calling thread, and only the body creation is queued to the tick, under a 3 ms budget per tick.</p></div>
 <h3>3. Immutable publication</h3>
@@ -141,12 +161,21 @@
 <h3>4. Copier sous le verrou, calculer dehors</h3>
 <p>Le dernier cas est un lecteur rare, sur un autre thread, qui a besoin d'une vue cohérente d'une liste que le tick modifie. Le lecteur copie les références sous le verrou du tick (quelques nanosecondes pour quelques centaines de références) et fait son vrai travail sur la copie, hors du verrou.</p>
 </div>
+<div lang="zh-TW">
+<div class="note pitfall"><p class="note-label">我踩過的坑</p><p>載入一張地圖會建立數十個 Box2D 剛體（太空站、資源節點、NPC）。有很長一段時間，它是在收到閘道「託管這張地圖」訊息的那條執行緒上建立的，而同時 tick 正在推進另外六十個世界。症狀不是一個我能攔截的例外：而是 <code>b2CreateBody</code> 內部的 <code>ExecutionEngineException</code>，原生記憶體損毀，執行環境當場停擺。建立地圖曾是伺服器中最後一個在 tick 之外碰 Box2D 的地方。現在它被拆成兩半：慢的部分（從資料庫讀取地圖及其內容）在呼叫端的執行緒上執行，只有剛體的建立被排入 tick 的佇列，每個 tick 有 3 ms 的預算。</p></div>
+<h3>3. 不可變發布</h3>
+<p>有些資料由一條執行緒寫入、由許多條讀取：每位玩家的快照都會查詢的空間索引、已載入的地圖清單、遊戲資料目錄。對這些資料，寫入端在一旁建好一個完整的新版本，再用一次參考指派把它發布出去。參考指派是不可分割的，所以讀取端看到的不是完整的舊版本，就是完整的新版本，永遠不會是建到一半的版本，而且沒有任何讀取端需要上鎖。</p>
+<p>空間索引過去由一個全域鎖保護，每次讀取都要持有它。這個查詢在平行路徑上每位玩家每個 tick 執行一次，所以這個鎖恰好讓平行迴圈本來要分散的工作變成依序執行。它從未出現在 CPU 效能分析中：<strong>鎖的代價是核心在等待，而不是燒掉的時脈</strong>，這就是它能存活這麼久的原因。已發布版本的讀取端遵守兩條規則：只擷取一次存進區域變數（讀兩次屬性可能會橫跨兩個版本），而且絕不保留到目前的 tick 之後（它的緩衝區在兩次重建之後就會被回收）。</p>
+<h3>4. 在鎖內複製，在鎖外計算</h3>
+<p>最後一種情況，是另一條執行緒上一個罕見的讀取端，需要一份 tick 會修改的清單的一致視圖。讀取端在 tick 的鎖內複製這些參考（幾百個參考只要幾奈秒），再在鎖外對副本做真正的工作。</p></div>
 <div lang="en">
 <div class="note measured"><p class="note-label">Measured</p><p>Choosing where a newly arrived ship appears used to enumerate the map's ship list directly from the network thread while the tick was adding a hull: "Collection was modified; enumeration operation may not execute". The network handler caught the exception and dropped the packet, so that one connection simply never entered the world. Observed once in 200 arrivals on a bench. In production that is "one login in N falls into the void", the worst kind of bug to diagnose.</p></div>
 </div>
 <div lang="fr">
 <div class="note measured"><p class="note-label">Mesuré</p><p>Le choix de l'endroit où apparaît un vaisseau qui arrive énumérait directement la liste des vaisseaux de la carte depuis le thread réseau, pendant que le tick ajoutait une coque : « Collection was modified; enumeration operation may not execute ». Le gestionnaire réseau rattrapait l'exception et jetait le paquet : cette connexion-là n'entrait tout simplement jamais dans le monde. Observé une fois sur 200 arrivées au banc. En production, c'est « une connexion sur N tombe dans le vide », le pire genre de bug à diagnostiquer.</p></div>
 </div>
+<div lang="zh-TW">
+<div class="note measured"><p class="note-label">實測</p><p>決定一艘新到達的船出現在哪裡，過去是直接從網路執行緒列舉地圖的船艦清單，而同時 tick 正在加入一個船體：「Collection was modified; enumeration operation may not execute」。網路處理常式攔截了這個例外並丟棄封包，所以那一條連線就這樣永遠沒有進入世界。在一個測試台中，每 200 次抵達觀察到一次。在正式環境，那就是「每 N 次登入就有一次掉進虛空」，最難診斷的那一種 bug。</p></div></div>
 </section>
 
 <section class="sec" id="workers">
@@ -158,6 +187,9 @@
 <h2>Des ouvriers dédiés plutôt que le ThreadPool</h2>
 <p>Les boucles parallèles du tick (cartes, balles, construction des snapshots) utilisaient d'abord <code>Parallel.For</code>. Sur un banc à 400 bots, le tick s'est mis à décrocher de 100 à 600 ms d'un coup, toujours dans une section contenant une boucle parallèle, avec presque aucun CPU consommé. La ligne de diagnostic le disait en clair :</p>
 </div>
+<div lang="zh-TW">
+<h2>用專屬工作執行緒取代執行緒集區</h2>
+<p>tick 的平行迴圈（地圖、子彈、快照建構）一開始使用 <code>Parallel.For</code>。在一個 400 個機器人的測試台中，tick 開始一次停頓 100 到 600 ms，總是發生在含有平行迴圈的區段，而且幾乎沒有消耗 CPU。診斷那一行說得很清楚：</p></div>
 <div class="code"><div class="code-head"><span class="file">GameServer console · 400-bot bench</span></div><pre><code data-lang="txt">[Tick lent] tick 2585 : 616,9 ms — pire section « snap build » 601,6 ms mur / 0,0 ms CPU → ATTENTE
   | pool : 20 threads (plancher 20, libres 32767), 0 items en attente ; snapshots : 385 pair(s) bâtis par 2 thread(s)</code></pre></div>
 <div lang="en">
@@ -174,6 +206,12 @@
 <div class="pick"><h4>TickWorkers</h4><p>N threads créés une fois, à une priorité de tick, endormis sur un sémaphore. L'appelant participe, les indices se prennent sur un compteur partagé, et la jointure n'attend que les threads qui travaillent vraiment. Un ouvrier que l'OS n'a jamais ordonnancé n'est jamais attendu.</p></div>
 </div>
 </div>
+<div lang="zh-TW">
+<p>600 ms 的牆鐘時間、零 CPU、兩條執行緒建構了 385 份快照。tick 執行緒獨自做完了整個迴圈，然後等待執行緒集區執行它排入的分身，而那些分身一開始執行時已經無事可做。執行緒集區的工作執行緒以一般優先權執行，而在一台有 800 條機器人網路執行緒不斷被喚醒的機器上，一般優先權的工作執行緒得排在數百條執行緒後面等。tick 的優先權是最高的，但 <code>Parallel.For</code> 讓它依賴了優先權不高的執行緒。</p>
+<div class="compare">
+<div><h4>在集區上的 Parallel.For</h4><p>工作執行緒是共用的一般優先權執行緒。迴圈會等待它排程的每一個分身，包括在工作完成之後才開始的分身。一個被餓死的集區會讓 tick 停頓，而 CPU 用量為零。</p></div>
+<div class="pick"><h4>TickWorkers</h4><p>N 條執行緒只建立一次，使用 tick 等級的優先權，在一個號誌上睡眠。呼叫端也參與工作，索引從一個共用計數器取得，而匯合時只等待真正在工作的執行緒。一個作業系統從未排程到的工作執行緒，永遠不會被等待。</p></div>
+</div></div>
 <div class="code"><div class="code-head"><span class="file">GameServer/Services/TickWorkers.cs · simplified</span></div><pre><code data-lang="cs">public static void For(int count, Action&lt;int&gt; body)
 {
     // No workers, a single item, or a nested call (the map loop contains the bullet loop): inline.
@@ -211,6 +249,8 @@ static void Run(bool alreadyActive)
 <div lang="fr">
 <p>Avec les ouvriers dédiés, le banc suivant est passé d'un pire tick de 778 ms à 164 ms, et le maximum de la construction des snapshots de 600 ms à 20 ms. Deux détails méritent d'être copiés. Le job est un objet neuf par boucle, parce qu'avec trois champs statiques un ouvrier réveillé en retard pouvait lire le corps de la boucle A puis prendre un indice de la boucle B, qui venait de remettre le compteur à zéro. Et l'<em>envoi</em> des snapshots est redevenu séquentiel sur son propre thread : 400 envois prennent environ 10 ms à 25 Hz, ce qui tient, et ça garde les verrous internes de la bibliothèque réseau (tenus par un thread de priorité normale) hors des ouvriers du tick, où ils auraient pu faire attendre le thread du monde derrière une inversion de priorité.</p>
 </div>
+<div lang="zh-TW">
+<p>改用專屬工作執行緒後，下一次測試台的最差 tick 從 778 ms 降到 164 ms，快照建構的最大值從 600 ms 降到 20 ms。有兩個細節值得照抄。每個迴圈的工作都是一個新物件，因為如果用三個靜態欄位，一個醒得晚的工作執行緒可能會讀到迴圈 A 的主體，卻取得迴圈 B 的索引，而迴圈 B 剛好重設了計數器。而快照<em>傳送</em>回到在自己的執行緒上循序執行：在 25 Hz 下 400 次傳送約花 10 ms，裝得下，而且這讓網路函式庫的內部鎖（由一般優先權的執行緒持有）遠離 tick 的工作執行緒，否則它們可能讓世界執行緒排在一次優先權反轉後面等待。</p></div>
 </section>
 
 <section class="sec" id="cores">
@@ -226,6 +266,11 @@ static void Run(bool alreadyActive)
 <div class="note measured"><p class="note-label">Mesuré</p><p>Le profileur des objets signalait « layout 22,3 ms » : une étape qui prend un verrou non contendu et teste un null. C'était le thread du monde qui perdait son cœur au profit de ses propres aides. Avec « cœurs − 2 » ouvriers et le thread du monde seul en <code>Highest</code>, « layout » est passé de 22,3 ms à 0,1 ms. Les deux bancs suivants ont accusé « entrée pilote » (46 µs par vaisseau pour un code borné vers 1 µs), puis « tir » et « gaz » : un seul objet à environ 21 ms, sur une étape différente à chaque fois. Encore le thread du monde, préempté cette fois par les threads des bots pendant la rampe de connexion. Trois bancs de suite, le profileur a désigné une étape innocente ; le coupable était toujours l'ordonnanceur. Chaque étape rapporte maintenant sa part du CPU du thread à côté de sa part du temps mural (chapitre <a href="observability.html">10.1</a>).</p></div>
 <p>La règle est devenue une formule quand plusieurs instances de serveur de jeu ont partagé une machine. Chaque instance voyait tous les cœurs et prenait « cœurs − 2 » ouvriers : dix instances sur vingt processeurs logiques créaient 180 threads prioritaires. Le nombre d'ouvriers se déduit maintenant du nombre d'instances de la machine, que l'agent de machine transmet à chaque serveur (chapitre <a href="node-agents.html">7.3</a>) :</p>
 </div>
+<div lang="zh-TW">
+<h2>就緒的高優先權執行緒絕不多於核心數</h2>
+<p>一開始的配置是「核心數減一」個工作執行緒。再加上世界執行緒與快照執行緒，就是核心數<em>加一</em>條可能同時就緒的高優先權執行緒，通常發生在世界正在 tick、而快照建構在每個工作執行緒上執行的時候。這時其中一條就要等一整個排程時間片，在桌面版 Windows 上是 20 到 30 ms。如果那是世界執行緒，或是一個持有世界正在等待之工作片段的工作執行緒，tick 就會在一個幾乎不花成本的步驟中間出現一個 22 ms 的空洞。</p>
+<div class="note measured"><p class="note-label">實測</p><p>物件效能分析器回報「layout 22.3 ms」：一個取得無競爭鎖並測試 null 的步驟。那是世界執行緒把自己的核心讓給了自己的助手。改成「核心數 − 2」個工作執行緒、並讓世界執行緒獨自處於 <code>Highest</code> 之後，「layout」從 22.3 ms 降到 0.1 ms。接下來兩次測試台分別怪罪「駕駛員輸入」（對一段上限約 1 µs 的程式碼，每艘船 46 µs），然後是「開火」與「氣體」：每次都是某一個物件約 21 ms，每次出現在不同的步驟。又是世界執行緒，這次是在連線爬升期被機器人的執行緒搶佔。連續三次測試台，效能分析器都指向一個無辜的步驟；罪魁禍首永遠是排程器。現在每個步驟都會在它佔牆鐘時間的比例旁邊，回報它佔該執行緒 CPU 的比例（第 <a href="observability.html">10.1</a> 章）。</p></div>
+<p>當好幾個遊戲伺服器實例共用一台機器時，這條規則變成了一個公式。每個實例都看到所有核心，各自拿了「核心數 − 2」個工作執行緒，所以二十個邏輯處理器上的十個實例，建立了 180 條高優先權執行緒。現在工作執行緒的數量由機器上的實例數推導出來，這個數字由節點代理程式傳給每台伺服器（第 <a href="node-agents.html">7.3</a> 章）：</p></div>
 <div class="code"><div class="code-head"><span class="file">sizing, agent and game server</span></div><pre><code data-lang="txt">agent       : instances = min( MaxInstances , processors / (wanted workers + 2) )
 game server : workers   = processors / instances − 2        (floor 0: loops run inline)</code></pre></div>
 <div lang="en">
@@ -236,6 +281,9 @@ game server : workers   = processors / instances − 2        (floor 0: loops ru
 <p>Les « + 2 » et « − 2 » sont les threads du monde et des snapshots que possède chaque instance : un coût fixe, c'est pourquoi on le retire après la division. Un résultat nul n'est pas un repli mais la bonne réponse : quand deux threads prioritaires par instance occupent déjà tous les cœurs, un ouvrier pour lequel aucun cœur n'est libre coûte un réveil, et s'il est ordonnancé en retard au milieu d'une tranche, l'appelant l'attend un quantum. Les deux processus impriment leur calcul au démarrage, y compris quand il vaut zéro, parce qu'un tick séquentiel qui ne s'annonce pas se redécouvre trois heures plus tard dans une ligne de rapport disant « 291 snapshots bâtis par 2 threads ».</p>
 <div class="note rule"><p class="note-label">Règle</p><p>Compter ses threads prioritaires face aux cœurs qui les exécuteront vraiment, tous processus de la machine confondus.</p><p>Les priorités n'ordonnent que des threads prêts ensemble. Avec plus de threads prêts que de cœurs, l'un d'eux attend un quantum, et rien dans son propre code ne dit pourquoi.</p></div>
 </div>
+<div lang="zh-TW">
+<p>「+ 2」與「− 2」是每個實例都擁有的世界執行緒與快照執行緒：一個固定成本，所以在除法之後才減去。結果為零不是一個後備值，而是正確答案：當每個實例的兩條高優先權執行緒已經用掉每個核心時，一個沒有核心可用的工作執行緒只會多花一次喚醒，而如果它在工作片段中間被晚排程，呼叫端就得等它一個時間片。兩個程序都會在啟動時印出它們的計算結果，包括結果為零的時候，因為一個不宣告自己的循序 tick，會在三個小時後的一行報告「291 snapshots built by 2 threads」中被重新發現。</p>
+<div class="note rule"><p class="note-label">規則</p><p>把高優先權執行緒的數量，與實際會執行它們的核心數比較，而且要涵蓋機器上的每一個程序。</p><p>優先權只能為同時就緒的執行緒排序。就緒的執行緒多於核心時，其中一條就得等一個時間片，而它自己的程式碼裡沒有任何東西能解釋原因。</p></div></div>
 </section>
 
 <section class="sec" id="lock-order">
@@ -247,6 +295,9 @@ game server : workers   = processors / instances − 2        (floor 0: loops ru
 <h2>Les verrous qui ont le droit d'exister</h2>
 <p>Il reste quelques verrous, et chacun suit la même discipline : tenu brièvement, jamais autour d'une entrée-sortie, et toujours pris dans le même ordre. Celui qui a failli mal tourner mérite d'être montré. Le client réseau avait besoin d'un verrou pour qu'envoyer et fermer la socket ne puissent pas se croiser. La version tentante tenait aussi ce verrou pendant la <em>distribution</em> des paquets. Mais distribuer, c'est exécuter du code applicatif, qui prend ses propres verrous, et dans le serveur de jeu cela donnait deux threads prenant les deux mêmes verrous dans des ordres opposés :</p>
 </div>
+<div lang="zh-TW">
+<h2>被允許存在的鎖</h2>
+<p>還剩下幾個鎖，每一個都遵守同樣的紀律：短暫持有、絕不包住 I/O、而且永遠以相同的順序取得。差點出錯的那一個值得展示。網路用戶端需要一個鎖，讓傳送與關閉 socket 不會互相競爭。誘人的版本讓這個鎖也包住封包<em>分派</em>。但分派會執行應用程式碼，而應用程式碼會取得它自己的鎖，在遊戲伺服器中，這就產生了兩條以相反順序取得同樣兩個鎖的執行緒：</p></div>
 <div class="code"><div class="code-head"><span class="file">the deadlock that was never shipped</span></div><pre><code data-lang="txt">tick thread    : holds the map-set lock (unloading a map)  → sends a packet   → wants the network lock
 gateway pump   : holds the network lock (dispatching)      → "host this map"  → wants the map-set lock</code></pre></div>
 <div lang="en">
@@ -259,6 +310,10 @@ gateway pump   : holds the network lock (dispatching)      → "host this map"  
 <div class="note rule"><p class="note-label">Règle</p><p>Ne jamais tenir un verrou pendant qu'on exécute du code qu'on ne contrôle pas, et un rappel est du code qu'on ne contrôle pas.</p><p>Un verrou ajouté pour réparer une course et qui crée un interblocage est un mauvais échange. Écrire les deux ordres d'acquisition côte à côte avant d'ajouter un verrou qui enveloppe un rappel.</p></div>
 <p>L'écrivain de fond est délibérément un seul thread. Les écritures du serveur se sérialisent déjà derrière les verrous d'inventaire : des écrivains parallèles ne gagneraient rien et multiplieraient les interblocages possibles, et un thread unique donne l'ordre gratuitement : deux écritures pour le même personnage atteignent la base dans l'ordre où le jeu les a produites. Si un jour une écriture longue en bloque d'autres, la réponse sera une file <em>par personnage</em>, pas plusieurs threads sur une file commune, qui perdrait l'ordre sans le dire.</p>
 </div>
+<div lang="zh-TW">
+<p>伺服器會在第一次地圖載入與卸載同時發生時凍住。因此網路鎖涵蓋傳送、關閉與開啟，但不涵蓋分派，唯一的例外是負載測試用戶端的手動模式，那裡的分析不同，而且就寫在程式碼旁邊。</p>
+<div class="note rule"><p class="note-label">規則</p><p>絕不在持有鎖時執行你無法掌控的程式碼，而回呼就是你無法掌控的程式碼。</p><p>為了修一個競爭條件而加的鎖，卻造成死結，是一筆壞交易。在加入任何包住回呼的鎖之前，先把兩種取得順序並排寫出來。</p></div>
+<p>背景寫入刻意只用單一執行緒。伺服器的寫入本來就會排在庫存鎖後面依序執行，所以平行的寫入者不會帶來任何好處，反而會讓可能的死結倍增；而單一執行緒能免費提供順序：同一個角色的兩次寫入，會依遊戲產生它們的順序到達資料庫。如果有一天某個長時間的寫入擋住了其他寫入，答案會是<em>每個角色</em>一個佇列，而不是在一個共用佇列上放好幾條執行緒，那樣會在不聲不響中失去順序。</p></div>
 </section>
 
 <section class="sec" id="network-thread">
@@ -274,6 +329,11 @@ gateway pump   : holds the network lock (dispatching)      → "host this map"  
 <div class="note measured"><p class="note-label">Mesuré</p><p>Sur un banc à 2 500 bots, une vague de transitions de carte envoyait des dizaines de bots vers la même carte non chargée dans la même seconde. Chacun arrivait dans le chargeur de cartes, ne trouvait pas la carte (en file, pas encore bâtie), refaisait les sept mêmes requêtes de préparation et ajoutait une requête de plus. Derrière le verrou par carte, ces préparations redondantes s'exécutaient à la queue leu leu sur le thread réseau. Le monde tournait à 25 Hz bien stables pendant que le thread réseau était bouché : plus une entrée traitée, la grâce de deux secondes des clients qui expire, et 2 505 sessions tombées à 923. Aucun compteur de tick n'aurait pu le montrer.</p></div>
 <p>La correction traite un chargement en vol comme une chose partagée : le premier thread qui demande prépare la carte et publie sa requête ; tous les suivants attendent cette même requête. Une préparation, une entrée de file, et tous les threads réseau en attente repartent ensemble quand la carte naît. Le verrou par carte ne garde plus qu'une décision (« est-ce moi qui prépare ? ») et n'est jamais tenu pendant l'attente.</p>
 </div>
+<div lang="zh-TW">
+<h2>網路執行緒也是共用的</h2>
+<p>下一章的「tick 中不碰資料庫」規則不適用於網路執行緒，它可以等待查詢。但遊戲伺服器每個 socket 只有一個網路泵，由上面的每位玩家共用，所以在那裡等待從來都不是免費的。</p>
+<div class="note measured"><p class="note-label">實測</p><p>在一個 2,500 個機器人的測試台中，一波地圖切換在同一秒內把數十個機器人送往同一張尚未載入的地圖。每一個都進入地圖載入器，找不到地圖（已排入佇列，還沒建好），重做了同樣七個準備查詢，又多排了一個請求。在每張地圖的鎖後面，這些多餘的準備在網路執行緒上一個接一個地執行。世界穩穩地以 25 Hz tick，而網路執行緒卻塞住了：沒有輸入被處理，用戶端兩秒的寬限期到期，2,505 個連線階段掉到 923 個。沒有任何 tick 計數器能顯示這件事。</p></div>
+<p>修正方式是把進行中的載入當成共用的東西：第一條提出請求的執行緒負責準備地圖並發布它的請求；之後的每一條執行緒都等待同一個請求。一次準備、一個佇列項目，而地圖誕生時，所有等待中的網路執行緒一起恢復。每張地圖的鎖現在只保護一個決定（「由我來準備嗎？」），而且在等待期間從不持有。</p></div>
 </section>
 
 <section class="sec" id="takeaways">
@@ -292,6 +352,13 @@ gateway pump   : holds the network lock (dispatching)      → "host this map"  
 <li>Faire tourner les boucles parallèles du tick sur des ouvriers dédiés et prioritaires dont la jointure n'attend que les threads actifs.</li>
 <li>Garder les threads prioritaires sous le nombre de cœurs, à l'échelle de la machine, et ne jamais tenir un verrou autour d'un rappel.</li>
 </ul></div>
+<div lang="zh-TW"><h2>重點整理</h2><ul>
+<li>讓每一份狀態只有一條擁有它的執行緒，並以地圖作為平行化的單位。</li>
+<li>只透過四種模式跨越執行緒：只讀一次的最後寫入者獲勝欄位、排入佇列的修改、不可變發布、在鎖內複製。</li>
+<li>只從推進物理引擎的那條執行緒去碰它；原生記憶體損毀不是一個你能攔截的例外。</li>
+<li>在專屬、有優先權的工作執行緒上執行 tick 的平行迴圈，匯合時只等待活躍的執行緒。</li>
+<li>讓整台機器上就緒的高優先權執行緒數不超過核心數，而且絕不在回呼外面持有鎖。</li>
+</ul></div>
 </div>
 </section>
 
@@ -304,6 +371,7 @@ gateway pump   : holds the network lock (dispatching)      → "host this map"  
 <footer class="site-footer" id="mq-footer"></footer>
 <script src="assets/js/site-data.js" defer></script>
 <script src="assets/js/glossary-data.js" defer></script>
+<script src="assets/js/ui-zh.js" defer></script>
 <script src="assets/js/app.js" defer></script>
 <script src="assets/js/widgets.js" defer></script>
 </body>

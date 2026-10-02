@@ -15,8 +15,16 @@
     get: function (k) { try { return window.localStorage.getItem(k); } catch (e) { return null; } },
     set: function (k, v) { try { window.localStorage.setItem(k, v); } catch (e) { /* private mode */ } }
   };
-  function lang() { return root.getAttribute("data-lang") === "fr" ? "fr" : "en"; }
-  function L(en, fr) { return lang() === "fr" ? fr : en; }
+  // Three languages: "en", "fr" and "zh" (Traditional Chinese, as written in Taiwan). The code is
+  // also the key in the data objects; in the page, Chinese blocks carry lang="zh-TW" (see langTag).
+  var LANGS = ["en", "fr", "zh"];
+  function lang() { var l = root.getAttribute("data-lang"); return l === "fr" || l === "zh" ? l : "en"; }
+  function langTag(l) { return l === "zh" ? "zh-TW" : l; }
+  // Chrome strings are written as (en, fr); the Chinese comes from MQ_ZH (ui-zh.js), keyed by the
+  // English, unless a call passes it explicitly (needed when the string is built from numbers).
+  var ZH = window.MQ_ZH || {};
+  function zhOf(en, zh) { return zh != null ? zh : (Object.prototype.hasOwnProperty.call(ZH, en) ? ZH[en] : en); }
+  function L(en, fr, zh) { var l = lang(); return l === "fr" ? fr : l === "zh" ? zhOf(en, zh) : en; }
   function tr(o) { return o ? (o[lang()] || o.en) : ""; }
   function el(tag, attrs, html) {
     var n = document.createElement(tag);
@@ -34,9 +42,12 @@
       return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
     });
   }
-  // Both languages inline, CSS hides the inactive one. Used for chrome that must not re-render.
-  function bi(en, fr) { return '<span lang="en">' + esc(en) + '</span><span lang="fr">' + esc(fr) + "</span>"; }
-  function biObj(o) { return bi(o.en, o.fr); }
+  // Every language inline, CSS hides the inactive ones. Used for chrome that must not re-render.
+  function bi(en, fr, zh) {
+    return '<span lang="en">' + esc(en) + '</span><span lang="fr">' + esc(fr) + '</span><span lang="zh-TW">' + esc(zhOf(en, zh)) + "</span>";
+  }
+  function biObj(o) { return bi(o.en, o.fr, o.zh); }
+  function biT(c) { return bi(c.en.t, c.fr.t, c.zh && c.zh.t); }
   function visited() {
     try { return JSON.parse(store.get("mq-visited") || "[]"); } catch (e) { return []; }
   }
@@ -44,13 +55,13 @@
     var v = visited();
     if (v.indexOf(id) < 0) { v.push(id); store.set("mq-visited", JSON.stringify(v)); }
   }
-  MQ.util = { L: L, tr: tr, el: el, esc: esc, bi: bi, lang: lang, store: store };
+  MQ.util = { L: L, tr: tr, el: el, esc: esc, bi: bi, lang: lang, langTag: langTag, zhOf: zhOf, store: store };
 
   /* ------------------------------------------------------------ language */
   function updateTitle() {
     var name = D.site.name;
     var titleText = name;
-    if (chapter) titleText = chapter[lang()].t + " · " + name;
+    if (chapter) titleText = (chapter[lang()] || chapter.en).t + " · " + name;
     else {
       D.reference.forEach(function (r) {
         if (r.id === pageId && r.id !== "index") titleText = tr(r) + " · " + name;
@@ -60,7 +71,7 @@
   }
   function setLang(l) {
     root.setAttribute("data-lang", l);
-    root.setAttribute("lang", l);
+    root.setAttribute("lang", langTag(l));
     store.set("mq-lang", l);
     updateTitle();
     document.querySelectorAll("[data-lang-btn]").forEach(function (b) {
@@ -113,7 +124,7 @@
       { href: "takeaways.html", id: "takeaways", en: "Key takeaways", fr: "À retenir" }
     ];
     var nav = navItems.map(function (n) {
-      return '<a href="' + n.href + '"' + (n.id === pageId ? ' aria-current="page"' : "") + ">" + bi(n.en, n.fr) + "</a>";
+      return '<a href="' + n.href + '"' + (n.id === pageId ? ' aria-current="page"' : "") + ">" + bi(n.en, n.fr, n.zh) + "</a>";
     }).join("");
     host.innerHTML =
       '<div class="header-inner">' +
@@ -122,7 +133,8 @@
       '<nav class="main-nav" aria-label="' + L("Main", "Principal") + '">' + nav + "</nav>" +
       '<div class="header-tools">' +
       '<button class="search-btn" id="mq-search-btn" type="button">' + SEARCH_ICON + '<span class="sb-text">' + bi("Search the notes", "Chercher dans les notes") + "</span><kbd>" + (isMac ? "⌘K" : "Ctrl K") + "</kbd></button>" +
-      '<div class="seg" role="group" aria-label="Language / Langue"><button type="button" data-lang-btn="en" aria-pressed="false">EN</button><button type="button" data-lang-btn="fr" aria-pressed="false">FR</button></div>' +
+      // The Chinese button carries no lang attribute: the language CSS would hide it.
+      '<div class="seg" role="group" aria-label="Language / Langue / 語言"><button type="button" data-lang-btn="en" aria-pressed="false">EN</button><button type="button" data-lang-btn="fr" aria-pressed="false">FR</button><button type="button" data-lang-btn="zh" aria-pressed="false" title="繁體中文（台灣）">中文</button></div>' +
       '<button class="icon-btn" id="mq-theme-btn" type="button"></button>' +
       "</div></div>";
 
@@ -161,19 +173,19 @@
       { href: "lessons.html", id: "lessons", en: "Rules of thumb", fr: "Règles d'or" },
       { href: "takeaways.html", id: "takeaways", en: "Key takeaways", fr: "À retenir" }
     ].forEach(function (r) {
-      html += '<a href="' + r.href + '"' + (r.id === pageId ? ' aria-current="page"' : "") + ">" + bi(r.en, r.fr) + "</a>";
+      html += '<a href="' + r.href + '"' + (r.id === pageId ? ' aria-current="page"' : "") + ">" + bi(r.en, r.fr, r.zh) + "</a>";
     });
     html += "</div>";
     D.parts.forEach(function (p) {
       var isCurrent = chapter && chapter.part === p.id;
       html += '<details class="curr-part"' + (isCurrent || !chapter ? " open" : "") + ">";
-      html += '<summary><span class="pn">' + p.n + "</span>" + bi(p.en, p.fr) + '<span class="chev" aria-hidden="true">›</span></summary>';
+      html += '<summary><span class="pn">' + p.n + "</span>" + bi(p.en, p.fr, p.zh) + '<span class="chev" aria-hidden="true">›</span></summary>';
       html += '<ol class="curr-chapters">';
       p.chapters.forEach(function (id) {
         var c = D.chapters[id];
         var cls = "curr-chapter" + (v.indexOf(id) >= 0 ? " visited" : "");
         html += '<li class="' + cls + '"><a href="' + c.file + '"' + (id === pageId ? ' aria-current="page"' : "") + ">" +
-          '<span class="cn">' + c.n + "</span><span>" + bi(c.en.t, c.fr.t) + '</span><i class="visited-mark" aria-hidden="true"></i></a></li>';
+          '<span class="cn">' + c.n + "</span><span>" + biT(c) + '</span><i class="visited-mark" aria-hidden="true"></i></a></li>';
       });
       html += "</ol></details>";
     });
@@ -209,9 +221,12 @@
     var prose = document.querySelector(".prose");
     if (!prose) return 0;
     var text = "";
-    prose.querySelectorAll('[lang="' + lang() + '"]').forEach(function (n) { text += " " + n.textContent; });
+    prose.querySelectorAll('[lang="' + langTag(lang()) + '"]').forEach(function (n) { text += " " + n.textContent; });
+    // Chinese has no spaces: count its characters apart, read at about 320 a minute.
+    var cjk = (text.match(/[\u3400-\u9fff\uf900-\ufaff]/g) || []).length;
+    text = text.replace(/[\u3400-\u9fff\uf900-\ufaff\u3000-\u303f\uff00-\uffef]/g, " ");
     var words = text.split(/\s+/).filter(Boolean).length;
-    return Math.max(2, Math.round(words / 200));
+    return Math.max(2, Math.round((words + cjk / 1.6) / 200));
   }
 
   function buildChapterHead() {
@@ -219,8 +234,8 @@
     var part = D.parts.filter(function (p) { return p.id === chapter.part; })[0];
     var eb = document.querySelector(".eyebrow[data-auto]");
     if (eb) {
-      eb.innerHTML = '<span class="pnum">' + bi("Part " + part.n, "Partie " + part.n) + "</span>" +
-        '<span class="sep">/</span><span>' + bi(part.en, part.fr) + "</span>" +
+      eb.innerHTML = '<span class="pnum">' + bi("Part " + part.n, "Partie " + part.n, "第 " + part.n + " 部") + "</span>" +
+        '<span class="sep">/</span><span>' + bi(part.en, part.fr, part.zh) + "</span>" +
         '<span class="sep">/</span><span>' + chapter.n + "</span>";
     }
     var meta = document.querySelector(".meta-row[data-auto]");
@@ -230,13 +245,13 @@
         return '<a class="chip" href="topics.html#' + c + '">' + biObj(D.categories[c]) + "</a>";
       }).join("");
       meta.innerHTML =
-        '<span class="meta-item">' + levelPips(chapter.level) + bi(lv.en, lv.fr) + "</span>" +
+        '<span class="meta-item">' + levelPips(chapter.level) + biObj(lv) + "</span>" +
         '<span class="meta-item" id="mq-minutes"></span>' +
         '<span class="chips">' + cats + "</span>";
       var upd = function () {
         var m = readingMinutes();
         var mEl = document.getElementById("mq-minutes");
-        if (mEl) mEl.textContent = L("≈ " + m + " min read", "≈ " + m + " min de lecture");
+        if (mEl) mEl.textContent = L("≈ " + m + " min read", "≈ " + m + " min de lecture", "約 " + m + " 分鐘閱讀");
       };
       upd();
       document.addEventListener("mq:lang", upd);
@@ -267,9 +282,9 @@
     s += '<path d="M' + ca[0] + " " + (ca[1] + 12) + " C " + ca[0] + " 108, " + cg[0] + " 108, " + cg[0] + " " + (cg[1] + 12) + '" class="' + (bothCG ? "dg-line-hot" : "dg-line") + ' dg-dash"/>';
     // Short labels: the rail is narrow, and French names run long.
     var SHORT = {
-      launcher: ["Launcher", "Launcher"], update: ["Updates", "MAJ"], monitor: ["Monitor", "Monitor"],
-      client: ["Client", "Client"], gateway: ["Gateway", "Gateway"], gs: ["Game srv", "Serv. jeu"],
-      sim: ["World sim", "Simu"], db: ["Database", "Base"], agent: ["Agents", "Agents"]
+      launcher: ["Launcher", "Launcher", "啟動器"], update: ["Updates", "MAJ", "更新"], monitor: ["Monitor", "Monitor", "監控"],
+      client: ["Client", "Client", "用戶端"], gateway: ["Gateway", "Gateway", "閘道"], gs: ["Game srv", "Serv. jeu", "遊戲伺服器"],
+      sim: ["World sim", "Simu", "世界模擬"], db: ["Database", "Base", "資料庫"], agent: ["Agents", "Agents", "代理程式"]
     };
     Object.keys(N).forEach(function (id) {
       var on = hot.indexOf(id) >= 0;
@@ -278,7 +293,7 @@
       if (on) s += '<rect x="' + N[id][0] + '" y="' + N[id][1] + '" width="' + W + '" height="' + H + '" rx="5" class="dg-hot"/>';
       var lab = SHORT[id];
       s += '<text x="' + (N[id][0] + W / 2) + '" y="' + (N[id][1] + 15.5) + '" text-anchor="middle" style="font:600 10px var(--font-body);fill:' + (on ? "var(--ink)" : "var(--ink-3)") + '">' +
-        '<tspan lang="en">' + esc(lab[0]) + '</tspan><tspan lang="fr">' + esc(lab[1]) + "</tspan></text>";
+        '<tspan lang="en">' + esc(lab[0]) + '</tspan><tspan lang="fr">' + esc(lab[1]) + '</tspan><tspan lang="zh-TW">' + esc(lab[2]) + "</tspan></text>";
     });
     s += "</svg>";
     return s;
@@ -307,7 +322,7 @@
   function buildToc() {
     var list = document.getElementById("mq-toc");
     if (!list) return;
-    var l = lang();
+    var l = langTag(lang());
     var items = [];
     document.querySelectorAll(".prose > section.sec[id]").forEach(function (sec) {
       var h2 = null;
@@ -342,9 +357,9 @@
         var a = el("a", { class: "anchor-link", href: "#" + sec.id, "aria-label": L("Link to this section", "Lien vers cette section") }, "#");
         h.appendChild(a);
       });
-      ["en", "fr"].forEach(function (l) {
+      LANGS.forEach(function (l) {
         var k = 0;
-        sec.querySelectorAll(':scope [lang="' + l + '"] h3').forEach(function (h) {
+        sec.querySelectorAll(':scope [lang="' + langTag(l) + '"] h3').forEach(function (h) {
           if (h.closest(".note, .takeaways, .lab")) return;
           k++;
           if (!h.id) h.id = sec.id + "--" + k + "-" + l;
@@ -364,14 +379,14 @@
     var leadsTo = D.order.map(function (id) { return D.chapters[id]; }).filter(function (c) {
       return (c.req || []).indexOf(pageId) >= 0;
     });
-    function li(c) { return '<li><a href="' + c.file + '">' + c.n + " · " + bi(c.en.t, c.fr.t) + "</a></li>"; }
+    function li(c) { return '<li><a href="' + c.file + '">' + c.n + " · " + biT(c) + "</a></li>"; }
     var html = '<div class="chapter-links">';
     if (buildsOn.length) html += "<div><h3>" + bi("Builds on", "S'appuie sur") + "</h3><ul>" + buildsOn.map(li).join("") + "</ul></div>";
     if (leadsTo.length) html += "<div><h3>" + bi("Leads to", "Mène à") + "</h3><ul>" + leadsTo.map(li).join("") + "</ul></div>";
     html += "</div>";
     html += '<nav class="pager" aria-label="' + L("Chapters", "Chapitres") + '">';
-    if (prev) html += '<a class="prev" href="' + prev.file + '"><span>← ' + bi("Previous", "Précédent") + " · " + prev.n + "</span><b>" + bi(prev.en.t, prev.fr.t) + "</b></a>";
-    if (next) html += '<a class="next" href="' + next.file + '"><span>' + bi("Next", "Suivant") + " · " + next.n + " →</span><b>" + bi(next.en.t, next.fr.t) + "</b></a>";
+    if (prev) html += '<a class="prev" href="' + prev.file + '"><span>← ' + bi("Previous", "Précédent") + " · " + prev.n + "</span><b>" + biT(prev) + "</b></a>";
+    if (next) html += '<a class="next" href="' + next.file + '"><span>' + bi("Next", "Suivant") + " · " + next.n + " →</span><b>" + biT(next) + "</b></a>";
     html += "</nav>";
     host.innerHTML = html;
 
@@ -495,7 +510,8 @@
   /* ----------------------------------------------------------------- search */
   var searchState = { open: false, loading: false, filter: null, sel: 0, results: [] };
   function norm(s) {
-    return String(s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9#+.]+/g, " ").trim();
+    // CJK characters are kept: a Chinese query matches as a substring, without word breaks.
+    return String(s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9#+.\u3400-\u9fff\uf900-\ufaff]+/g, " ").trim();
   }
   function ensureIndex(cb) {
     if (window.MQ_INDEX) { prepIndex(); cb(); return; }
@@ -518,7 +534,7 @@
     var docs = [];
     D.order.forEach(function (id) {
       var c = D.chapters[id];
-      ["en", "fr"].forEach(function (l) { docs.push({ p: id, a: "", l: l, h: c[l].t, t: c[l].d, k: "page" }); });
+      LANGS.forEach(function (l) { var x = c[l] || c.en; docs.push({ p: id, a: "", l: l, h: x.t, t: x.d, k: "page" }); });
     });
     return docs;
   }
@@ -528,7 +544,7 @@
     I.docs.forEach(function (d) {
       d._h = norm(d.h);
       d._t = norm(d.t);
-      d._p = D.chapters[d.p] ? norm(D.chapters[d.p][d.l].t) : norm(d.p);
+      d._p = D.chapters[d.p] ? norm((D.chapters[d.p][d.l] || D.chapters[d.p].en).t) : norm(d.p);
     });
     I._prepared = true;
   }
@@ -616,7 +632,7 @@
     }
     list.innerHTML = results.map(function (d, k) {
       var c = D.chapters[d.p];
-      var where = c ? c.n + " · " + c[l].t : (d.k === "term" ? L("Glossary", "Glossaire") : d.p);
+      var where = c ? c.n + " · " + (c[l] || c.en).t : (d.k === "term" ? L("Glossary", "Glossaire") : d.p);
       var href = (c ? c.file : (d.k === "term" ? "glossary.html" : d.p + ".html")) + (d.a ? "#" + d.a : "");
       var kind = d.k === "rule" ? L("Rule · ", "Règle · ") : "";
       return '<li><a href="' + href + '" class="' + (k === 0 ? "sel" : "") + '"><span class="r-path">' + esc(kind + where) +
@@ -712,13 +728,13 @@
     D.parts.forEach(function (p) {
       var lv = p.chapters.map(function (id) { return D.chapters[id].level; });
       var lo = Math.min.apply(null, lv), hi = Math.max.apply(null, lv);
-      var range = lo === hi ? D.levels[lo] : { en: D.levels[lo].en + " → " + D.levels[hi].en, fr: D.levels[lo].fr + " → " + D.levels[hi].fr };
+      var range = lo === hi ? D.levels[lo] : { en: D.levels[lo].en + " → " + D.levels[hi].en, fr: D.levels[lo].fr + " → " + D.levels[hi].fr, zh: D.levels[lo].zh + " → " + D.levels[hi].zh };
       html += '<li><div class="station" aria-hidden="true">' + p.n + "</div><div>" +
-        '<div class="stage-head"><h3>' + bi(p.en, p.fr) + '</h3><span class="lvlr">' + biObj(range) + "</span></div>" +
-        '<p class="stage-why">' + bi(p.wen, p.wfr) + "</p>" +
+        '<div class="stage-head"><h3>' + bi(p.en, p.fr, p.zh) + '</h3><span class="lvlr">' + biObj(range) + "</span></div>" +
+        '<p class="stage-why">' + bi(p.wen, p.wfr, p.wzh) + "</p>" +
         '<div class="stage-chapters">' + p.chapters.map(function (id) {
           var c = D.chapters[id];
-          return '<a href="' + c.file + '" class="' + (v.indexOf(id) >= 0 ? "visited" : "") + '"><span class="cn">' + c.n + "</span>" + bi(c.en.t, c.fr.t) + "</a>";
+          return '<a href="' + c.file + '" class="' + (v.indexOf(id) >= 0 ? "visited" : "") + '"><span class="cn">' + c.n + "</span>" + biT(c) + "</a>";
         }).join("") + "</div></div></li>";
     });
     host.innerHTML = html;
@@ -746,7 +762,7 @@
       });
       host.innerHTML = count ? html : '<div class="empty">' + esc(L("No chapter matches both filters.", "Aucun chapitre ne correspond aux deux filtres.")) + "</div>";
       var info = document.getElementById("mq-topic-desc");
-      if (info) info.textContent = state.cat ? tr({ en: D.categories[state.cat].den, fr: D.categories[state.cat].dfr }) : "";
+      if (info) info.textContent = state.cat ? tr({ en: D.categories[state.cat].den, fr: D.categories[state.cat].dfr, zh: D.categories[state.cat].dzh }) : "";
     }
     function renderFilters() {
       var l = lang();
@@ -780,13 +796,15 @@
     if (!host || !window.MQ_GLOSSARY) return;
     function render() {
       var l = lang();
+      // Chinese entries are ordered and lettered by their English term, which they show beside.
+      var key = l === "zh" ? "en" : l;
       var items = window.MQ_GLOSSARY.slice().sort(function (a, b) {
-        return norm(a[l].term).localeCompare(norm(b[l].term));
+        return norm(a[key].term).localeCompare(norm(b[key].term));
       });
       var letters = {};
       var html = '<dl class="gloss-list">';
       items.forEach(function (g) {
-        var first = norm(g[l].term).charAt(0).toUpperCase();
+        var first = norm(g[key].term).charAt(0).toUpperCase();
         var anchor = "";
         if (!letters[first]) { letters[first] = 1; anchor = ' data-letter="' + first + '"'; }
         var see = (g.see || []).filter(function (id) { return D.chapters[id]; }).map(function (id) {

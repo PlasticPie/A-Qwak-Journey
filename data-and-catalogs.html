@@ -7,12 +7,12 @@
 <meta name="description" content="Migrations, a seed lock shared by several processes, and game data you can change without restarting anything.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Chakra+Petch:wght@500;600&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Chakra+Petch:wght@500;600&family=JetBrains+Mono:wght@400;500;600&family=Noto+Sans+TC:wght@400;700&display=swap">
 <link rel="stylesheet" href="assets/css/site.css">
-<script>(function(){var r=document.documentElement,l,t;try{l=localStorage.getItem("mq-lang");t=localStorage.getItem("mq-theme");}catch(e){}if(l!=="en"&&l!=="fr"){l=(navigator.language||"").toLowerCase().indexOf("fr")===0?"fr":"en";}r.setAttribute("data-lang",l);r.setAttribute("lang",l);if(t==="light"||t==="dark")r.setAttribute("data-theme",t);})();</script>
+<script>(function(){var r=document.documentElement,l,t,n;try{l=localStorage.getItem("mq-lang");t=localStorage.getItem("mq-theme");}catch(e){}if(l!=="en"&&l!=="fr"&&l!=="zh"){n=(navigator.language||"").toLowerCase();l=n.indexOf("fr")===0?"fr":n.indexOf("zh")===0?"zh":"en";}r.setAttribute("data-lang",l);r.setAttribute("lang",l==="zh"?"zh-TW":l);if(t==="light"||t==="dark")r.setAttribute("data-theme",t);})();</script>
 </head>
 <body data-page="data-and-catalogs">
-<a class="skip-link" href="#main"><span lang="en">Skip to content</span><span lang="fr">Aller au contenu</span></a>
+<a class="skip-link" href="#main"><span lang="en">Skip to content</span><span lang="fr">Aller au contenu</span><span lang="zh-TW">跳到主要內容</span></a>
 <header class="site-header" id="mq-header"></header>
 <div class="layout">
 <aside class="sidebar" id="mq-sidebar"></aside>
@@ -20,8 +20,8 @@
 <article>
 <header class="chapter-head">
   <div class="eyebrow" data-auto></div>
-  <h1><span lang="en">Schema, seeding and live catalogs</span><span lang="fr">Schéma, amorçage et catalogues à chaud</span></h1>
-  <p class="dek"><span lang="en">Migrations, a seed lock shared by several processes, and game data you can change without restarting anything.</span><span lang="fr">Les migrations, un verrou d'amorçage partagé par plusieurs processus, et des données de jeu modifiables sans rien redémarrer.</span></p>
+  <h1><span lang="en">Schema, seeding and live catalogs</span><span lang="fr">Schéma, amorçage et catalogues à chaud</span><span lang="zh-TW">結構描述、初始資料與即時目錄</span></h1>
+  <p class="dek"><span lang="en">Migrations, a seed lock shared by several processes, and game data you can change without restarting anything.</span><span lang="fr">Les migrations, un verrou d'amorçage partagé par plusieurs processus, et des données de jeu modifiables sans rien redémarrer.</span><span lang="zh-TW">資料庫遷移、多個程序共用的初始化鎖，以及不必重新啟動任何東西就能修改的遊戲資料。</span></p>
   <div class="meta-row" data-auto></div>
 </header>
 
@@ -46,6 +46,14 @@
 </ul>
 <p>Ce chapitre traite de la mise en place des deux et de leur cohérence : le schéma et ses migrations, le monde initial (l'<em>amorçage</em>), et des catalogues qui peuvent changer pendant que le serveur tourne.</p>
 </div>
+<div lang="zh-TW">
+<h2>兩種資料</h2>
+<p>一款 MMO 攜帶兩種截然不同的資料，而把它們搞混，造成了與「資料庫」有關的大部分痛苦：</p>
+<ul>
+<li><strong>世界狀態</strong>：角色、船艦、庫存、地圖、訂單。它隨著人們遊玩而改變，必須在重新啟動後留存，存放在資料庫中（MySQL，透過 Entity Framework Core）。</li>
+<li><strong>遊戲資料</strong>：一個零件有多重、一顆子彈飛多快、一個配方需要什麼。它在設計者編輯時才改變，對所有人都相同，存放在內嵌於一個共用函式庫中的 JSON <em>目錄</em>裡，伺服器與 Unity 用戶端都會載入這個函式庫，所以兩端讀到的是相同的數字。</li>
+</ul>
+<p>本章談的是如何讓兩者就位並保持一致：結構描述及其遷移、初始世界（<em>種子資料</em>），以及能在伺服器運作時改變的目錄。</p></div>
 </section>
 
 <section class="sec" id="schema">
@@ -61,6 +69,11 @@
 <p>L'agent de machine (chapitre <a href="node-agents.html">7.3</a>) n'utilise délibérément <em>pas</em> cette fabrique, et la raison est un bon principe. L'agent crée un contexte toutes les deux secondes, pour toujours, et ne doit pas créer le schéma : si les tables du parc n'existent pas, une migration n'a pas été appliquée, et un agent qui les fabriquerait lui-même masquerait exactement ce que l'opérateur doit voir. Là, l'erreur est le comportement voulu.</p>
 <div class="note tradeoff"><p class="note-label">Compromis</p><p>« Créer le schéma s'il manque » et « faire évoluer le schéma par migrations » sont deux mécanismes qui se composent mal : une base créée de la première façon n'a pas d'historique de migrations sur lequel la seconde puisse s'appuyer. C'est pratique en développement et marqué comme à faire dans le code ; une installation de production passerait les migrations comme une étape de déploiement explicite et laisserait chaque processus échouer bruyamment sur un schéma qui ne correspond pas.</p></div>
 </div>
+<div lang="zh-TW">
+<h2>結構描述：對伺服器方便，對代理程式嚴格</h2>
+<p>結構描述在程式碼中定義，並透過 EF Core 的遷移演進，在專案的生命週期中大約有七十個。伺服器的資料庫內容工廠會在建立內容時確保結構描述存在，讓一台全新的開發機能在空的資料庫上啟動，不需要任何手動步驟。既有的資料庫則以 EF 工具明確地進行遷移。</p>
+<p>節點代理程式（第 <a href="node-agents.html">7.3</a> 章）刻意<em>不</em>使用那個工廠，而原因是一個好原則。代理程式每兩秒建立一次資料庫內容，永不停止，而且絕不能建立結構描述：如果叢集的資料表不存在，就代表有一個遷移沒有被套用，而一個自己捏造出這些資料表的代理程式，恰恰會掩蓋操作者需要看到的東西。在那裡，錯誤才是期望的行為。</p>
+<div class="note tradeoff"><p class="note-label">取捨</p><p>「如果結構描述不存在就建立它」與「以遷移演進結構描述」是兩個不太能組合在一起的機制：以第一種方式建立的資料庫，沒有可供第二種方式建構的遷移歷史。這在開發期間很方便，並在程式碼中標記為待辦事項；正式環境的設定會把遷移當成一個明確的部署步驟，並讓每個程序在結構描述不相符時大聲地失敗。</p></div></div>
 </section>
 
 <section class="sec" id="seed">
@@ -76,6 +89,11 @@
 <p>Et l'exception était le cas aimable. La partie « soigner » de l'amorçage (ajouter les nœuds et la faune manquants à un monde existant) n'a aucune clé unique : deux processus qui la couraient ensemble <strong>doublaient chaque gisement</strong> en silence, sans aucune erreur nulle part.</p>
 <p>Ces processus ne partagent que la base : le verrou doit donc y vivre. Le <code>GET_LOCK</code> de MySQL est un verrou entre processus : un nom, un délai, tenu par une connexion. Le premier processus arrivé amorce ; les autres attendent, puis trouvent le monde en place et ne font que soigner.</p>
 </div>
+<div lang="zh-TW">
+<h2>由從不交談的程序共用的初始化鎖</h2>
+<p>初始化建立的是初始世界：地圖網格、資源節點、生物、傳送門、陣營、叢集的容量資料列。它對<em>每個程序</em>而言是冪等的：「世界存在嗎？不存在，那就建立它。」但閘道、遊戲伺服器與世界模擬是一起啟動的，並在同一瞬間問這個問題。全都看到「不存在」，全都插入世界編號 1，一個成功，其他的因為重複的鍵而失敗。下一次執行則在更後面一步失敗，卡在一個陣營名稱上。</p>
+<p>而例外還算是好的情況。初始化中的「修補」部分（為既有的世界補上缺少的節點與生物）完全沒有唯一鍵，所以兩個程序同時執行它，會悄悄地<strong>讓每一處資源礦床加倍</strong>，而且任何地方都沒有錯誤。</p>
+<p>這些程序除了資料庫之外不共享任何東西，所以鎖必須放在那裡。MySQL 的 <code>GET_LOCK</code> 是一個跨程序的互斥鎖：一個名稱、一個逾時，由一條連線持有。最先到達的程序負責初始化；其他的等待，然後發現世界已經就位，只做修補。</p></div>
 <div class="code"><div class="code-head"><span class="file">Qwak.Data/QwakDataHelper.cs · SeedAll, simplified</span></div><pre><code data-lang="cs">db.Database.OpenConnection();  // kept open: EF opens and closes per command, and a lock
 try  // taken on a closed connection no longer exists
 {
@@ -100,6 +118,9 @@ finally { db.Database.CloseConnection(); }</code></pre></div>
 <div class="note rule"><p class="note-label">Règle</p><p>Entre des processus qui ne se parlent pas, le seul verrou qu'ils partagent est celui de la base.</p><p>Le même raisonnement revient dans le parc : les agents de machine prennent du travail avec <code>SELECT … FOR UPDATE</code> sur une ligne partagée (chapitre <a href="node-agents.html">7.3</a>). Un verrou interne au processus, aussi soigné soit-il, ne protège rien entre processus.</p></div>
 <p>Un détail de plus de l'amorçage : il <em>dit</em> ce qu'il a fait. Un amorçage qui saute en silence un monde existant est indiscernable d'un amorçage qui ne marche pas : on lance le serveur, rien ne s'affiche, et on cherche un bug qui n'existe pas. Chaque branche écrit une ligne, y compris « le monde existe déjà, géographie conservée ».</p>
 </div>
+<div lang="zh-TW">
+<div class="note rule"><p class="note-label">規則</p><p>在彼此不交談的程序之間，它們唯一共享的鎖，就是資料庫的鎖。</p><p>同樣的推理在叢集中再次出現：節點代理程式以在共用資料列上的 <code>SELECT … FOR UPDATE</code> 認領工作（第 <a href="node-agents.html">7.3</a> 章）。程序內的鎖，無論多謹慎，都無法跨程序提供任何保護。</p></div>
+<p>關於初始化還有一個細節：它會<em>說出</em>自己做了什麼。一個悄悄跳過既有世界的初始化，與一個不能運作的初始化無法區分：你啟動伺服器，什麼都沒出現，然後去找一個不存在的 bug。每一個分支都會記錄一行，包括「世界已存在，地理保持不變」。</p></div>
 </section>
 
 <section class="sec" id="catalogs">
@@ -111,34 +132,37 @@ finally { db.Database.CloseConnection(); }</code></pre></div>
 <h2>Des catalogues à chaud : le fichier est le protocole</h2>
 <p>Changer un nombre dans un catalogue voulait dire recompiler la bibliothèque partagée, reconstruire les bibliothèques du client et relancer Unity. Le JSON embarqué n'est plus qu'une <strong>valeur par défaut</strong>, et deux sources peuvent la supplanter sans toucher à aucun fichier ni bibliothèque du client :</p>
 </div>
+<div lang="zh-TW">
+<h2>即時目錄：檔案就是協定</h2>
+<p>修改目錄中的一個數字，過去意味著重新編譯共用函式庫、重新建置用戶端函式庫，以及重新啟動 Unity。現在內嵌的 JSON 只是一個<strong>預設值</strong>，有兩個來源可以取代它，而不必碰任何用戶端檔案或函式庫：</p></div>
 <figure class="fig fig-scroll">
 <svg viewBox="0 0 760 250" role="img" aria-label="Catalog hot reload: the data editor saves a JSON file; a file watcher on the server notices it; on the tick thread, between two ticks, the server reloads the catalog, rebuilds dependants, runs the cross-checks and either publishes the new version or keeps the previous one; the new catalog is sent compressed to every connected client, which replaces it in memory">
   <defs><marker id="dc-arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="currentColor" opacity="0.7"/></marker></defs>
   <rect x="20" y="30" width="150" height="56" rx="8" class="dg-box"/>
-  <text class="dg-text" x="95" y="54" text-anchor="middle" font-weight="700"><tspan lang="en">Data editor</tspan><tspan lang="fr">Éditeur de données</tspan></text>
-  <text class="dg-small" x="95" y="73" text-anchor="middle"><tspan lang="en">saves part_specs.json</tspan><tspan lang="fr">sauve part_specs.json</tspan></text>
+  <text class="dg-text" x="95" y="54" text-anchor="middle" font-weight="700"><tspan lang="en">Data editor</tspan><tspan lang="fr">Éditeur de données</tspan><tspan lang="zh-TW">資料編輯器</tspan></text>
+  <text class="dg-small" x="95" y="73" text-anchor="middle"><tspan lang="en">saves part_specs.json</tspan><tspan lang="fr">sauve part_specs.json</tspan><tspan lang="zh-TW">儲存 part_specs.json</tspan></text>
   <line x1="170" y1="58" x2="226" y2="58" class="dg-line" marker-end="url(#dc-arr)"/>
   <rect x="230" y="30" width="150" height="56" rx="8" class="dg-box"/>
-  <text class="dg-text" x="305" y="54" text-anchor="middle" font-weight="700"><tspan lang="en">File watcher</tspan><tspan lang="fr">Surveillance</tspan></text>
-  <text class="dg-small" x="305" y="73" text-anchor="middle"><tspan lang="en">400 ms of silence, then queue</tspan><tspan lang="fr">400 ms de silence, puis file</tspan></text>
+  <text class="dg-text" x="305" y="54" text-anchor="middle" font-weight="700"><tspan lang="en">File watcher</tspan><tspan lang="fr">Surveillance</tspan><tspan lang="zh-TW">檔案監看器</tspan></text>
+  <text class="dg-small" x="305" y="73" text-anchor="middle"><tspan lang="en">400 ms of silence, then queue</tspan><tspan lang="fr">400 ms de silence, puis file</tspan><tspan lang="zh-TW">靜默 400 ms，然後排入佇列</tspan></text>
   <line x1="380" y1="58" x2="436" y2="58" class="dg-line" marker-end="url(#dc-arr)"/>
   <rect x="440" y="18" width="300" height="140" rx="8" class="dg-hot"/>
-  <text class="dg-text" x="590" y="42" text-anchor="middle" font-weight="700"><tspan lang="en">Tick thread, between two ticks</tspan><tspan lang="fr">Thread du tick, entre deux ticks</tspan></text>
-  <text class="dg-small" x="456" y="66"><tspan lang="en">1. reload: new immutable instance</tspan><tspan lang="fr">1. recharger : nouvelle instance immuable</tspan></text>
-  <text class="dg-small" x="456" y="86"><tspan lang="en">2. rebuild dependants (items, recipes, NPCs)</tspan><tspan lang="fr">2. reconstruire les dépendants (objets, recettes, PNJ)</tspan></text>
-  <text class="dg-small" x="456" y="106"><tspan lang="en">3. cross-checks: refuse and keep the old one</tspan><tspan lang="fr">3. vérifications croisées : refuser, garder l'ancien</tspan></text>
-  <text class="dg-small" x="456" y="126"><tspan lang="en">4. invalidate every hull's cached stats</tspan><tspan lang="fr">4. invalider les stats en cache de chaque coque</tspan></text>
-  <text class="dg-small" x="456" y="146"><tspan lang="en">5. publish by reference swap</tspan><tspan lang="fr">5. publier par échange de référence</tspan></text>
+  <text class="dg-text" x="590" y="42" text-anchor="middle" font-weight="700"><tspan lang="en">Tick thread, between two ticks</tspan><tspan lang="fr">Thread du tick, entre deux ticks</tspan><tspan lang="zh-TW">Tick 執行緒，在兩個 tick 之間</tspan></text>
+  <text class="dg-small" x="456" y="66"><tspan lang="en">1. reload: new immutable instance</tspan><tspan lang="fr">1. recharger : nouvelle instance immuable</tspan><tspan lang="zh-TW">1. 重新載入：新的不可變實例</tspan></text>
+  <text class="dg-small" x="456" y="86"><tspan lang="en">2. rebuild dependants (items, recipes, NPCs)</tspan><tspan lang="fr">2. reconstruire les dépendants (objets, recettes, PNJ)</tspan><tspan lang="zh-TW">2. 重建相依項目（物品、配方、NPC）</tspan></text>
+  <text class="dg-small" x="456" y="106"><tspan lang="en">3. cross-checks: refuse and keep the old one</tspan><tspan lang="fr">3. vérifications croisées : refuser, garder l'ancien</tspan><tspan lang="zh-TW">3. 交叉檢查：拒絕並保留舊的</tspan></text>
+  <text class="dg-small" x="456" y="126"><tspan lang="en">4. invalidate every hull's cached stats</tspan><tspan lang="fr">4. invalider les stats en cache de chaque coque</tspan><tspan lang="zh-TW">4. 作廢每個船體快取的數值</tspan></text>
+  <text class="dg-small" x="456" y="146"><tspan lang="en">5. publish by reference swap</tspan><tspan lang="fr">5. publier par échange de référence</tspan><tspan lang="zh-TW">5. 以參考交換發布</tspan></text>
   <line x1="590" y1="158" x2="590" y2="186" class="dg-line" marker-end="url(#dc-arr)"/>
   <rect x="440" y="190" width="300" height="46" rx="8" class="dg-box-2"/>
-  <text class="dg-small" x="590" y="210" text-anchor="middle"><tspan lang="en">CatalogSync (gzip) to every connected client</tspan><tspan lang="fr">CatalogSync (gzip) vers chaque client connecté</tspan></text>
-  <text class="dg-small" x="590" y="227" text-anchor="middle"><tspan lang="en">client: replace in memory, never on disk</tspan><tspan lang="fr">client : remplacer en mémoire, jamais sur disque</tspan></text>
+  <text class="dg-small" x="590" y="210" text-anchor="middle"><tspan lang="en">CatalogSync (gzip) to every connected client</tspan><tspan lang="fr">CatalogSync (gzip) vers chaque client connecté</tspan><tspan lang="zh-TW">CatalogSync（gzip）送給每個已連線的用戶端</tspan></text>
+  <text class="dg-small" x="590" y="227" text-anchor="middle"><tspan lang="en">client: replace in memory, never on disk</tspan><tspan lang="fr">client : remplacer en mémoire, jamais sur disque</tspan><tspan lang="zh-TW">用戶端：在記憶體中取代，從不寫入磁碟</tspan></text>
   <rect x="230" y="120" width="150" height="46" rx="8" class="dg-box"/>
-  <text class="dg-small" x="305" y="140" text-anchor="middle"><tspan lang="en">admin /reload</tspan><tspan lang="fr">/reload d'un admin</tspan></text>
-  <text class="dg-small" x="305" y="157" text-anchor="middle"><tspan lang="en">rereads the whole folder</tspan><tspan lang="fr">relit tout le dossier</tspan></text>
+  <text class="dg-small" x="305" y="140" text-anchor="middle"><tspan lang="en">admin /reload</tspan><tspan lang="fr">/reload d'un admin</tspan><tspan lang="zh-TW">管理員 /reload</tspan></text>
+  <text class="dg-small" x="305" y="157" text-anchor="middle"><tspan lang="en">rereads the whole folder</tspan><tspan lang="fr">relit tout le dossier</tspan><tspan lang="zh-TW">重新讀取整個資料夾</tspan></text>
   <line x1="380" y1="143" x2="436" y2="120" class="dg-line" marker-end="url(#dc-arr)"/>
 </svg>
-<figcaption><span lang="en"><strong>No protocol between the tool and the server.</strong> The editor writes a file; the server watches the folder. The reload happens where no map is moving, and a catalog that breaks a cross-check is refused while the previous one stays in force.</span><span lang="fr"><strong>Aucun protocole entre l'outil et le serveur.</strong> L'éditeur écrit un fichier ; le serveur surveille le dossier. Le rechargement a lieu là où aucune carte ne bouge, et un catalogue qui casse une vérification croisée est refusé pendant que le précédent reste en vigueur.</span></figcaption>
+<figcaption><span lang="en"><strong>No protocol between the tool and the server.</strong> The editor writes a file; the server watches the folder. The reload happens where no map is moving, and a catalog that breaks a cross-check is refused while the previous one stays in force.</span><span lang="fr"><strong>Aucun protocole entre l'outil et le serveur.</strong> L'éditeur écrit un fichier ; le serveur surveille le dossier. Le rechargement a lieu là où aucune carte ne bouge, et un catalogue qui casse une vérification croisée est refusé pendant que le précédent reste en vigueur.</span><span lang="zh-TW"><strong>工具與伺服器之間沒有協定。</strong>編輯器寫入一個檔案；伺服器監看資料夾。重新載入發生在沒有任何地圖在移動的地方，而一個未通過交叉檢查的目錄會被拒絕，先前的版本則繼續生效。</span></figcaption>
 </figure>
 <div lang="en">
 <ul>
@@ -158,6 +182,14 @@ finally { db.Database.CloseConnection(); }</code></pre></div>
 </ul>
 <p>Certaines choses ne peuvent pas se recharger par nature : ce qui a été <em>construit</em> à partir d'un catalogue et vit ensuite seul (un corps physique déjà créé, un PNJ déjà en vol, une recette en cours), et les énumérations, qui sont du code. Et les clés d'un catalogue sont un contrat : renommer une famille d'objets ou un identifiant de balle n'est pas un réglage, c'est une migration, parce que les inventaires et les coques en base portent ces identifiants.</p>
 </div>
+<div lang="zh-TW">
+<ul>
+<li><strong>去抖動。</strong>編輯器會以好幾個事件寫入一個檔案（截斷、寫入、重新命名暫存檔），所以監看器會等待 400 ms 的靜默才重新載入。</li>
+<li><strong>在 tick 之間交換。</strong>監看器只把一個名稱排入佇列；重新載入在 tick 執行緒上、在任何地圖移動之前執行，所以沒有任何平行迴圈會讀到一半舊目錄、一半新目錄。幾毫秒的 JSON 解析：一次罕見的卡頓，與每分鐘的掃除同一個數量級。</li>
+<li><strong>不一致就拒絕。</strong>只有在每個目錄都建好之後才能執行的交叉檢查（彈藥不存在的武器、參考了缺少零件的 NPC），會在啟動時以及每次重新載入後執行。一個存到一半的目錄不會讓伺服器倒下；它會被拒絕並回報。</li>
+<li><strong>以資料形式送給用戶端。</strong>一個目錄是 1 到 45 KB、非常重複的 JSON，壓縮後小 4 到 8 倍：不到一秒的快照量。用戶端在連線時會收到與其函式庫中編譯版本不同的目錄（而且會記住每位玩家收到的版本，所以約 20 KB 不會在每次換地圖時重送），並在每次重新載入後再收到一次。</li>
+</ul>
+<p>有些東西本質上就無法重新載入：從目錄<em>建立</em>出來之後就自己存活的東西（已經建立的物理剛體、已經在飛的 NPC、進行中的配方），以及列舉，它們是程式碼。而目錄的鍵是一份契約：重新命名一個物品族系或一個子彈 ID 不是調整數值，而是一次遷移，因為資料庫中的庫存與船體帶著這些 ID。</p></div>
 </section>
 
 <section class="sec" id="hot-reads">
@@ -175,6 +207,12 @@ finally { db.Database.CloseConnection(); }</code></pre></div>
 <div class="note measured"><p class="note-label">Mesuré</p><p>Au banc suivant, l'étape « tir » est passée de 11 à 3,1 ms, « entrée pilote » de 23 à 0,5 ms, et le pire tick de 68,7 à 57,9 ms. Relire le code du tir en chemin a aussi trouvé un vrai bug de jeu : la vérification d'angle (la cible est-elle dans l'arc de cette arme ?) avait disparu lors d'un changement sans rapport, et toute arme hors recharge tirait dans sa propre direction, quel que soit l'angle vers la cible. Au banc, cela comptait double : 400 vaisseaux qui tirent 100 % du temps, c'étaient aussi des centaines de balles en trop à chaque salve.</p></div>
 <div class="note rule"><p class="note-label">Règle</p><p>Séparer la façon dont les données sont stockées (éditables, validées, versionnées) de la façon dont elles sont lues sur le chemin chaud (plates, typées, immuables).</p><p>L'édition veut de la souplesse ; le tick veut des tableaux. Construire la seconde forme à partir de la première au chargement donne les deux, et un rechargement la reconstruit simplement.</p></div>
 </div>
+<div lang="zh-TW">
+<h2>熱路徑上的遊戲資料</h2>
+<p>一個可以即時編輯的目錄，每個 tick 仍然會被讀取數萬次，而它的讀取方式很重要。在一個 400 艘船的測試台上，開火佔了每艘船工作量的 60 到 80 %。每把武器每個 tick 查詢目錄十幾次，甚至在還不知道自己是否在冷卻中之前，而每次讀取都會走訪一個通用的 JSON 物件：整數轉字串（記憶體配置）、索引子、一次 token 轉換，而對零件類型還要從文字解析列舉。更糟的是，子彈目錄在每次呼叫時都以反射反序列化一整筆子彈項目。</p>
+<p>熱門的目錄現在會<strong>在載入時建立一個扁平的快取</strong>：每個零件一個項目，以屬性為索引的數字陣列，類型都已經解碼；子彈項目只反序列化一次並共用。一次熱讀取就是一次字典查詢加上一次陣列索引，沒有任何記憶體配置。熱重載不受影響：快取是不可變的，會被整塊取代。</p>
+<div class="note measured"><p class="note-label">實測</p><p>在下一次測試台中，「開火」步驟從 11 ms 降到 3.1 ms，「駕駛員輸入」從 23 ms 降到 0.5 ms，最差的 tick 從 68.7 ms 降到 57.9 ms。順便重讀開火程式碼時，還發現了一個真正的遊戲玩法 bug：角度檢查（目標是否在這把武器的射界內？）在一次無關的變更中遺失了，所以每把冷卻完畢的武器，不論與目標的角度為何，都朝自己的方向開火。在測試台上它算了兩次：400 艘船 100 % 時間都在開火，也意味著每輪齊射多出數百顆子彈。</p></div>
+<div class="note rule"><p class="note-label">規則</p><p>把資料如何儲存（可編輯、經過驗證、有版本）與它在熱路徑上如何被讀取（扁平、有型別、不可變）分開。</p><p>編輯需要彈性；tick 需要陣列。在載入時從前者建立後者，就能兩者兼得，而重新載入只是再建立一次。</p></div></div>
 </section>
 
 <section class="sec" id="takeaways">
@@ -193,6 +231,13 @@ finally { db.Database.CloseConnection(); }</code></pre></div>
 <li>Recharger les catalogues depuis des fichiers, entre deux ticks, avec des vérifications croisées qui refusent les données incohérentes et gardent la version précédente.</li>
 <li>Compiler les données éditables en structures plates et immuables pour les lectures chaudes, et traiter les clés de catalogue comme un contrat.</li>
 </ul></div>
+<div lang="zh-TW"><h2>重點整理</h2><ul>
+<li>把世界狀態放在資料庫中，把遊戲資料放在用戶端與伺服器都會載入的共用目錄中。</li>
+<li>讓絕不能猜測的工具（代理程式）在結構描述缺少時失敗，而不是建立它。</li>
+<li>當好幾個程序一起啟動時，在資料庫鎖之下進行初始化；沒有唯一鍵的修補路徑會無聲地重複。</li>
+<li>從檔案、在 tick 之間重新載入目錄，並以交叉檢查拒絕不一致的資料、保留先前的版本。</li>
+<li>把可編輯的資料編譯成扁平、不可變的結構供熱讀取使用，並把目錄的鍵當成一份契約。</li>
+</ul></div>
 </div>
 </section>
 
@@ -205,6 +250,7 @@ finally { db.Database.CloseConnection(); }</code></pre></div>
 <footer class="site-footer" id="mq-footer"></footer>
 <script src="assets/js/site-data.js" defer></script>
 <script src="assets/js/glossary-data.js" defer></script>
+<script src="assets/js/ui-zh.js" defer></script>
 <script src="assets/js/app.js" defer></script>
 <script src="assets/js/widgets.js" defer></script>
 </body>

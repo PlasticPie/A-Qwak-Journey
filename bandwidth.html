@@ -7,12 +7,12 @@
 <meta name="description" content="Where every byte of a snapshot goes, the arithmetic that predicts megabytes per second, and the MTU wall.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Chakra+Petch:wght@500;600&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Chakra+Petch:wght@500;600&family=JetBrains+Mono:wght@400;500;600&family=Noto+Sans+TC:wght@400;700&display=swap">
 <link rel="stylesheet" href="assets/css/site.css">
-<script>(function(){var r=document.documentElement,l,t;try{l=localStorage.getItem("mq-lang");t=localStorage.getItem("mq-theme");}catch(e){}if(l!=="en"&&l!=="fr"){l=(navigator.language||"").toLowerCase().indexOf("fr")===0?"fr":"en";}r.setAttribute("data-lang",l);r.setAttribute("lang",l);if(t==="light"||t==="dark")r.setAttribute("data-theme",t);})();</script>
+<script>(function(){var r=document.documentElement,l,t,n;try{l=localStorage.getItem("mq-lang");t=localStorage.getItem("mq-theme");}catch(e){}if(l!=="en"&&l!=="fr"&&l!=="zh"){n=(navigator.language||"").toLowerCase();l=n.indexOf("fr")===0?"fr":n.indexOf("zh")===0?"zh":"en";}r.setAttribute("data-lang",l);r.setAttribute("lang",l==="zh"?"zh-TW":l);if(t==="light"||t==="dark")r.setAttribute("data-theme",t);})();</script>
 </head>
 <body data-page="bandwidth">
-<a class="skip-link" href="#main"><span lang="en">Skip to content</span><span lang="fr">Aller au contenu</span></a>
+<a class="skip-link" href="#main"><span lang="en">Skip to content</span><span lang="fr">Aller au contenu</span><span lang="zh-TW">跳到主要內容</span></a>
 <header class="site-header" id="mq-header"></header>
 <div class="layout">
 <aside class="sidebar" id="mq-sidebar"></aside>
@@ -20,8 +20,8 @@
 <article>
 <header class="chapter-head">
   <div class="eyebrow" data-auto></div>
-  <h1><span lang="en">Bandwidth accounting</span><span lang="fr">La comptabilité de la bande passante</span></h1>
-  <p class="dek"><span lang="en">Where every byte of a snapshot goes, the arithmetic that predicts megabytes per second, and the MTU wall.</span><span lang="fr">Où va chaque octet d'un snapshot, l'arithmétique qui prédit les mégaoctets par seconde, et le mur du MTU.</span></p>
+  <h1><span lang="en">Bandwidth accounting</span><span lang="fr">La comptabilité de la bande passante</span><span lang="zh-TW">頻寬帳本</span></h1>
+  <p class="dek"><span lang="en">Where every byte of a snapshot goes, the arithmetic that predicts megabytes per second, and the MTU wall.</span><span lang="fr">Où va chaque octet d'un snapshot, l'arithmétique qui prédit les mégaoctets par seconde, et le mur du MTU.</span><span lang="zh-TW">快照的每個位元組花在哪裡、預測每秒 MB 數的算式，以及 MTU 這道牆。</span></p>
   <div class="meta-row" data-auto></div>
 </header>
 
@@ -38,21 +38,25 @@
 <p>La bande passante est la seule ressource qui ne devient pas moins chère en rendant le code plus rapide : elle se paie par joueur, par tick, dans le lien sortant du serveur et dans le téléchargement de chaque client. C'est aussi l'endroit le plus facile pour optimiser la mauvaise chose. Un changement qui raccourcissait les balles et supprimait leur angle devait économiser 15 % du snapshot ; la mesure a dit 0,7 %, dans le bruit. Les deux hypothèses derrière l'estimation étaient fausses : les balles n'étaient déjà envoyées que deux fois par spectateur (chapitre <a href="snapshots.html#lifetimes">4.2</a>), et leurs vitesses tenaient déjà sur deux octets (chapitre <a href="encoding.html">1.3</a>). Deux fois de suite, on avait optimisé un coût dont on n'avait jamais mesuré le poids.</p>
 <p>La réponse a été un instrument, éteint par défaut : une fois par seconde, pour un joueur, le serveur ventile le snapshot par type d'objet. Il re-sérialise chaque objet dans un paquet de brouillon, un par un, et lit la longueur ; les coques sont recopiées depuis leur bloc préparé, sans effet de bord. Le bloc du joueur lui-même n'est pas re-sérialisé, parce que c'est un delta à mémoire et que l'écrire deux fois consommerait le delta : il est déduit par soustraction. Une centaine de recopies par seconde, pour un joueur : négligeable.</p>
 </div>
+<div lang="zh-TW">
+<h2>動刀之前，先知道位元組花在哪裡</h2>
+<p>頻寬是唯一一種不會因為程式碼跑得更快而變便宜的資源：它以每位玩家、每個 tick 計費，花在伺服器的出站連線上，也花在每個用戶端的下載上。它也是最容易最佳化錯東西的地方。一項縮短子彈並拿掉其角度的變更，預期能省下快照的 15 %；量測結果是 0.7 %，落在雜訊範圍內。這個估計背後的兩個假設都是錯的：子彈早就只對每位觀察者送兩次（第 <a href="snapshots.html#lifetimes">4.2</a> 章），而且它們的速度早就放得進兩個位元組（第 <a href="encoding.html">1.3</a> 章）。連續兩次，被最佳化的成本，其權重從未被量測過。</p>
+<p>答案是一個量測工具，預設關閉：每秒一次，針對一位玩家，伺服器依物件類型拆解快照。它把每個物件一次一個重新序列化到一個暫存封包中，並讀取長度；船體則從它們預先準備好的區塊中複製，這不會有任何副作用。玩家自己的區塊不會被重新序列化，因為它是一個帶記憶的差量，寫兩次會把差量用掉；它是用減法推算出來的。每秒大約一百次複製，只針對一位玩家：可以忽略。</p></div>
 <figure class="fig">
 <div data-chart>
 <script type="application/json">
 {
   "type": "hbar",
   "labelWidth": 230,
-  "cats": { "en": ["Other hulls (60 × 22 B)", "Bullets (5 × 9 B)", "Own ship + header"], "fr": ["Autres coques (60 × 22 o)", "Balles (5 × 9 o)", "Ma coque + en-tête"] },
-  "series": [ { "name": { "en": "Bytes in one snapshot", "fr": "Octets dans un snapshot" }, "values": [1371, 47, 31] } ],
-  "unit": { "en": "B", "fr": "o" },
-  "unitLabel": { "en": "bytes, one snapshot of 1,449 B", "fr": "octets, un snapshot de 1 449 o" },
-  "aria": { "en": "A 1,449-byte snapshot at 600 players: other hulls 1,371 bytes, bullets 47 bytes, own ship and header 31 bytes", "fr": "Un snapshot de 1 449 octets à 600 joueurs : autres coques 1 371 octets, balles 47 octets, ma coque et en-tête 31 octets" }
+  "cats": { "en": ["Other hulls (60 × 22 B)", "Bullets (5 × 9 B)", "Own ship + header"], "fr": ["Autres coques (60 × 22 o)", "Balles (5 × 9 o)", "Ma coque + en-tête"], "zh": ["其他船體（60 × 22 B）","子彈（5 × 9 B）","自己的船 + 標頭"] },
+  "series": [ { "name": { "en": "Bytes in one snapshot", "fr": "Octets dans un snapshot", "zh": "一份快照中的位元組" }, "values": [1371, 47, 31] } ],
+  "unit": { "en": "B", "fr": "o", "zh": "B" },
+  "unitLabel": { "en": "bytes, one snapshot of 1,449 B", "fr": "octets, un snapshot de 1 449 o", "zh": "位元組，一份 1,449 B 的快照" },
+  "aria": { "en": "A 1,449-byte snapshot at 600 players: other hulls 1,371 bytes, bullets 47 bytes, own ship and header 31 bytes", "fr": "Un snapshot de 1 449 octets à 600 joueurs : autres coques 1 371 octets, balles 47 octets, ma coque et en-tête 31 octets", "zh": "600 位玩家時一份 1,449 位元組的快照：其他船體 1,371 位元組、子彈 47 位元組、自己的船與標頭 31 位元組" }
 }
 </script>
 </div>
-<figcaption><span lang="en"><strong>One snapshot at 600 players, broken down by the trace.</strong> 95 % is the base block of other hulls; every conditional block (damage, beams, effects, gunners, fire) is at zero, meaning the delta rules of chapter <a href="deltas.html">4.4</a> are doing their job. The 116 bytes of ids are included in the bars.</span><span lang="fr"><strong>Un snapshot à 600 joueurs, ventilé par la trace.</strong> 95 % est le bloc de base des autres coques ; tous les blocs conditionnels (dégâts, faisceaux, effets, artilleurs, feu) sont à zéro : les règles de delta du chapitre <a href="deltas.html">4.4</a> font leur travail. Les 116 octets d'identifiants sont compris dans les barres.</span></figcaption>
+<figcaption><span lang="en"><strong>One snapshot at 600 players, broken down by the trace.</strong> 95 % is the base block of other hulls; every conditional block (damage, beams, effects, gunners, fire) is at zero, meaning the delta rules of chapter <a href="deltas.html">4.4</a> are doing their job. The 116 bytes of ids are included in the bars.</span><span lang="fr"><strong>Un snapshot à 600 joueurs, ventilé par la trace.</strong> 95 % est le bloc de base des autres coques ; tous les blocs conditionnels (dégâts, faisceaux, effets, artilleurs, feu) sont à zéro : les règles de delta du chapitre <a href="deltas.html">4.4</a> font leur travail. Les 116 octets d'identifiants sont compris dans les barres.</span><span lang="zh-TW"><strong>600 位玩家時的一份快照，由追蹤工具拆解。</strong>95 % 是其他船體的基本區塊；每一個有條件的區塊（損傷、光束、效果、砲手、火災）都是零，代表第 <a href="deltas.html">4.4</a> 章的差量規則正在發揮作用。116 位元組的 ID 已包含在長條中。</span></figcaption>
 </figure>
 <div lang="en">
 <p>What remains is irreducible: about 22 bytes per hull of id, type, flags, quantized movement and turret orientation, per hull, per tick, per viewer. When the delta rules have removed everything conditional, the only levers left are <em>how many</em> hulls each player receives and <em>how often</em>, which is exactly what the freshness budget controls.</p>
@@ -60,6 +64,8 @@
 <div lang="fr">
 <p>Ce qui reste est irréductible : environ 22 octets par coque d'identifiant, de type, de drapeaux, de mouvement quantifié et d'orientation des tourelles, par coque, par tick, par spectateur. Une fois que les règles de delta ont retiré tout le conditionnel, les seuls leviers restants sont <em>combien</em> de coques reçoit chaque joueur et <em>à quelle fréquence</em>, exactement ce que contrôle le budget de fraîcheur.</p>
 </div>
+<div lang="zh-TW">
+<p>剩下的部分是無法再壓縮的：每個船體約 22 位元組，包含 ID、類型、旗標、量化的移動與砲塔方位，每個船體、每個 tick、每位觀察者。當差量規則移除了所有有條件的東西之後，剩下的唯一槓桿，就是每位玩家收到<em>多少</em>船體，以及<em>多常</em>收到，而這正是新鮮度預算所控制的。</p></div>
 </section>
 
 <section class="sec" id="arithmetic">
@@ -71,6 +77,9 @@
 <h2>L'arithmétique qui prédit le lien</h2>
 <p>Une fois la charge utile comprise, la bande passante sortante est une multiplication, et elle mérite d'être faite avant chaque banc :</p>
 </div>
+<div lang="zh-TW">
+<h2>預測連線流量的算式</h2>
+<p>一旦理解了酬載，出站頻寬就是一道乘法，值得在每次測試台之前先算一遍：</p></div>
 <div class="code"><div class="code-head"><span class="file">600-player bench, two rings 30 / 60</span></div><pre><code data-lang="txt">hulls per tick per player × bytes per hull × players × snapshots per second
       (30 + 60) / 2       ×     22 B      ×   600   ×          25          = 14.85 MB/s
                                                                   measured : 14.5  MB/s</code></pre></div>
@@ -82,20 +91,23 @@
 <p>À 2 % près. Quand la formule et la mesure sont d'accord, on comprend le système ; quand elles ne le sont pas, l'écart est le chiffre le plus intéressant de la journée. La formule est aussi un majorant : quand un joueur voit moins de coques que la capacité d'un anneau, cet anneau les prend toutes et coûte moins. Au banc suivant, avec trois anneaux (20 / 40 / 100) et des joueurs voyant une quarantaine de coques chacun, l'anneau lointain n'était jamais saturé et le trafic sortant est tombé à 12,2 Mo/s.</p>
 <p>La même arithmétique dit ce qui peut s'optimiser et ce qui ne le peut pas. À 400 joueurs, le serveur envoyait 8,08 Mo/s, environ 20 Ko/s par joueur à 25 paquets par seconde. Ce chiffre est le mur du métier, pas celui du code : il ne se franchit pas en optimisant, il se répartit sur des processus et des machines.</p>
 </div>
+<div lang="zh-TW">
+<p>誤差在 2 % 之內。當算式與量測一致時，你就理解了這個系統；當它們不一致時，那個差距就是當天最有趣的數字。這個算式也是一個上限：當玩家看到的船體少於某一圈的容量時，那一圈會全部收下，成本也較低。在下一次測試台中，使用三圈（20 / 40 / 100）、每位玩家看到約四十個船體，最遠的那一圈從未飽和，出站流量降到 12.2 MB/s。</p>
+<p>同樣的算式也告訴你什麼能最佳化、什麼不能。400 位玩家時，伺服器送出 8.08 MB/s，以每秒 25 個封包計，每位玩家約 20 KB/s。這個數字是這一行的牆，而不是程式碼的牆：它無法靠最佳化跨越，只能分散到多個程序與多台機器上。</p></div>
 <figure class="fig">
 <div data-chart>
 <script type="application/json">
 {
   "type": "bar",
-  "cats": { "en": ["201 packed\nno budget", "201 spread out\nno budget", "400, one map\nbudget", "600, one map\nthree rings"], "fr": ["201 regroupés\nsans budget", "201 dispersés\nsans budget", "400, une carte\nbudget", "600, une carte\ntrois anneaux"] },
-  "series": [ { "name": { "en": "Outgoing per player", "fr": "Sortant par joueur" }, "values": [1086, 147, 162, 163] } ],
+  "cats": { "en": ["201 packed\nno budget", "201 spread out\nno budget", "400, one map\nbudget", "600, one map\nthree rings"], "fr": ["201 regroupés\nsans budget", "201 dispersés\nsans budget", "400, une carte\nbudget", "600, une carte\ntrois anneaux"], "zh": ["201 人擠在一起\n無預算","201 人分散\n無預算","400 人，單一地圖\n有預算","600 人，單一地圖\n三圈"] },
+  "series": [ { "name": { "en": "Outgoing per player", "fr": "Sortant par joueur", "zh": "每位玩家的出站流量" }, "values": [1086, 147, 162, 163] } ],
   "unit": "kbit/s",
-  "unitLabel": { "en": "kbit/s per player", "fr": "kbit/s par joueur" },
-  "aria": { "en": "Outgoing bandwidth per player: 1,086 kbit/s for 201 packed players without budget, 147 spread out, 162 at 400 on one map with the budget, 163 at 600 on one map with three rings", "fr": "Bande passante sortante par joueur : 1 086 kbit/s pour 201 joueurs regroupés sans budget, 147 dispersés, 162 à 400 sur une carte avec le budget, 163 à 600 sur une carte avec trois anneaux" }
+  "unitLabel": { "en": "kbit/s per player", "fr": "kbit/s par joueur", "zh": "每位玩家 kbit/s" },
+  "aria": { "en": "Outgoing bandwidth per player: 1,086 kbit/s for 201 packed players without budget, 147 spread out, 162 at 400 on one map with the budget, 163 at 600 on one map with three rings", "fr": "Bande passante sortante par joueur : 1 086 kbit/s pour 201 joueurs regroupés sans budget, 147 dispersés, 162 à 400 sur une carte avec le budget, 163 à 600 sur une carte avec trois anneaux", "zh": "每位玩家的出站頻寬：201 位玩家擠在一起且無預算時 1,086 kbit/s，分散時 147，單一地圖 400 人有預算時 162，單一地圖 600 人三圈時 163" }
 }
 </script>
 </div>
-<figcaption><span lang="en"><strong>With the budget, a crowd costs the same per head as an empty map.</strong> Values derived from the benches' totals (27.3, 8.08 and 12.2 MB/s divided by the player count). The conditions differ between benches, so read the shape, not the decimals.</span><span lang="fr"><strong>Avec le budget, une foule coûte par tête autant qu'une carte vide.</strong> Valeurs tirées des totaux des bancs (27,3, 8,08 et 12,2 Mo/s divisés par le nombre de joueurs). Les conditions diffèrent d'un banc à l'autre : lisez la forme, pas les décimales.</span></figcaption>
+<figcaption><span lang="en"><strong>With the budget, a crowd costs the same per head as an empty map.</strong> Values derived from the benches' totals (27.3, 8.08 and 12.2 MB/s divided by the player count). The conditions differ between benches, so read the shape, not the decimals.</span><span lang="fr"><strong>Avec le budget, une foule coûte par tête autant qu'une carte vide.</strong> Valeurs tirées des totaux des bancs (27,3, 8,08 et 12,2 Mo/s divisés par le nombre de joueurs). Les conditions diffèrent d'un banc à l'autre : lisez la forme, pas les décimales.</span><span lang="zh-TW"><strong>有了預算，人潮中每人的成本和空地圖一樣。</strong>數值由各測試台的總量推算而來（27.3、8.08 與 12.2 MB/s 除以玩家數）。各測試台的條件不同，所以請看形狀，不要看小數。</span></figcaption>
 </figure>
 </section>
 
@@ -126,6 +138,18 @@
 </tbody></table></div>
 <p>Le plafond, ici, n'est pas le CPU mais le trafic sortant d'une carte, qui grandit linéairement avec le nombre de joueurs une fois les anneaux du budget saturés. Vers 500 joueurs par carte, le pic retombe vers 9 Mo/s, et un lien gigabit héberge plusieurs cartes peuplées au lieu d'une seule à l'étroit. Et un plafond par carte n'est un plafond de jeu que s'il n'y a qu'une carte : la question suivante n'est plus « combien par carte » mais « combien de cartes par serveur », ce qui est une mesure pour le chapitre <a href="map-hosting.html">7.1</a>, pas une prédiction.</p>
 </div>
+<div lang="zh-TW">
+<h2>第一道天花板是網路卡</h2>
+<p>一次以單一地圖 1,000 位玩家為目標的測試台，在約 780 時因為一個例外而停止（第 <a href="serialize-once.html#race">4.3</a> 章）。撇開當機不談，它的數字說明了下一道牆在哪裡：</p>
+<div class="table-wrap"><table>
+<thead><tr><th>量測項目</th><th>數值</th><th>解讀</th></tr></thead>
+<tbody>
+<tr><td>最差 tick 的工作量</td><td>38.0 ms</td><td>tick 守住了：單一地圖 800 位玩家，在 40 ms 預算之內。</td></tr>
+<tr><td>出站，平均 / 峰值</td><td>8.8 / 15.1 MB/s</td><td>峰值約 121 Mbit/s：100 Mbit/s 的網路卡已經飽和，而 Gigabit 連線的六分之一就這樣沒了，只為了一張地圖。</td></tr>
+<tr><td>每秒出站封包數，平均 / 峰值</td><td>12,010 / 19,637</td><td>峰值等於 780 × 25：傳送路徑撐得住這個頻率。平均值說明它沒做到：實際頻率 15.4 Hz。</td></tr>
+<tr><td>最差 tick 的延遲醒來</td><td>258.8 ms</td><td>87 % 的間隔在 tick 之外：機器人和伺服器在搶同一台電腦。從這一行無法對伺服器做出任何結論。</td></tr>
+</tbody></table></div>
+<p>這裡的天花板不是 CPU，而是單一地圖的出站流量，一旦預算的各圈都飽和，它就隨玩家數線性增長。在每張地圖約 500 位玩家時，峰值會回落到約 9 MB/s，一條 Gigabit 連線就能承載好幾張有人的地圖，而不是一張擁擠的地圖。而且，每張地圖的天花板只有在只有一張地圖時才是遊戲的天花板：下一個問題不是「每張地圖多少人」，而是「每台伺服器多少張地圖」，那是第 <a href="map-hosting.html">7.1</a> 章要量測的，而不是預測的。</p></div>
 </section>
 
 <section class="sec" id="mtu">
@@ -143,6 +167,12 @@
 <p>Ainsi, le moment où un joueur arrive, le seul moment où une première impression fluide compte le plus, est aussi celui où part son paquet le plus gros et le plus fragile. C'est le premier point de la liste de ce qui reste, et la correction naturelle est de laisser le budget étaler les envois obligatoires du nouveau venu sur quelques ticks, les plus proches d'abord, au lieu de décrire toute la scène en un seul datagramme.</p>
 <div class="note rule"><p class="note-label">Règle</p><p>Surveiller la taille maximale des paquets, pas seulement la bande passante moyenne.</p><p>Les moyennes décrivent le lien ; la queue de distribution décrit l'expérience. Un paquet de 15 Ko une fois par arrivée est invisible en mégaoctets par seconde, et très visible pour le joueur qui arrive.</p></div>
 </div>
+<div lang="zh-TW">
+<h2>MTU 這道牆：抵達時的第一份快照</h2>
+<p>穩定狀態下的快照是一兩 KB。量到過最大的一份是 <strong>15,687 位元組</strong>，發生在第 601 位玩家正在連線的時候。對新來的人來說，視野內的每個物件都是「從未送出」，因此是必要的，而每個受損的船體都以帶著損傷清單的完整視圖送出。預算限制的是可選的傳送，而不是必要的傳送。</p>
+<div class="note beginner"><p class="note-label">新手須知</p><p>一個放不進路徑最大傳輸單元（實務上約 1,400 位元組的酬載）的 UDP 資料包，會被函式庫或 IP 切成多個分段。只有在<em>每一個</em>分段都到達時，訊息才能使用。十一個分段會讓整則訊息遺失的機率變成十一倍，而在可靠通道上，它們還會延遲排在後面的所有東西（第 <a href="transport.html">1.1</a> 章）。</p></div>
+<p>所以玩家抵達的那一刻——最需要流暢第一印象的那一刻——也正是他最大、最脆弱的封包送出的時刻。這是待辦清單上的第一項，而自然的修正方式，是讓預算把新玩家的必要傳送由近到遠分散到幾個 tick 中，而不是在一個資料包中描述整個場景。</p>
+<div class="note rule"><p class="note-label">規則</p><p>要注意最大封包大小，而不只是平均頻寬。</p><p>平均值描述的是連線；尾端描述的是體驗。每次抵達一個 15 KB 的封包，在每秒 MB 數中看不見，對正在抵達的玩家來說卻非常明顯。</p></div></div>
 </section>
 
 <section class="sec" id="both-ends">
@@ -154,6 +184,9 @@
 <h2>Les octets coûtent du CPU aux deux bouts</h2>
 <p>Chaque octet envoyé est aussi un octet sérialisé par le serveur, chiffré, déchiffré, analysé et appliqué par le client. Le protocole delta des balles n'était pas du tout motivé par le réseau : à 1 000 balles par tir, la mise à jour réseau du client montrait des pics de 100 ms, à analyser et appliquer des centaines d'états de balles inchangés par snapshot. Couper les octets a coupé les pics de temps de trame. Quand on budgète la bande passante, on budgète le CPU du client avec.</p>
 </div>
+<div lang="zh-TW">
+<h2>位元組在兩端都要花 CPU</h2>
+<p>送出的每個位元組，也都是伺服器要序列化、加密，用戶端要解密、解析並套用的位元組。子彈差量協定的動機根本不是網路：每次射擊 1,000 顆子彈時，用戶端的網路更新出現 100 ms 的尖峰，因為每份快照都要解析並套用數百個沒有改變的子彈狀態。減少位元組，就減少了影格時間的尖峰。在為頻寬編列預算時，也要把用戶端的 CPU 一起算進去。</p></div>
 </section>
 
 <section class="sec" id="takeaways">
@@ -172,6 +205,13 @@
 <li>S'attendre à ce que le premier plafond par carte soit le lien réseau, et répartir la charge sur des cartes et des machines.</li>
 <li>Surveiller la taille maximale des paquets, surtout à l'arrivée, et compter le CPU du client dans le coût de la bande passante.</li>
 </ul></div>
+<div lang="zh-TW"><h2>重點整理</h2><ul>
+<li>在最佳化任何東西之前，先依物件類型拆解快照；沒有它所做的估計錯了兩次。</li>
+<li>用「傳送次數 × 位元組 × 玩家數 × 頻率」預測出站流量，並把與量測之間的差距視為一項發現。</li>
+<li>有條件的區塊消失之後，剩下的槓桿只有傳送的數量與頻率。</li>
+<li>預期每張地圖的第一道天花板會是網路連線，並把負載分散到多張地圖與多台機器上。</li>
+<li>注意最大封包大小，特別是在抵達時，並把用戶端的 CPU 算進頻寬成本的一部分。</li>
+</ul></div>
 </div>
 </section>
 
@@ -184,6 +224,7 @@
 <footer class="site-footer" id="mq-footer"></footer>
 <script src="assets/js/site-data.js" defer></script>
 <script src="assets/js/glossary-data.js" defer></script>
+<script src="assets/js/ui-zh.js" defer></script>
 <script src="assets/js/app.js" defer></script>
 <script src="assets/js/widgets.js" defer></script>
 </body>

@@ -7,12 +7,12 @@
 <meta name="description" content="Variable-length integers, zig-zag, quantization, and the size cliffs that quietly decide your bandwidth.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Chakra+Petch:wght@500;600&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Chakra+Petch:wght@500;600&family=JetBrains+Mono:wght@400;500;600&family=Noto+Sans+TC:wght@400;700&display=swap">
 <link rel="stylesheet" href="assets/css/site.css">
-<script>(function(){var r=document.documentElement,l,t;try{l=localStorage.getItem("mq-lang");t=localStorage.getItem("mq-theme");}catch(e){}if(l!=="en"&&l!=="fr"){l=(navigator.language||"").toLowerCase().indexOf("fr")===0?"fr":"en";}r.setAttribute("data-lang",l);r.setAttribute("lang",l);if(t==="light"||t==="dark")r.setAttribute("data-theme",t);})();</script>
+<script>(function(){var r=document.documentElement,l,t,n;try{l=localStorage.getItem("mq-lang");t=localStorage.getItem("mq-theme");}catch(e){}if(l!=="en"&&l!=="fr"&&l!=="zh"){n=(navigator.language||"").toLowerCase();l=n.indexOf("fr")===0?"fr":n.indexOf("zh")===0?"zh":"en";}r.setAttribute("data-lang",l);r.setAttribute("lang",l==="zh"?"zh-TW":l);if(t==="light"||t==="dark")r.setAttribute("data-theme",t);})();</script>
 </head>
 <body data-page="encoding">
-<a class="skip-link" href="#main"><span lang="en">Skip to content</span><span lang="fr">Aller au contenu</span></a>
+<a class="skip-link" href="#main"><span lang="en">Skip to content</span><span lang="fr">Aller au contenu</span><span lang="zh-TW">跳到主要內容</span></a>
 <header class="site-header" id="mq-header"></header>
 <div class="layout">
 <aside class="sidebar" id="mq-sidebar"></aside>
@@ -20,8 +20,8 @@
 <article>
 <header class="chapter-head">
   <div class="eyebrow" data-auto></div>
-  <h1><span lang="en">Squeezing bytes</span><span lang="fr">Économiser les octets</span></h1>
-  <p class="dek"><span lang="en">Variable-length integers, zig-zag, quantization, and the size cliffs that quietly decide your bandwidth.</span><span lang="fr">Les entiers de taille variable, le zig-zag, la quantification, et les falaises de taille qui décident en silence de la bande passante.</span></p>
+  <h1><span lang="en">Squeezing bytes</span><span lang="fr">Économiser les octets</span><span lang="zh-TW">壓榨位元組</span></h1>
+  <p class="dek"><span lang="en">Variable-length integers, zig-zag, quantization, and the size cliffs that quietly decide your bandwidth.</span><span lang="fr">Les entiers de taille variable, le zig-zag, la quantification, et les falaises de taille qui décident en silence de la bande passante.</span><span lang="zh-TW">可變長度整數、zig-zag、量化，以及默默決定頻寬的長度斷崖。</span></p>
   <div class="meta-row" data-auto></div>
 </header>
 
@@ -36,6 +36,9 @@
 <h2>Pourquoi un octet compte</h2>
 <p>Un octet économisé une fois, ce n'est rien. Un octet économisé sur chaque objet, dans chaque snapshot, pour chaque joueur est multiplié trois fois. Un octet par vaisseau, 60 vaisseaux en vue, 25 snapshots par seconde, 600 joueurs sur une carte : ça fait <strong>900 Ko/s</strong> de trafic sortant pour un octet. Les encodages ci-dessous expliquent comment le vaisseau moyen d'un snapshot de MoonQwak est descendu à environ 19 octets : son identifiant, son type, un octet de drapeaux, sa position, son cap et ses vitesses, et l'angle de ses tourelles.</p>
 </div>
+<div lang="zh-TW">
+<h2>為什麼一個位元組很重要</h2>
+<p>省下一次的一個位元組微不足道。但在每個物件、每份快照、每位玩家身上都省下一個位元組，就是乘了三次。每艘船一個位元組，視野內 60 艘船，每秒 25 份快照，一張地圖 600 名玩家：光是一個位元組，就是 <strong>900 KB/s</strong> 的出站流量。下面這些編碼，就是 MoonQwak 快照中平均一艘船如何降到約 19 位元組的方法：它的 ID、類型、一個旗標位元組、位置、航向與速度，以及砲塔的角度。</p></div>
 </section>
 
 <section class="sec" id="varint">
@@ -67,6 +70,19 @@
 </tbody></table></div>
 <p>Le lecteur regarde un octet, connaît la taille totale, et lit le reste d'un coup. L'encodeur du labo ci-dessous est une transcription directe du code du projet : vous pouvez vérifier n'importe quelle valeur.</p>
 </div>
+<div lang="zh-TW">
+<h2>可變長度整數</h2>
+<p>遊戲中的大多數數字都很小：數量、ID、物品數量、小座標。把每個都寫成固定 4 或 8 位元組的整數，會浪費掉大部分的位元組。<a class="term" data-term="varint">varint</a> 讓較小的值使用較少的位元組。MoonQwak 的格式把長度放在第一個位元組的最高幾個位元，再以大端序儲存數值：</p>
+<div class="table-wrap"><table>
+<thead><tr><th>數值範圍</th><th class="num">位元組</th><th>第一個位元組</th></tr></thead>
+<tbody>
+<tr><td>0 到 126</td><td class="num">1</td><td><code>0xxxxxxx</code>，就是數值本身</td></tr>
+<tr><td>127 到 16,382</td><td class="num">2</td><td><code>10xxxxxx</code> + 1 位元組</td></tr>
+<tr><td>16,383 到 536,870,910</td><td class="num">4</td><td><code>110xxxxx</code> + 3 位元組</td></tr>
+<tr><td>最多到 2<sup>60</sup> − 2</td><td class="num">8</td><td><code>1110xxxx</code> + 7 位元組</td></tr>
+<tr><td>任何更大的值</td><td class="num">9</td><td><code>0xFF</code> + 8 位元組</td></tr>
+</tbody></table></div>
+<p>讀取端看一個位元組就知道總長度，然後一次讀完剩下的部分。下面實驗室裡的編碼器是直接從專案程式碼移植過來的，你可以檢查任何數值。</p></div>
 <div data-widget="varint"></div>
 <div lang="en">
 <div class="note tradeoff"><p class="note-label">Trade-off</p><p>The format has no 3-byte size. The common alternative, LEB128 (used by Protocol Buffers), stores 7 bits per byte with a continuation bit and grows one byte at a time: 3 bytes reach 2,097,151. MoonQwak's layout decodes with a single branch but jumps from 2 to 4 bytes at 16,383. That jump is the "cliff" this chapter keeps coming back to. The format was kept because every byte already on the wire depends on it; the cliffs were worked around by choosing scales and id ranges instead.</p><p>One more oddity kept for compatibility: the one-byte test is "strictly less than 127", so the value 127 itself takes two bytes.</p></div>
@@ -74,6 +90,8 @@
 <div lang="fr">
 <div class="note tradeoff"><p class="note-label">Compromis</p><p>Le format n'a pas de taille 3 octets. L'alternative courante, LEB128 (celle de Protocol Buffers), stocke 7 bits par octet avec un bit de continuation et grandit d'un octet à la fois : 3 octets vont jusqu'à 2 097 151. La disposition de MoonQwak se décode en une seule branche, mais saute de 2 à 4 octets à 16 383. Ce saut est la « falaise » dont ce chapitre reparle sans cesse. Le format a été gardé parce que chaque octet déjà sur le fil en dépend ; on a contourné les falaises en choisissant les échelles et les plages d'identifiants.</p><p>Une dernière bizarrerie gardée pour la compatibilité : le test à un octet est « strictement inférieur à 127 », donc la valeur 127 elle-même prend deux octets.</p></div>
 </div>
+<div lang="zh-TW">
+<div class="note tradeoff"><p class="note-label">取捨</p><p>這個格式沒有 3 位元組的長度。常見的替代方案 LEB128（Protocol Buffers 使用的）每個位元組存 7 個位元加一個延續位元，一次增加一個位元組：3 個位元組可達 2,097,151。MoonQwak 的格式只需一個分支就能解碼，但在 16,383 時從 2 位元組直接跳到 4 位元組。這個跳躍就是本章一再回來談的「斷崖」。之所以保留這個格式，是因為線路上已經存在的每個位元組都依賴它；斷崖則是靠選擇比例與 ID 範圍來繞過。</p><p>還有一個為了相容性而保留的怪癖：單一位元組的判斷條件是「嚴格小於 127」，所以數值 127 本身要佔兩個位元組。</p></div></div>
 <div class="code"><div class="code-head"><span class="file">Network/VarInt.cs · encoding without allocating</span></div><pre><code data-lang="cs">private static int EncodeUVarInt(ulong value, Span&lt;byte&gt; dst)
 {
     if (value &lt; 0x7f) { dst[0] = (byte)value; return 1; }
@@ -103,6 +121,8 @@ public static void WriteUVarInt(ulong value, BinaryWriter writer)
 <div lang="fr">
 <div class="note measured"><p class="note-label">Mesuré</p><p>La première version de cet encodeur créait une lambda et au moins un <code>byte[]</code> par valeur écrite, y compris pour les valeurs d'un octet, et le lecteur faisait de même. Chaque champ varint de chaque paquet passait par là, côté serveur comme côté client. Réécrire les deux côtés avec <code>stackalloc</code> et des lectures directes, vérifiées octet pour octet contre l'ancienne sortie, a été l'un des plus gros gains CPU de toute la passe de performance.</p></div>
 </div>
+<div lang="zh-TW">
+<div class="note measured"><p class="note-label">實測</p><p>這個編碼器的第一版，每寫入一個數值都會建立一個 lambda 和至少一個 <code>byte[]</code>，連單一位元組的值也一樣，而讀取端也如出一轍。每個封包的每個 varint 欄位都經過它，在伺服器上和用戶端上都是。用 <code>stackalloc</code> 與直接讀取改寫兩端，並逐位元組與舊輸出比對，是整個效能優化階段中最大的 CPU 收穫之一。</p></div></div>
 </section>
 
 <section class="sec" id="zigzag">
@@ -114,6 +134,9 @@ public static void WriteUVarInt(ulong value, BinaryWriter writer)
 <h2>Les nombres négatifs : le zig-zag</h2>
 <p>Un varint est non signé. Convertissez −1 en entier non signé de 64 bits et vous obtenez la plus grande valeur possible, qui coûte le maximum de 9 octets, l'inverse de ce qu'on veut pour un petit décalage. L'encodage <a class="term" data-term="zigzag">zig-zag</a> entrelace positifs et négatifs avant le varint : 0, −1, 1, −2, 2 deviennent 0, 1, 2, 3, 4. Les petites valeurs restent petites quel que soit leur signe.</p>
 </div>
+<div lang="zh-TW">
+<h2>負數：zig-zag</h2>
+<p>varint 是無號的。把 −1 轉成無號 64 位元整數，會得到可能的最大值，要花最多的 9 個位元組，這與你對一個小偏移量的期望正好相反。<a class="term" data-term="zigzag">Zig-zag</a> 編碼在 varint 之前先把正負值交錯排列：0、−1、1、−2、2 變成 0、1、2、3、4。不論正負，絕對值小的數字都保持很小。</p></div>
 <div class="code"><div class="code-head"><span class="file">Network/VarInt.cs</span></div><pre><code data-lang="cs">private static ulong ZigZagEncode(long value) => (ulong)((value &lt;&lt; 1) ^ (value >> 63));
 private static long ZigZagDecode(ulong value) => (long)(value >> 1) ^ -(long)(value &amp; 1);</code></pre></div>
 <div lang="en">
@@ -122,6 +145,8 @@ private static long ZigZagDecode(ulong value) => (long)(value >> 1) ^ -(long)(va
 <div lang="fr">
 <p>Le prix du zig-zag est qu'il double chaque valeur absolue. Une valeur signée ne tient sur deux octets que tant que sa forme zig-zag reste sous 16 383, c'est-à-dire entre −8 191 et +8 191. Ce facteur deux est facile à oublier quand on fait le calcul de tête, et la section suivante montre ce que ça coûte quand on l'oublie.</p>
 </div>
+<div lang="zh-TW">
+<p>zig-zag 的代價是每個絕對值都被加倍。一個有號數值只有在其 zig-zag 形式低於 16,383 時才放得進兩個位元組，也就是介於 −8,191 與 +8,191 之間。在腦中心算時，這個兩倍很容易被遺忘，而下一節會說明遺忘它的代價。</p></div>
 </section>
 
 <section class="sec" id="quantization">
@@ -153,6 +178,19 @@ private static long ZigZagDecode(ulong value) => (long)(value >> 1) ^ -(long)(va
 </tbody></table></div>
 <p>Le cap est l'exception : un vaisseau a autant de chances de pointer dans une direction que dans une autre, donc un varint (qui récompense les petites valeurs) n'aiderait pas. Deux octets fixes couvrant tout le cercle sont quatre fois plus petits qu'un double et coûtent pareil pour tous les angles.</p>
 </div>
+<div lang="zh-TW">
+<h2>量化：把浮點數變成縮放後的整數</h2>
+<p>一個 <code>double</code> 永遠要花 8 個位元組，而且帶著遠超過螢幕能顯示的精度。<a class="term" data-term="quantization">量化</a>把數值乘上一個比例、四捨五入，再把這個整數以 zig-zag varint 送出。接收端再除以同一個比例。這些比例放在一個共用類別中，因為寫入端與讀取端比例不一致時並不會拋出例外：它只會默默地把每個位置乘上兩者的比值。</p>
+<div class="table-wrap"><table>
+<thead><tr><th>物理量</th><th class="num">比例</th><th>步長</th><th>兩位元組可涵蓋範圍</th></tr></thead>
+<tbody>
+<tr><td>船艦與角色位置</td><td class="num">40</td><td>2.5 cm</td><td>±204.8 單位</td></tr>
+<tr><td>船艦速度</td><td class="num">100</td><td>1 cm/s</td><td>±81.9 單位/秒</td></tr>
+<tr><td>子彈位置與速度</td><td class="num">10</td><td>10 cm</td><td>±819.1 單位</td></tr>
+<tr><td>角速度</td><td class="num">1,000</td><td>0.001 rad/s</td><td>±8.19 rad/s</td></tr>
+<tr><td>航向</td><td colspan="3">固定 16 位元：一整圈的分數，每步約 0.0001 rad</td></tr>
+</tbody></table></div>
+<p>航向是例外：船艦指向任何方向的機率都一樣，所以 varint（獎勵小數值）幫不上忙。兩個涵蓋整個圓的固定位元組，比 double 小四倍，而且每個角度的成本都一樣。</p></div>
 <div class="code"><div class="code-head"><span class="file">Packet/BasePacket.cs</span></div><pre><code data-lang="cs">public void WriteQuantized(double value, double scale) => WriteVarInt((long)Math.Round(value * scale));
 public double ReadQuantized(double scale) => ReadVarInt() / scale;
 
@@ -187,12 +225,24 @@ public void WriteAngle(double radians)
 <h3>La vitesse des balles</h3>
 <p>La balle la plus rapide du catalogue vole à 88 unités par seconde. Écrite à l'échelle des vaisseaux de 1/100, une composante de vitesse de cette taille fait 8 800 pas avant zig-zag et 17 600 après : quatre octets. Les balles ont reçu leur propre échelle de 1/10, où ±819 unités par seconde tiennent sur deux octets. L'erreur est de 5 cm sur la position et 5 cm/s sur la vitesse, ce qui, après une seconde de vol, place la balle du client à 0,1 unité de celle du serveur, sur des coques dont les cellules ont un rayon de 3.</p>
 </div>
+<div lang="zh-TW">
+<h2>斷崖，三次</h2>
+<p>因為長度在固定門檻處從 2 位元組跳到 4 位元組，一個數值的小小變化就可能讓它的成本加倍。MoonQwak 有三次獨立的最佳化，都是為了讓常見的數值留在這道邊緣的正確一側。</p>
+<h3>位置與地圖大小</h3>
+<p>當地圖半徑從 100 變成 400 單位時，船艦大部分時間都離中心很遠，座標越過了門檻。一個追蹤紀錄顯示，同一艘船在巡航時是 23 位元組，在中心附近戰鬥時是 19 位元組：多出來的 4 個位元組，是兩個各自長到 4 位元組的座標。位置比例從 100（1 cm）改成 40（2.5 cm），把邊緣從離中心 81.9 單位移到 204.8 單位。</p>
+<div class="note pitfall"><p class="note-label">我踩過的坑</p><p>這次變更的第一次計算，是把 16,383 除以比例，得出在比例 40 下 ±409 單位都能放進兩個位元組，這樣就涵蓋了整張地圖。它忘了 zig-zag 會先把數值加倍，所以真正的上限是 8,191 步，也就是 ±204.8 單位。在半徑 400 的地圖上，離中心約 205 單位以外的位置，每個軸仍然要佔四個位元組。上面的實驗室就看得到：在「船艦位置」中試試 204 和 206。要用兩個位元組涵蓋整張地圖，需要比例 20（5 cm 步長）或更小。</p></div>
+<h3>不斷變大的 ID</h3>
+<p>每個物件都從一個永不重複使用的計數器取得網路 ID。子彈只活約一秒，而每秒會發射數百顆，所以在一場戰鬥開打幾分鐘內，計數器就超過了 16,383，從那之後每個 ID 都要花四個位元組。在混戰中，ID 約佔快照的 14%。修正方式是給子彈一段自己專用、可回收的 ID 區段，從 8,192 到 16,382，全部都放得進兩個位元組（ID 是無號的，所以這裡沒有 zig-zag）。一個 ID 只有在 10 秒的隔離期之後才會回到區段中，這比用戶端記得一顆子彈的時間長得多，所以回收的 ID 永遠不會和舊的混淆。其他所有東西的計數器則跳過這個區段。（<a href="entities.html">3.6</a>）</p>
+<h3>子彈速度</h3>
+<p>目錄中最快的子彈每秒飛行 88 單位。若用船艦的 1/100 比例寫入，這麼大的速度分量在 zig-zag 之前是 8,800 步，之後是 17,600：四個位元組。子彈因此有了自己的 1/10 比例，每秒 ±819 單位都放得進兩個位元組。誤差在位置上是 5 cm、速度上是 5 cm/s，飛行一整秒後，用戶端的子彈與伺服器的相差 0.1 單位，而船體格子的半徑是 3。</p></div>
 <div lang="en">
 <div class="note rule"><p class="note-label">Rule</p><p>For every frequent value, know which side of the size cliff it lives on, and compute it with the encoding actually used.</p><p>With a signed varint, the two-byte range is ±8,191 steps, not 16,383. Divide by the scale, then compare with the real range of the value (map radius, top speed, id lifetime).</p></div>
 </div>
 <div lang="fr">
 <div class="note rule"><p class="note-label">Règle</p><p>Pour chaque valeur fréquente, savoir de quel côté de la falaise de taille elle vit, et le calculer avec l'encodage réellement utilisé.</p><p>Avec un varint signé, la plage sur deux octets est de ±8 191 pas, pas 16 383. Diviser par l'échelle, puis comparer avec la plage réelle de la valeur (rayon de la carte, vitesse maximale, durée de vie des identifiants).</p></div>
 </div>
+<div lang="zh-TW">
+<div class="note rule"><p class="note-label">規則</p><p>對每一個常見的數值，都要知道它位在長度斷崖的哪一側，並且用實際使用的編碼來計算。</p><p>用有號 varint 時，兩位元組的範圍是 ±8,191 步，而不是 16,383。先除以比例，再與該數值的實際範圍（地圖半徑、最高速度、ID 生命週期）比較。</p></div></div>
 </section>
 
 <section class="sec" id="flags">
@@ -206,6 +256,10 @@ public void WriteAngle(double radians)
 <p>Le champ le moins cher est celui qu'on n'envoie pas. Chaque vaisseau d'un snapshot commence par un octet de drapeaux dont les bits annoncent quels blocs optionnels suivent : mouvement, reconstruction de coque, état par hex, angles des tourelles, rayons laser, effets, postes d'équipage, feu. Un vaisseau immobile à qui rien n'arrive coûte son identifiant, son type et cet octet.</p>
 <p>Deux détails ont rendu ça correct. Le bit de mouvement est aussi envoyé au tick exact où un vaisseau s'arrête, pour que chaque spectateur se cale sur la position finale au lieu d'extrapoler au-delà. Et le bloc d'état par hex couvre tous les champs qu'il envoie : une première version comparait quatre champs sur cinq, si bien que le cinquième (un hex à court d'énergie) ne déclenchait jamais d'envoi et restait invisible aux autres joueurs. Le chapitre <a href="deltas.html">4.4</a> raconte toute l'histoire de ce bloc.</p>
 </div>
+<div lang="zh-TW">
+<h2>旗標位元組：只為改變的部分付費</h2>
+<p>最便宜的欄位，就是不送的欄位。快照中的每艘船都以一個旗標位元組開頭，其中的位元宣告後面跟著哪些選用區塊：移動、船體重建、每格狀態、砲塔角度、雷射光束、特效、船員崗位、開火。一艘靜止不動、什麼事都沒發生的船，只花它的 ID、類型和這一個位元組。</p>
+<p>有兩個細節讓這行得通。移動位元也會在船艦停下的那一個 tick 送出，讓每位觀察者都停在最終位置，而不是外插越過它。而每格狀態區塊會涵蓋它送出的每個欄位：早期的版本只比較了五個欄位中的四個，所以第五個（某一格的電力不足）從未觸發傳送，其他玩家就悄悄地看不到它。第 <a href="deltas.html">4.4</a> 章會講述這個區塊的完整故事。</p></div>
 </section>
 
 <section class="sec" id="measure-first">
@@ -221,6 +275,11 @@ public void WriteAngle(double radians)
 <div class="note pitfall"><p class="note-label">Piège rencontré</p><p>Un lot « balles au dixième plus un angle de moins » devait économiser 15 % de la taille des snapshots. Il en a économisé 0,7 %. Deux hypothèses étaient fausses : les balles n'étaient plus envoyées qu'à leur apparition et à leur impact depuis longtemps (donc une petite part de chaque snapshot), et la plupart de leurs vitesses étaient déjà sous le seuil des deux octets. Aucune des deux n'avait été mesurée.</p></div>
 <p>La réponse a été un instrument, pas une optimisation de plus : une trace, activée par une variable d'environnement, qui re-sérialise le snapshot d'un joueur objet par objet une fois par seconde et affiche la taille par type d'objet, les octets passés en identifiants, et combien de vaisseaux portent chaque bloc optionnel. Une ligne typique du banc à 600 joueurs :</p>
 </div>
+<div lang="zh-TW">
+<h2>量測位元組由什麼組成</h2>
+<p>編碼工作很容易瞄錯目標，而 MoonQwak 連續犯了兩次。</p>
+<div class="note pitfall"><p class="note-label">我踩過的坑</p><p>一批「子彈改用 1/10 加上少一個角度」的修改，預期能省下 15% 的快照大小。結果只省了 0.7%。有兩個假設是錯的：子彈早就只在產生與命中時才送（所以它們在每份快照中只佔一小部分），而且它們大多數的速度原本就低於兩位元組的門檻。這兩個假設都沒有被量測過。</p></div>
+<p>對策是一個量測工具，而不是另一項最佳化：一個由環境變數開啟的追蹤工具，每秒一次逐物件地重新序列化某位玩家的快照，並印出依物件類型區分的大小、花在 ID 上的位元組，以及有多少艘船帶著各個選用區塊。以下是 600 名玩家測試台中典型的一行：</p></div>
 <div class="code"><div class="code-head"><span class="file">GameServer console · QWAK_SNAP_TRACE=1</span></div><pre><code data-lang="txt">[Snap bytes] peer 0: total 1449 · self+header 31 · ids 116 · Ship 60x22=1371 · Bullet 5x9=47
    hull blocks: movement 60 · turrets 60 · rebuild 0 · state 0 · beams 0 · effects 0 · posts 0 · fire 0</code></pre></div>
 <div lang="en">
@@ -231,6 +290,9 @@ public void WriteAngle(double radians)
 <p>Cette ligne a clos un débat : 95 % du snapshot était la base fixe de chaque vaisseau, chaque bloc optionnel était déjà à zéro, et il n'y avait plus rien à gagner sur l'encodage. Le seul levier restant était la fréquence d'envoi de chaque vaisseau, qui est le sujet du chapitre <a href="freshness-budget.html">4.5</a>.</p>
 <div class="note rule"><p class="note-label">Règle</p><p>Avant d'optimiser un encodage, décomposer la vraie charge utile par ce qu'elle contient.</p><p>Une estimation de l'endroit où vont les octets est une hypothèse. Une décomposition par type d'un vrai paquet prend un après-midi à écrire et change en général le plan.</p></div>
 </div>
+<div lang="zh-TW">
+<p>這一行結束了一場爭論：快照的 95% 是每艘船的固定基本資料，每個選用區塊都已經是零，從編碼上已經沒有什麼可以再省了。唯一剩下的槓桿，是每艘船多久送一次，這正是 <a href="freshness-budget.html">4.5</a> 的主題。</p>
+<div class="note rule"><p class="note-label">規則</p><p>在最佳化編碼之前，先把真實的酬載依內容拆解。</p><p>對位元組花在哪裡的估計只是一個假設。為真實封包做一份依類型的拆解，只要一個下午，而且通常會改變計畫。</p></div></div>
 </section>
 
 <section class="sec" id="takeaways">
@@ -249,6 +311,13 @@ public void WriteAngle(double radians)
 <li>Les octets de drapeaux permettent à un objet au repos de ne coûter presque rien.</li>
 <li>Mesurer la composition de vrais paquets avant de choisir quoi optimiser.</li>
 </ul></div>
+<div lang="zh-TW"><h2>重點整理</h2><ul>
+<li>varint 讓小數字很便宜；zig-zag 讓小的負數也一樣便宜，代價是範圍減半。</li>
+<li>把浮點數量化到遊戲需要的精度，比例只定義一次，由兩端共用。</li>
+<li>有長度跳躍的 varint 格式會有斷崖；透過選擇比例與 ID 範圍，讓常見數值留在斷崖之下。</li>
+<li>旗標位元組讓閒置的物件幾乎不花成本。</li>
+<li>在決定要最佳化什麼之前，先量測真實封包的組成。</li>
+</ul></div>
 </div>
 </section>
 
@@ -261,6 +330,7 @@ public void WriteAngle(double radians)
 <footer class="site-footer" id="mq-footer"></footer>
 <script src="assets/js/site-data.js" defer></script>
 <script src="assets/js/glossary-data.js" defer></script>
+<script src="assets/js/ui-zh.js" defer></script>
 <script src="assets/js/app.js" defer></script>
 <script src="assets/js/widgets.js" defer></script>
 </body>

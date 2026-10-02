@@ -7,12 +7,12 @@
 <meta name="description" content="ECS for bullets, one mesh for eight hundred debris, and the per-instance traps that only show under load.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Chakra+Petch:wght@500;600&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Chakra+Petch:wght@500;600&family=JetBrains+Mono:wght@400;500;600&family=Noto+Sans+TC:wght@400;700&display=swap">
 <link rel="stylesheet" href="assets/css/site.css">
-<script>(function(){var r=document.documentElement,l,t;try{l=localStorage.getItem("mq-lang");t=localStorage.getItem("mq-theme");}catch(e){}if(l!=="en"&&l!=="fr"){l=(navigator.language||"").toLowerCase().indexOf("fr")===0?"fr":"en";}r.setAttribute("data-lang",l);r.setAttribute("lang",l);if(t==="light"||t==="dark")r.setAttribute("data-theme",t);})();</script>
+<script>(function(){var r=document.documentElement,l,t,n;try{l=localStorage.getItem("mq-lang");t=localStorage.getItem("mq-theme");}catch(e){}if(l!=="en"&&l!=="fr"&&l!=="zh"){n=(navigator.language||"").toLowerCase();l=n.indexOf("fr")===0?"fr":n.indexOf("zh")===0?"zh":"en";}r.setAttribute("data-lang",l);r.setAttribute("lang",l==="zh"?"zh-TW":l);if(t==="light"||t==="dark")r.setAttribute("data-theme",t);})();</script>
 </head>
 <body data-page="client-rendering">
-<a class="skip-link" href="#main"><span lang="en">Skip to content</span><span lang="fr">Aller au contenu</span></a>
+<a class="skip-link" href="#main"><span lang="en">Skip to content</span><span lang="fr">Aller au contenu</span><span lang="zh-TW">跳到主要內容</span></a>
 <header class="site-header" id="mq-header"></header>
 <div class="layout">
 <aside class="sidebar" id="mq-sidebar"></aside>
@@ -20,8 +20,8 @@
 <article>
 <header class="chapter-head">
   <div class="eyebrow" data-auto></div>
-  <h1><span lang="en">Rendering thousands of objects</span><span lang="fr">Afficher des milliers d'objets</span></h1>
-  <p class="dek"><span lang="en">ECS for bullets, one mesh for eight hundred debris, and the per-instance traps that only show under load.</span><span lang="fr">L'ECS pour les balles, une seule maille pour huit cents débris, et les pièges par instance qui n'apparaissent qu'en charge.</span></p>
+  <h1><span lang="en">Rendering thousands of objects</span><span lang="fr">Afficher des milliers d'objets</span><span lang="zh-TW">繪製成千上萬個物件</span></h1>
+  <p class="dek"><span lang="en">ECS for bullets, one mesh for eight hundred debris, and the per-instance traps that only show under load.</span><span lang="fr">L'ECS pour les balles, une seule maille pour huit cents débris, et les pièges par instance qui n'apparaissent qu'en charge.</span><span lang="zh-TW">子彈用 ECS、八百塊碎片用一個網格，以及只在高負載下才現形的逐實例陷阱。</span></p>
   <div class="meta-row" data-auto></div>
 </header>
 
@@ -38,6 +38,10 @@
 <p>Un banc avec une centaine de vaisseaux PNJ en combat a montré une situation que le travail côté serveur ne peut pas régler seul : le serveur tenait ses 40 ms par tick, et le client tombait à 20 images par seconde, avec environ <strong>1 200 draw calls</strong> par image. Un client de MMO n'affiche pas une scène conçue par un artiste, avec un nombre d'objets connu ; il affiche ce que le serveur lui dit, et en combat, ce sont des centaines d'objets éphémères qui apparaissent et disparaissent chaque seconde.</p>
 <div class="note beginner"><p class="note-label">Pour débuter</p><p>Un <strong>draw call</strong> est une demande du CPU au GPU de dessiner quelque chose. Chacun porte un coût CPU fixe (changements d'état, validation) : un millier de petits objets dessinés séparément peut saturer le CPU pendant que le GPU se tourne les pouces. Les moteurs essaient de <em>regrouper</em> les objets compatibles en moins d'appels, mais seulement sous conditions (même matériau, types de rendu compatibles), que du code par objet casse facilement.</p></div>
 </div>
+<div lang="zh-TW">
+<h2>伺服器撐住了，用戶端倒了</h2>
+<p>一次有一百艘 NPC 船艦交戰的測試台，呈現出一個光靠伺服器端的工作無法解決的情況：伺服器守住了每個 tick 40 ms，而用戶端掉到每秒 20 個影格，每個影格約有 <strong>1,200 次繪製呼叫</strong>。MMO 用戶端繪製的不是美術人員設計好、物件數量已知的場景；它繪製的是伺服器告訴它的任何東西，而在戰鬥中，那是每秒出現又消失的數百個短暫物件。</p>
+<div class="note beginner"><p class="note-label">新手須知</p><p><strong>繪製呼叫</strong>是 CPU 要求 GPU 畫某樣東西的一次請求。每一次都帶著固定的 CPU 成本（狀態切換、驗證），所以一千個分開繪製的小物件可能讓 CPU 飽和，而 GPU 卻閒著。引擎會試著把相容的物件<em>合批</em>成較少的呼叫，但只在某些條件下（相同材質、相容的繪製器類型），而逐物件的程式碼很容易打破這些條件。</p></div></div>
 </section>
 
 <section class="sec" id="one-mesh">
@@ -53,37 +57,42 @@
 <p>La première passe a partagé le matériau et fusionné les fonctions de mise à jour par pièce. C'était juste et insuffisant. <strong>Un matériau partagé lève un obstacle au regroupement ; il ne fusionne pas les draw calls.</strong> Un rendu de ligne régénère sa géométrie à chaque image et se soumet seul au GPU : huit cents rendus de ligne, ce sont huit cents draw calls, quel que soit leur matériau.</p>
 <p>La seconde passe a supprimé entièrement les rendus. Un composant possède une maille dynamique, reconstruite à chaque image : huit sommets par pièce (le contour carré est un anneau de quatre coins extérieurs et quatre intérieurs), la teinte portée par les couleurs de sommet, et un seul rendu pour tout le champ. Huit cents pièces, un draw call.</p>
 </div>
+<div lang="zh-TW">
+<h2>八百塊碎片，一次繪製呼叫</h2>
+<p>開採完的貨物以碎片的形式漂浮在太空中，測試台上有 796 塊存活著。每一塊都有自己的子物件作為輪廓、自己的 LineRenderer，而在第一輪最佳化之前，還有自己的材質：大約佔了 1,200 次繪製呼叫的一半。</p>
+<p>第一輪讓材質共用，並合併了每一塊的更新函式。這是對的，但不夠。<strong>共用材質只是移除了合批的一個障礙；它並不會合併繪製呼叫。</strong>LineRenderer 每個影格都會重新產生它的幾何，並單獨提交給 GPU：八百個 LineRenderer 就是八百次繪製呼叫，無論材質為何。</p>
+<p>第二輪完全拿掉了這些繪製器。一個元件擁有一個每個影格重建的動態網格：每塊八個頂點（方形輪廓是由外側四個角與內側四個角組成的環），色調由頂點顏色攜帶，整片碎片場只用一個繪製器。八百塊，一次繪製呼叫。</p></div>
 <figure class="fig fig-scroll">
 <svg viewBox="0 0 760 190" role="img" aria-label="Before: every debris piece is its own object with a line renderer, one draw call each. After: all pieces are rows written into one mesh with vertex colours, drawn by a single renderer in one draw call">
   <defs><marker id="cr-arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="currentColor" opacity="0.7"/></marker></defs>
-  <text class="dg-label" x="20" y="24"><tspan lang="en">Before: one object per piece</tspan><tspan lang="fr">Avant : un objet par pièce</tspan></text>
+  <text class="dg-label" x="20" y="24"><tspan lang="en">Before: one object per piece</tspan><tspan lang="fr">Avant : un objet par pièce</tspan><tspan lang="zh-TW">之前：每塊一個物件</tspan></text>
   <g class="dg-box">
     <rect x="20" y="40" width="96" height="30" rx="5"/><rect x="20" y="78" width="96" height="30" rx="5"/><rect x="20" y="116" width="96" height="30" rx="5"/>
   </g>
-  <text class="dg-small" x="68" y="59" text-anchor="middle"><tspan lang="en">piece + line</tspan><tspan lang="fr">pièce + ligne</tspan></text>
-  <text class="dg-small" x="68" y="97" text-anchor="middle"><tspan lang="en">piece + line</tspan><tspan lang="fr">pièce + ligne</tspan></text>
-  <text class="dg-small" x="68" y="135" text-anchor="middle"><tspan lang="en">piece + line</tspan><tspan lang="fr">pièce + ligne</tspan></text>
+  <text class="dg-small" x="68" y="59" text-anchor="middle"><tspan lang="en">piece + line</tspan><tspan lang="fr">pièce + ligne</tspan><tspan lang="zh-TW">碎片 + 線條</tspan></text>
+  <text class="dg-small" x="68" y="97" text-anchor="middle"><tspan lang="en">piece + line</tspan><tspan lang="fr">pièce + ligne</tspan><tspan lang="zh-TW">碎片 + 線條</tspan></text>
+  <text class="dg-small" x="68" y="135" text-anchor="middle"><tspan lang="en">piece + line</tspan><tspan lang="fr">pièce + ligne</tspan><tspan lang="zh-TW">碎片 + 線條</tspan></text>
   <text class="dg-small" x="68" y="168" text-anchor="middle">… × 796</text>
   <line x1="120" y1="55" x2="218" y2="55" class="dg-line" marker-end="url(#cr-arr)"/>
   <line x1="120" y1="93" x2="218" y2="93" class="dg-line" marker-end="url(#cr-arr)"/>
   <line x1="120" y1="131" x2="218" y2="131" class="dg-line" marker-end="url(#cr-arr)"/>
   <rect x="222" y="40" width="80" height="106" rx="6" class="dg-box" style="stroke:var(--crit);stroke-width:2.5"/>
   <text class="dg-text" x="262" y="88" text-anchor="middle" font-weight="700">GPU</text>
-  <text class="dg-small" x="262" y="106" text-anchor="middle" style="fill:var(--crit-ink)"><tspan lang="en">796 calls</tspan><tspan lang="fr">796 appels</tspan></text>
+  <text class="dg-small" x="262" y="106" text-anchor="middle" style="fill:var(--crit-ink)"><tspan lang="en">796 calls</tspan><tspan lang="fr">796 appels</tspan><tspan lang="zh-TW">796 次呼叫</tspan></text>
   <line x1="348" y1="20" x2="348" y2="176" class="dg-line dg-dash"/>
-  <text class="dg-label" x="380" y="24"><tspan lang="en">After: rows in one mesh</tspan><tspan lang="fr">Après : des lignes dans une maille</tspan></text>
+  <text class="dg-label" x="380" y="24"><tspan lang="en">After: rows in one mesh</tspan><tspan lang="fr">Après : des lignes dans une maille</tspan><tspan lang="zh-TW">之後：一個網格中的一列列資料</tspan></text>
   <rect x="380" y="40" width="170" height="106" rx="6" class="dg-box-2"/>
   <text class="dg-small dg-mono" x="392" y="62">pos · tint → 8 verts</text>
   <text class="dg-small dg-mono" x="392" y="82">pos · tint → 8 verts</text>
   <text class="dg-small dg-mono" x="392" y="102">pos · tint → 8 verts</text>
   <text class="dg-small dg-mono" x="392" y="122">… 6 400 verts</text>
-  <text class="dg-small" x="465" y="168" text-anchor="middle"><tspan lang="en">rebuilt every frame</tspan><tspan lang="fr">reconstruite à chaque image</tspan></text>
+  <text class="dg-small" x="465" y="168" text-anchor="middle"><tspan lang="en">rebuilt every frame</tspan><tspan lang="fr">reconstruite à chaque image</tspan><tspan lang="zh-TW">每個影格重建</tspan></text>
   <line x1="554" y1="93" x2="620" y2="93" class="dg-line" marker-end="url(#cr-arr)"/>
   <rect x="624" y="40" width="116" height="106" rx="6" class="dg-box" style="stroke:var(--good);stroke-width:2.5"/>
   <text class="dg-text" x="682" y="88" text-anchor="middle" font-weight="700">GPU</text>
-  <text class="dg-small" x="682" y="106" text-anchor="middle" style="fill:var(--good-ink)"><tspan lang="en">1 call</tspan><tspan lang="fr">1 appel</tspan></text>
+  <text class="dg-small" x="682" y="106" text-anchor="middle" style="fill:var(--good-ink)"><tspan lang="en">1 call</tspan><tspan lang="fr">1 appel</tspan><tspan lang="zh-TW">1 次呼叫</tspan></text>
 </svg>
-<figcaption><span lang="en"><strong>From objects to rows.</strong> The CPU still writes every piece's vertices, but it submits them once. Rebuilding about 6,400 vertices costs a fraction of a millisecond, what any particle system does every frame.</span><span lang="fr"><strong>Des objets aux lignes.</strong> Le CPU écrit toujours les sommets de chaque pièce, mais il les soumet une seule fois. Reconstruire environ 6 400 sommets coûte une fraction de milliseconde, ce que fait n'importe quel système de particules à chaque image.</span></figcaption>
+<figcaption><span lang="en"><strong>From objects to rows.</strong> The CPU still writes every piece's vertices, but it submits them once. Rebuilding about 6,400 vertices costs a fraction of a millisecond, what any particle system does every frame.</span><span lang="fr"><strong>Des objets aux lignes.</strong> Le CPU écrit toujours les sommets de chaque pièce, mais il les soumet une seule fois. Reconstruire environ 6 400 sommets coûte une fraction de milliseconde, ce que fait n'importe quel système de particules à chaque image.</span><span lang="zh-TW"><strong>從物件到資料列。</strong>CPU 仍然要寫入每一塊的頂點，但只提交一次。重建大約 6,400 個頂點只花零點幾毫秒，這是任何粒子系統每個影格都在做的事。</span></figcaption>
 </figure>
 <div lang="en">
 <div class="note tradeoff"><p class="note-label">Trade-off</p><p>GPU instancing would send one matrix per piece instead of eight vertices, which is cheaper on the CPU. But a per-instance tint needs a shader compiled for instancing, and the default sprite shader is not reliably one; it would have meant a custom shader whose behaviour could not be measured before shipping. A rebuilt mesh with vertex colours was the lower-risk choice when the API risk could not be measured, and it removed the eight hundred submissions all the same. The index buffer is 32-bit: with 16-bit indices and eight vertices per piece, the ceiling would be around 8,000 debris, and a ceiling nobody chose is a production surprise.</p></div>
@@ -91,6 +100,8 @@
 <div lang="fr">
 <div class="note tradeoff"><p class="note-label">Compromis</p><p>L'instanciation GPU enverrait une matrice par pièce au lieu de huit sommets, ce qui est moins cher pour le CPU. Mais une teinte par instance exige un shader compilé pour l'instanciation, et le shader de sprites par défaut ne l'est pas de façon fiable ; il aurait fallu un shader maison dont on ne pouvait pas mesurer le comportement avant de livrer. Une maille reconstruite avec couleurs de sommet était le choix le moins risqué quand le risque d'API ne pouvait pas être mesuré, et elle supprimait tout autant les huit cents soumissions. Le tampon d'indices est en 32 bits : en 16 bits, à huit sommets par pièce, le plafond serait vers 8 000 débris, et un plafond que personne n'a choisi est une surprise de production.</p></div>
 </div>
+<div lang="zh-TW">
+<div class="note tradeoff"><p class="note-label">取捨</p><p>GPU 實例化會為每一塊送一個矩陣，而不是八個頂點，對 CPU 更便宜。但每個實例的色調需要一個為實例化編譯的著色器，而預設的 sprite 著色器並不可靠地支援；那就意味著要一個在發行前無法量測其行為的自訂著色器。在 API 風險無法量測時，帶頂點顏色的重建網格是風險較低的選擇，而它同樣消除了八百次提交。索引緩衝區是 32 位元的：若使用 16 位元索引、每塊八個頂點，上限大約是 8,000 塊碎片，而一個沒人選擇過的上限，就是正式環境中的意外。</p></div></div>
 </section>
 
 <section class="sec" id="carcasses">
@@ -116,6 +127,16 @@
 <p>Une carcasse est maintenant une ligne dans un tableau, dessinée selon le même motif que le champ de débris : un seul rendu, une maille reconstruite à chaque image (sept sommets par pièce, un hexagone en éventail de triangles), et les couleurs de sommet pour les trois effets que fournissait le matériau par instance : l'assombrissement, le flash orange et le fondu. Un plafond dur de 2 048 pièces empêche une amputation massive de gonfler la maille sans limite : au-delà, une carcasse de plus est invisible, alors qu'un pic de mémoire ne l'est pas.</p>
 <div class="note rule"><p class="note-label">Règle</p><p>« C'est rare » est une hypothèse de banc de charge, pas un fait de conception.</p><p>L'écrire à côté du code qui en dépend, avec les chiffres qui la casseraient, et laisser le prochain banc la confirmer ou la réfuter.</p></div>
 </div>
+<div lang="zh-TW">
+<h2>一個有用的謊言，做得便宜</h2>
+<p>當一個船體失去六角格時，伺服器會立刻刪除它們：沒有模擬出來的殘骸。但一塊船體在一個影格到下一個影格之間憑空消失，看起來就像 bug。所以用戶端講了一個故事：失去的六角格繼承船的速度，得到一個徑向的推力，漂移並旋轉一兩秒，逐漸變暗，閃一下橘光然後消失。沒有人能碰它、收集它或瞄準它；它並不存在，它只是被講述出來的。</p>
+<p>第一版為每一個失去的六角格建立一個遊戲物件、一個 MeshFilter、一個 MeshRenderer、一個新材質，以及一個帶自己更新函式的元件。它的註解為此辯護：「不需要物件池：每次截斷只有幾塊，罕見事件」。這個假設合理，但在負載下是錯的。一百艘各有五個六角格的 NPC 持續死亡，可不是「罕見的幾塊」：而是同時存活著數百具殘骸（每一具最多持續 2.7 秒），因此有數百個物件與同樣多的繪製呼叫，比碎片當初的成本還高。裡面還藏著兩個錯誤：</p>
+<ul>
+<li>透過 MeshFilter 的逐實例屬性、而不是共用屬性來指定網格，讓 Unity 把這個「共用」網格當成那個 MeshFilter 所擁有，並連同它一起摧毀。第一具死掉的殘骸摧毀了網格，下一具又重建它，如此循環。</li>
+<li>每一塊一個新材質：這是用戶端中同一個錯誤的第三次出現，前兩次是子彈繪製器（見下文）和舊的碎片繪製器。</li>
+</ul>
+<p>現在一具殘骸是陣列中的一列資料，以與碎片場相同的模式繪製：一個繪製器、一個每個影格重建的網格（每塊七個頂點，以三角扇構成的六角形），並用頂點顏色呈現過去由逐實例材質提供的三種效果：變暗、橘色閃光與透明度淡出。2,048 塊的硬性上限，讓一次大規模截斷不會無限制地撐大網格：超過之後，多一具殘骸看不見，但記憶體尖峰可是看得見的。</p>
+<div class="note rule"><p class="note-label">規則</p><p>「這很罕見」是一個負載測試的假設，而不是設計上的事實。</p><p>把它寫在依賴它的程式碼旁邊，附上會讓它不成立的數字，並讓下一次測試台來證實或推翻它。</p></div></div>
 </section>
 
 <section class="sec" id="ecs">
@@ -147,6 +168,19 @@
 <p>Mais des pics d'environ 100 ms restaient, et le vrai déblocage n'était pas du tout côté client. Le serveur renvoyait dans chaque snapshot l'état inchangé de chaque balle vivante. Le protocole delta (chapitre <a href="snapshots.html#lifetimes">4.2</a>) a fait passer le travail du client de O(balles vivantes) à O(nouvelles balles) par snapshot, et la fin de vie de la balle est passée au client, qui la fait expirer à partir des données de portée et de vitesse partagées.</p>
 <div class="note rule"><p class="note-label">Règle</p><p>Avant de rendre le coût par élément moins cher, se demander si les éléments doivent être là du tout.</p><p>L'ECS a rendu chaque balle bon marché ; le protocole delta a rendu la plupart d'entre elles inutiles. Le volume bat le coût unitaire.</p></div>
 </div>
+<div lang="zh-TW">
+<h2>在 ECS 之下的子彈</h2>
+<p>子彈是極端的情況：數千顆同時存活，每顆約活一秒。每顆子彈一個經典的引擎物件，意味著數千個散落在記憶體各處的物件，各自有自己的 Transform 與更新呼叫，而每個影格 CPU 都在一個又一個毫不相關的位址之間跳來跳去。物件池能掩蓋配置的成本；它無法消除這些跳躍。</p>
+<p>用戶端把子彈搬到了 Unity 的實體元件系統（ECS）。實體只是一個 ID；它的元件是以型別為單位、連續儲存在小區塊中的純 struct；系統線性地處理這些陣列，編譯成向量化的原生程式碼，並分散到工作執行緒上。三根槓桿結合在一起：連續的記憶體（快取）、原生編譯（Burst）、真正的平行化（Job）。移動系統就是 ECS 版的航位推算：對每顆尚未被標記為命中的子彈，位置加上速度乘以經過的時間。</p>
+<p>遷移是與舊路徑並行進行的，以一個開關切換，以便在實際遊玩中比較，而不是在一個孤立的測試平台上。它帶來了自己的教訓，每一個都是長時間尋找之後的一行修正：</p>
+<ul>
+<li>三角形計數器在增加，子彈卻看不見：產生出來的四邊形背對著正交攝影機，而管線的 unlit 著色器預設會剔除背面，這與其他所有物件使用的 sprite 著色器不同。</li>
+<li>「Invalid entity」錯誤：用來作為實例化範本的原型實體收到了真正的元件資料，所以系統把它當成一顆存活的子彈，讓它老化並摧毀它。把它標記為 prefab，就能把它排除在每一個查詢之外。</li>
+<li>設定材質顏色毫無作用：管線的著色器讀取的是 <code>_BaseColor</code>，而不是舊式的 <code>_Color</code>；而淡出的透明度需要透明表面設定，編輯器把它藏在一個下拉選單後面。</li>
+</ul>
+<p>接著是第一次量測：每次射擊 1,000 顆子彈、射速 10，網路更新仍然產生 160 ms 的影格。在封包解析期間把每顆子彈逐一套用到 ECS 中（每顆新子彈一次實例化、每顆已知子彈一次讀取與寫入），造成了數千次個別的引擎呼叫。批次處理修好了一部分：先解析到一個清單，再在快照結束時用一次呼叫實例化所有新子彈，並把最後的狀態保存在受控的字典中，而不是從引擎讀回來。</p>
+<p>但約 100 ms 的尖峰仍然存在，而真正的突破根本不在用戶端。伺服器在每份快照中重送每顆存活子彈沒有改變的狀態。差量協定（第 <a href="snapshots.html#lifetimes">4.2</a> 章）把用戶端每份快照的工作量從 O(存活子彈) 降到 O(新子彈)，而子彈的生命終點也移到了用戶端，由它依共用的射程與速度資料讓子彈到期。</p>
+<div class="note rule"><p class="note-label">規則</p><p>在讓每一項的成本變便宜之前，先問這些項目到底需不需要存在。</p><p>ECS 讓每顆子彈變便宜；差量協定讓大部分子彈變得不必要。數量勝過單位成本。</p></div></div>
 </section>
 
 <section class="sec" id="traps">
@@ -176,6 +210,18 @@
 <tr><td>Des références statiques vers des objets du moteur</td><td>Avec les réglages rapides « d'entrée en jeu », les champs statiques survivent entre deux sessions de l'éditeur, mais les objets du moteur qu'ils désignent sont détruits.</td><td>Les détruire et les remettre à zéro au début de chaque session, avant de lâcher la référence.</td></tr>
 </tbody></table></div>
 </div>
+<div lang="zh-TW">
+<h2>只在負載下才現形的逐實例陷阱</h2>
+<p>傷害用戶端最深的，大多不是演算法，而是一個小小的逐物件習慣，在十個物件時無害，在一萬個時卻是災難：</p>
+<div class="table-wrap"><table>
+<thead><tr><th>習慣</th><th>它的代價</th><th>修正</th></tr></thead>
+<tbody>
+<tr><td>每個實例一個新材質</td><td>著色器查找與材質建構是引擎中較昂貴的呼叫之一；預熱一個數千顆子彈的物件池，變成了數百毫秒的同步停頓。</td><td>一個共用材質，只建立一次。</td></tr>
+<tr><td>每次狀態更新都查找元件</td><td>對子彈來說，每秒數萬次毫無意義的查找，而且就在處理快照的路徑上。</td><td>在物件建立時查找一次；物件的元件之後永遠不會改變。</td></tr>
+<tr><td>透過逐實例屬性指定網格</td><td>引擎會連同擁有者一起摧毀網格：「共用」網格被摧毀又重建，如此循環。</td><td>共用的網格就用共用網格屬性。</td></tr>
+<tr><td>在執行時依名稱尋找著色器</td><td>沒有任何場景參考的著色器會從組建中被剝除，而查找只在發行的遊戲中才會什麼都找不到。</td><td>保留一個後備著色器；白色的碎片好過一個例外。</td></tr>
+<tr><td>指向引擎物件的靜態參考</td><td>在快速「進入遊玩模式」的設定下，靜態欄位會在編輯器的不同工作階段之間存活，但它們指向的引擎物件已被摧毀。</td><td>在每個工作階段開始時摧毀並重設它們，再丟掉參考。</td></tr>
+</tbody></table></div></div>
 </section>
 
 <section class="sec" id="takeaways">
@@ -194,6 +240,13 @@
 <li>Régler le volume avant le coût unitaire : le meilleur objet est celui que le serveur n'a jamais envoyé.</li>
 <li>Traquer les habitudes par instance (matériaux, recherches, propriété des mailles) avec un banc de charge ; elles sont invisibles à petite échelle.</li>
 </ul></div>
+<div lang="zh-TW"><h2>重點整理</h2><ul>
+<li>在負載下計算繪製呼叫：共用的最佳化只是移除障礙，只有合併幾何才能減少呼叫。</li>
+<li>把成群的短命視覺效果變成一個網格中的一列列資料，以頂點顏色呈現，並設下硬性上限。</li>
+<li>對數千個相同的物件使用資料導向的配置（ECS），並以每份快照為單位批次處理結構性變更。</li>
+<li>先處理數量，再處理單位成本：最好的物件，是伺服器從未送出的那一個。</li>
+<li>用負載測試追獵逐實例的習慣（材質、查找、網格擁有權）；在小規模下它們是看不見的。</li>
+</ul></div>
 </div>
 </section>
 
@@ -206,6 +259,7 @@
 <footer class="site-footer" id="mq-footer"></footer>
 <script src="assets/js/site-data.js" defer></script>
 <script src="assets/js/glossary-data.js" defer></script>
+<script src="assets/js/ui-zh.js" defer></script>
 <script src="assets/js/app.js" defer></script>
 <script src="assets/js/widgets.js" defer></script>
 </body>

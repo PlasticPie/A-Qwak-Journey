@@ -7,12 +7,12 @@
 <meta name="description" content="One reconciler per machine: claiming work through the database, sizing to the hardware, and retiring empty servers.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Chakra+Petch:wght@500;600&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Chakra+Petch:wght@500;600&family=JetBrains+Mono:wght@400;500;600&family=Noto+Sans+TC:wght@400;700&display=swap">
 <link rel="stylesheet" href="assets/css/site.css">
-<script>(function(){var r=document.documentElement,l,t;try{l=localStorage.getItem("mq-lang");t=localStorage.getItem("mq-theme");}catch(e){}if(l!=="en"&&l!=="fr"){l=(navigator.language||"").toLowerCase().indexOf("fr")===0?"fr":"en";}r.setAttribute("data-lang",l);r.setAttribute("lang",l);if(t==="light"||t==="dark")r.setAttribute("data-theme",t);})();</script>
+<script>(function(){var r=document.documentElement,l,t,n;try{l=localStorage.getItem("mq-lang");t=localStorage.getItem("mq-theme");}catch(e){}if(l!=="en"&&l!=="fr"&&l!=="zh"){n=(navigator.language||"").toLowerCase();l=n.indexOf("fr")===0?"fr":n.indexOf("zh")===0?"zh":"en";}r.setAttribute("data-lang",l);r.setAttribute("lang",l==="zh"?"zh-TW":l);if(t==="light"||t==="dark")r.setAttribute("data-theme",t);})();</script>
 </head>
 <body data-page="node-agents">
-<a class="skip-link" href="#main"><span lang="en">Skip to content</span><span lang="fr">Aller au contenu</span></a>
+<a class="skip-link" href="#main"><span lang="en">Skip to content</span><span lang="fr">Aller au contenu</span><span lang="zh-TW">跳到主要內容</span></a>
 <header class="site-header" id="mq-header"></header>
 <div class="layout">
 <aside class="sidebar" id="mq-sidebar"></aside>
@@ -20,8 +20,8 @@
 <article>
 <header class="chapter-head">
   <div class="eyebrow" data-auto></div>
-  <h1><span lang="en">Node agents</span><span lang="fr">Les agents de machine</span></h1>
-  <p class="dek"><span lang="en">One reconciler per machine: claiming work through the database, sizing to the hardware, and retiring empty servers.</span><span lang="fr">Un réconciliateur par machine : prendre du travail via la base, se dimensionner sur le matériel, et retirer les serveurs vides.</span></p>
+  <h1><span lang="en">Node agents</span><span lang="fr">Les agents de machine</span><span lang="zh-TW">節點代理程式</span></h1>
+  <p class="dek"><span lang="en">One reconciler per machine: claiming work through the database, sizing to the hardware, and retiring empty servers.</span><span lang="fr">Un réconciliateur par machine : prendre du travail via la base, se dimensionner sur le matériel, et retirer les serveurs vides.</span><span lang="zh-TW">每台機器一個調和器：透過資料庫認領工作、依硬體調整規模，以及讓空伺服器退役。</span></p>
   <div class="meta-row" data-auto></div>
 </header>
 
@@ -38,6 +38,10 @@
 <p>Chaque machine capable d'héberger des serveurs de jeu fait tourner un petit processus, l'<strong>agent de machine</strong>. Il ne reçoit aucune instruction. Toutes les deux secondes, il compare ce qui tourne sur sa machine à ce que demandent les mondes (les nombres Desired du chapitre <a href="capacity.html">7.2</a>), et comble l'écart s'il a de la place. Un ordre peut se perdre, arriver deux fois, ou arriver à une machine qui vient de tomber ; un état désiré relu en boucle finit toujours par être atteint. Un agent redémarré au milieu d'un lancement reprend sans rien savoir de ce qui précède.</p>
 <p>Le modèle de données a changé en route, et le changement mérite d'être copié. La première version lisait des <em>emplacements</em> saisis d'avance, une ligne par serveur possible avec son identité et ses ports, et en tenait N vivants selon un nombre réglé à la main : elle décrivait le résultat au lieu de décrire la ressource. Il y a maintenant une ligne par <strong>machine</strong> (sa capacité), un nombre par <strong>monde</strong> (sa demande, calculée par la gateway), et les instances naissent sur la première machine qui a de la place. Rien d'une instance n'est saisi nulle part : son index, ses ports (<code>port de base + index</code>) et son identité (<code>MACHINE#index</code>) sont dérivés.</p>
 </div>
+<div lang="zh-TW">
+<h2>一個調和器，而不是一列命令佇列</h2>
+<p>每台可以託管遊戲伺服器的機器都執行一個小程序：<strong>節點代理程式</strong>。它不接收任何指示。每兩秒，它比較自己機器上執行的東西與各個世界的需求（第 <a href="capacity.html">7.2</a> 章的 Desired 數字），如果它有空間，就補上差距。一道命令可能遺失、到達兩次，或到達一台剛死掉的機器；而在迴圈中反覆讀取的期望狀態，最終總會被達成。一個在啟動途中重新啟動的代理程式，不需要知道之前發生過什麼就能繼續。</p>
+<p>資料模型在這一路上改變了，而這個改變值得照抄。第一版讀取的是預先輸入好的<em>槽位</em>，每個可能的伺服器一列，帶著它的身分與埠，並依一個手動調整的數字保持其中 N 個存活：它描述的是結果，而不是資源。現在每台<strong>機器</strong>一列（它的容量），每個<strong>世界</strong>一個數字（它的需求，由閘道計算），實例誕生在第一台有空間的機器上。實例的任何東西都不需要事先輸入：它的索引、它的埠（<code>基準埠 + 索引</code>）與它的身分（<code>MACHINE#index</code>）都是推導出來的。</p></div>
 </section>
 
 <section class="sec" id="claim">
@@ -49,6 +53,9 @@
 <h2>Prendre du travail via la base</h2>
 <p>Deux machines voient « il manque un serveur » au même moment et lancent toutes les deux : il y en a maintenant un de trop, et rien ne l'arrêtera jamais, puisqu'une instance qui héberge des cartes n'est jamais tuée. Ce n'est pas une imprécision acceptable, c'est une fuite. La décision est sérialisée par le seul arbitre que partagent deux processus qui ne se parlent jamais : la base.</p>
 </div>
+<div lang="zh-TW">
+<h2>透過資料庫認領工作</h2>
+<p>兩台機器在同一時刻看到「少了一台伺服器」，於是都啟動了：現在多了一台，而且永遠沒有東西會停止它，因為託管著地圖的實例從不被砍掉。這不是可接受的不精確，而是一個漏洞。這個決定由兩個從不交談的程序唯一共享的仲裁者來依序處理：資料庫。</p></div>
 <div class="code"><div class="code-head"><span class="file">Qwak.NodeAgent/NodeLoop.cs · TryClaim, simplified</span></div><pre><code data-lang="cs">using var db = _db();
 using var tx = db.Database.BeginTransaction();
 
@@ -83,6 +90,8 @@ tx.Commit();</code></pre></div>
 <div lang="fr">
 <p>L'ordre <em>verrouiller, compter, insérer, valider</em> est tout l'enjeu : compter avant de verrouiller reviendrait à décider sur une photo périmée, c'est-à-dire exactement la course à fermer. Et la ligne de l'instance est écrite <strong>avant</strong> que le processus démarre : un serveur encore en démarrage est déjà compté par tous les autres agents. Les lignes périmées ne peuvent pas non plus garder une place pour toujours : les lignes dont l'agent a cessé d'écrire un battement depuis 120 secondes sont ignorées au comptage, et n'importe quel agent peut les effacer. C'est le seul mécanisme de libération qui survive à la mort du superviseur lui-même, et c'est pourquoi il vit en base.</p>
 </div>
+<div lang="zh-TW">
+<p><em>上鎖、計數、插入、提交</em>這個順序就是全部的重點：在上鎖之前計數，會根據一張過時的照片做決定，而那恰恰是要封住的競爭條件。而且實例的資料列在程序啟動<strong>之前</strong>就寫入，所以一台還在開機的伺服器，已經被其他每個代理程式計入了。過時的資料列也無法永遠佔住位置：代理程式已經 120 秒沒寫入心跳的資料列，在計數時會被忽略，而且任何代理程式都可以刪除它們。這是唯一一個在監督者本身死掉後仍然有效的釋放機制，所以它放在資料庫中。</p></div>
 </section>
 
 <section class="sec" id="best">
@@ -104,6 +113,14 @@ tx.Commit();</code></pre></div>
 <li><strong>Égalités tranchées par le nom.</strong> Deux machines identiques au démarrage ont exactement le même score. Sans départage stable, chacune se croirait la meilleure au même instant et les deux lanceraient. Le nom de la machine est arbitraire, mais identique pour tous les observateurs, ce qui est la seule propriété demandée.</li>
 </ul>
 </div>
+<div lang="zh-TW">
+<h2>「我是最好的主機嗎？」</h2>
+<p>沒有這個問題，第一個拿到鎖的代理程式就贏了：一個任意的順序，它會把伺服器放到一台已經撐不住的機器上，就像放到一台閒置的機器上一樣輕易。所以每個代理程式在持有鎖時，看著與其他人相同的資料表，問自己是不是多放一台伺服器的最佳機器。沒有人替別人做決定，這讓系統不需要領導者。</p>
+<ul>
+<li><strong>分數。</strong>機器上託管的地圖數相對於它的容量（權重 1.0，因為地圖是有硬牆的資源），加上 RAM 使用率（0.6）與 CPU 使用率（0.4），後兩者只有在機器的指標夠新（兩分鐘以內）時才計入；否則不捏造任何東西，分數只依地圖而定。</li>
+<li><strong>排除條件。</strong>已滿的機器、超出 RAM 限制的機器，或代理程式最近沒有寫入心跳的機器，都不是候選者。最後這條規則就是全部的容錯移轉：如果最好的機器死了，它的資料列會變得過時，下一台就成了最好的，不需要任何一行容錯移轉的程式碼。</li>
+<li><strong>平手時依名稱決定。</strong>兩台相同的機器在啟動時分數完全相同。沒有穩定的平手決定方式，兩台都會在同一瞬間認為自己是最好的，然後都啟動。機器名稱是任意的，但對每個觀察者都相同，而這正是唯一需要的特性。</li>
+</ul></div>
 </section>
 
 <section class="sec" id="sizing">
@@ -115,6 +132,9 @@ tx.Commit();</code></pre></div>
 <h2>Se dimensionner sur le matériel</h2>
 <p>Trois nombres étaient autrefois tenus cohérents à la main : le nombre maximal d'instances de la machine, le maximum du monde, et le nombre d'ouvriers de tick dans la configuration de chaque serveur. Trois nombres couplés tenus à la main, ce sont trois occasions de se tromper et aucune de s'en apercevoir. Une configuration à un ouvrier « réglait » dix instances par machine et éteignait le parallélisme partout ailleurs. Il n'y a maintenant qu'un bouton, le nombre d'ouvriers de tick voulus par instance, et le reste est calculé par l'agent, qui tourne sur le matériel qu'il dimensionne :</p>
 </div>
+<div lang="zh-TW">
+<h2>依硬體調整規模</h2>
+<p>過去有三個數字要手動保持一致：機器的最大實例數、世界的最大值，以及每台伺服器設定中的 tick 工作執行緒數。三個手動維護的耦合數字，就是三個出錯的機會，卻沒有一個能察覺的機會。一份只有一個工作執行緒的設定，「修好了」每台機器十個實例，卻把其他所有地方的平行化都關掉了。現在只有一個旋鈕，也就是每個實例想要的 tick 工作執行緒數，其餘的由代理程式計算，因為它就在它所要調整規模的硬體上執行：</p></div>
 <div class="code"><div class="code-head"><span class="file">sizing, agent side</span></div><pre><code data-lang="txt">capacity = min( MaxInstances , processors / (workers wanted + 2) )
            ↓ passed to each child as the number of instances on this machine
 server   : workers = processors / instances − 2</code></pre></div>
@@ -124,6 +144,8 @@ server   : workers = processors / instances − 2</code></pre></div>
 <div lang="fr">
 <p>Le « + 2 » réserve les threads du monde et des snapshots de chaque instance (chapitre <a href="threading.html#cores">3.3</a>). Le maximum saisi garde son sens de <em>plafond</em> : l'agent peut décider moins, jamais plus. La RAM est délibérément absente de la formule : le CPU se compte exactement, alors que la mémoire d'une instance dépend du nombre de cartes qu'elle finira par porter, ce que personne ne sait au lancement. Inventer des « mégaoctets par instance » donnerait un chiffre faux qui a l'air mesuré. La mémoire a son propre garde-fou, et il est meilleur parce qu'il regarde l'état réel : l'agent refuse de lancer quand la RAM libre passe sous un minimum configuré, au moment où ça compte.</p>
 </div>
+<div lang="zh-TW">
+<p>「+ 2」保留給每個實例的世界執行緒與快照執行緒（第 <a href="threading.html#cores">3.3</a> 章）。輸入的最大值保留它作為<em>天花板</em>的意義：代理程式可以決定更少，但絕不能更多。RAM 被刻意排除在公式之外：CPU 可以精確計算，而一個實例的記憶體取決於它最終會承載多少張地圖，這在啟動時沒有人知道。捏造一個「每個實例多少 MB」，會得到一個看起來像是量測出來的錯誤數字。記憶體有自己的防護，而且更好，因為它看的是真實的狀態：當可用 RAM 低於設定的最低值時，代理程式會拒絕啟動，就在真正重要的時刻。</p></div>
 </section>
 
 <section class="sec" id="cooldowns">
@@ -139,6 +161,11 @@ server   : workers = processors / instances − 2</code></pre></div>
 <p>Cette pause protège d'une incertitude : quand un seuil réclame un renfort, personne ne sait encore si un seul suffira. <strong>Sous le minimum du monde</strong>, il n'y a aucune incertitude : « il en faut huit, deux tournent », et aucun des six manquants ne rendra les autres inutiles. Attendre 20 secondes entre chacun ne protégeait de rien et coûtait deux minutes et demie de démarrage à froid au banc. L'emballement qu'elle semblait empêcher est déjà fermé par l'ordre d'écriture (la ligne est comptée avant que le processus n'existe) : sous le plancher, la temporisation est donc de 3 secondes, juste assez pour étaler la charge de huit processus qui ouvrent leurs catalogues et leurs connexions à la base en même temps. Remplir un plancher de huit est passé d'environ 160 secondes à une trentaine.</p>
 <div class="note pitfall"><p class="note-label">Piège rencontré</p><p>Chaque machine peut aussi garder une réserve <em>préchargée</em> : des serveurs démarrés d'avance, au chaud, pour la prochaine pointe. Le préchargement était borné par le maximum du monde, pas par son nombre désiré. La gateway condamnait donc un serveur, son agent le tuait au bout d'une minute, et le tour suivant en lançait un neuf « au chaud » à sa place. Deux mécanismes justes se battaient en boucle, chacun défaisant le travail de l'autre, et la seule trace était un parc qui tournait à son maximum sans raison visible. Un monde qui se déleste ne précharge plus : quand les deux se contredisent, le retrait l'emporte, parce qu'il parle d'une charge mesurée et le préchargement d'une charge supposée.</p></div>
 </div>
+<div lang="zh-TW">
+<h2>兩種情況，兩種冷卻時間</h2>
+<p>一台遊戲伺服器要花好幾秒才能宣告自己。如果兩次啟動之間沒有停頓，調和器在這段期間會看到「仍然是零台伺服器」，然後每一輪都啟動一台：這是調和器的經典 bug，把<em>還沒準備好</em>和<em>不存在</em>搞混了。因此兩次啟動之間有 20 秒的冷卻時間，與一個開機中的實例不再被算為「啟動中」的時間相同。兩個必須一致的常數，就是一個常數。</p>
+<p>這個停頓防的是不確定性：當某個門檻要求支援時，沒有人知道一台是否就夠了。<strong>低於世界的最小值時</strong>則沒有不確定性：「需要八台，正在執行兩台」，而缺少的六台中沒有任何一台會讓其他的變得無用。每台之間等 20 秒什麼都沒保護到，卻讓一次測試台多花了兩分半的冷啟動。它看似防止的失控，已經被寫入順序封住了（資料列在程序存在之前就被計入），所以低於下限時的冷卻時間是 3 秒：剛好足以分散八個程序同時開啟目錄與資料庫連線的負載。補滿八台的下限，從約 160 秒縮短到約三十秒。</p>
+<div class="note pitfall"><p class="note-label">我踩過的坑</p><p>每台機器也可以保留一份<em>預載</em>的儲備：預先啟動、保持溫熱、為下一次峰值準備的伺服器。預載的上限是世界的最大值，而不是它的期望值。於是閘道判定一台伺服器退役，它的代理程式在一分鐘後砍掉它，而下一輪又啟動一台新的「保持溫熱」來取代它。兩個正確的機制在迴圈中互相打架，各自抵銷對方的工作，唯一的痕跡是一個毫無可見理由就以最大值運作的叢集。一個正在卸除負載的世界不再預載：兩者意見不一時，退役獲勝，因為它說的是量測到的負載，而預載說的是假設的負載。</p></div></div>
 </section>
 
 <section class="sec" id="retire">
@@ -164,12 +191,24 @@ server   : workers = processors / instances − 2</code></pre></div>
 </ul>
 <p>Le chronomètre « vide depuis » vit en mémoire, exprès. Un agent qui redémarre l'oublie et attend une minute de plus avant de tuer : il retarde un retrait, ce qui coûte un processus pendant soixante secondes. La panne symétrique, un chronomètre persistant qu'on croit à jour après un redémarrage, tuerait sur une observation que personne n'a faite. Oublier est la bonne panne.</p>
 </div>
+<div lang="zh-TW">
+<h2>讓空伺服器退役：觀察，絕不決定</h2>
+<p>閘道負責判定退役（第 <a href="capacity.html#retire">7.2</a> 章）；代理程式只負責<em>觀察</em>與執行。對自己機器上一台被判定退役的伺服器，它檢查三件事：閘道的報告是新的、伺服器承載零張地圖，而且已經維持夠久。三個讀數，沒有任何判斷。因為沒有任何代理程式在選擇任何東西，就不可能有兩個代理程式選中同一個東西，也沒有任何鎖需要取得。</p>
+<ul>
+<li><strong>六十秒的空無</strong>，也就是閘道連續十二次的報告。這個延遲所買到的風險是明確的：一張地圖可能已經被指派給這台伺服器，卻還沒被計入（「載入這張地圖」的訊息已經送出，回覆還沒回來），而在這個時間窗中砍掉它，就會拒絕那位等待中的玩家。</li>
+<li><strong>新鮮的觀察。</strong>地圖數與玩家數由閘道寫入。如果閘道掛了，它們就會凍結，而如果它們凍結在零，一個只讀取數值的代理程式，就會在一分鐘後砍掉一台沒有人能判斷是否為空的伺服器。觀察者的沉默絕不能被解讀為「什麼都沒變」：超過二十秒沒有報告，就什麼都不砍。</li>
+<li><strong>幽靈玩家。</strong>第一版要求零張地圖<em>而且</em>零位玩家，而一次一小時的測試台顯示一台伺服器「0 張地圖、1 位玩家、排空中 39 分鐘」，被一個幽靈挾持。這個狀態是不可能的：玩家永遠在某張地圖上，而有人的地圖從不卸載。那是一個玩家離開後仍被閘道保留的連線階段。現在代理程式在這種情況下會等五分鐘（足以讓暫時錯誤的計數自行修正），然後仍然停止伺服器，並大聲地說真正的 bug 在上游。</li>
+<li><strong>先砍程序，再刪資料列，絕不反過來。</strong>先刪除、而砍程序失敗，會留下一個沒有資料列的存活程序：它的索引變成可用，下一台伺服器就會在它的埠上誕生。照另一個順序，砍掉成功之後資料庫卻連不上，會留下一個沒有程序的資料列，而下一輪早就知道該如何清理它。</li>
+</ul>
+<p>「自何時起為空」的計時器刻意放在記憶體中。一個重新啟動的代理程式會忘記它，並在砍之前多等一分鐘：這延後了一次退役，代價是一個程序多活六十秒。對稱的失敗——一個在重新啟動後被當成仍然有效的持久化計時器——則會根據一個沒有人做過的觀察去砍程序。遺忘才是正確的失敗方式。</p></div>
 <div lang="en">
 <div class="note rule"><p class="note-label">Rule</p><p>The one who observes is the one who writes; the one who acts only reads.</p><p>The gateway observes the surplus and writes the condemnation; the agent observes two zeros and kills. Each fact has one writer, so N agents coexist without coordinating.</p></div>
 </div>
 <div lang="fr">
 <div class="note rule"><p class="note-label">Règle</p><p>Celui qui constate est celui qui écrit ; celui qui agit ne fait que lire.</p><p>La gateway constate le surplus et écrit la condamnation ; l'agent constate deux zéros et tue. Chaque fait n'a qu'un écrivain : N agents coexistent sans se coordonner.</p></div>
 </div>
+<div lang="zh-TW">
+<div class="note rule"><p class="note-label">規則</p><p>觀察的人就是寫入的人；行動的人只讀取。</p><p>閘道觀察到多餘並寫下判定；代理程式觀察到兩個零並砍掉程序。每一項事實都只有一個寫入者，所以 N 個代理程式能在不協調的情況下共存。</p></div></div>
 </section>
 
 <section class="sec" id="supervisor">
@@ -187,6 +226,12 @@ server   : workers = processors / instances − 2</code></pre></div>
 <div class="note measured"><p class="note-label">Mesuré</p><p>Les ports sont dérivés : port de jeu = départ + index. Avec un départ à 9051, l'instance 1 demandait 9052, le port sur lequel la gateway écoute ses serveurs de jeu. Le serveur démarrait, s'authentifiait, recevait et chargeait des cartes (tout cela passe par sa connexion <em>sortante</em> vers la gateway, qui marchait parfaitement), mais son écoute <em>entrante</em> pour les joueurs n'a jamais existé. Un serveur en apparence sain, avec quatre-vingts cartes, sur lequel aucun joueur n'arrivait jamais : trois sessions de banc pour comprendre, parce que rien ne distinguait « il écoute » de « il ne peut pas écouter ». L'agent vérifie maintenant les écoutes UDP de la machine avant de lancer et refuse un port occupé, bruyamment. C'est une photo (quelqu'un peut prendre le port entre-temps, ou une règle de pare-feu le refuser) : elle attrape le cas ordinaire, pas tous les cas.</p></div>
 <div class="note rule"><p class="note-label">Règle</p><p>Un échec de liaison silencieux est la pire des pannes.</p><p>Le processus vit, la moitié de ses fonctions marche, et le symptôme apparaît trois composants plus loin. Vérifier ce qu'on peut avant de démarrer, et faire échouer bruyamment le processus lui-même quand il ne peut pas écouter.</p></div>
 </div>
+<div lang="zh-TW">
+<h2>做一個好的監督者</h2>
+<p>沒有作業系統的服務管理員時，代理程式<em>就是</em>它的遊戲伺服器的監督者，而一個死掉時留下子程序的監督者，比沒有監督者更糟：當它重新啟動時，舊的伺服器仍然佔著它正要再次發出的埠與身分。Windows 有正確的工具，比結束掛勾更好：一個設定了「關閉時終止」的<strong>工作物件</strong>（job object）。放在其中的程序會隨著工作物件的控制代碼一起死，因此也隨著代理程式一起死，不論它是怎麼停止的：Ctrl+C、未處理的例外、「結束工作」、原生當機。由核心負責清理；掛勾則假設還有一個能執行它的程序。</p>
+<p>工作物件過去屬於閘道，在代理程式存在之前，是由它啟動伺服器的。於是重新啟動閘道，就會砍掉整個叢集的每一台遊戲伺服器：對付孤兒程序非常有效，對一次例行操作卻是災難。反過來說，停止代理程式<em>正是</em>應該停止它的伺服器的那個動作。代理程式也完全不監聽任何埠：根本不存在任何一片資料可能從中而來的網路，而程式碼也這樣寫著，留給哪天有人想「只是加一個小 API」的時候看。</p>
+<div class="note measured"><p class="note-label">實測</p><p>埠是推導出來的：遊戲埠 = 起始值 + 索引。起始值設為 9051 時，實例 1 要求的是 9052，而那正是閘道監聽它的遊戲伺服器的埠。伺服器啟動了、通過認證、收到並載入了地圖（這些全都經由它連到閘道的<em>出站</em>連線，而那條連線運作完美），但它給玩家用的<em>入站</em>監聽器從未存在。一台看起來健康、載有八十張地圖的伺服器，卻從來沒有任何玩家到達：花了三次測試台才弄懂，因為沒有任何東西能區分「它在監聽」與「它無法監聽」。現在代理程式在啟動之前會檢查機器的 UDP 監聽器，並大聲地拒絕已被佔用的埠。這是一張快照（中間可能有人搶走這個埠，或防火牆規則可能拒絕它），所以它抓得到一般情況，而不是所有情況。</p></div>
+<div class="note rule"><p class="note-label">規則</p><p>無聲的繫結失敗是最糟的一種停機。</p><p>程序活著，一半的功能能運作，而症狀出現在三個元件之外。能在啟動前檢查的就先檢查，並讓程序本身在無法監聽時大聲地失敗。</p></div></div>
 </section>
 
 <section class="sec" id="takeaways">
@@ -205,6 +250,13 @@ server   : workers = processors / instances − 2</code></pre></div>
 <li>Dimensionner les instances sur le matériel avec un seul bouton ; utiliser des temporisations différentes pour les besoins certains et incertains.</li>
 <li>Ne retirer que sur des observations fraîches et répétées, tuer avant d'effacer, et superviser les enfants avec un objet job du noyau.</li>
 </ul></div>
+<div lang="zh-TW"><h2>重點整理</h2><ul>
+<li>每台機器執行一個調和器，在迴圈中比較期望狀態與實際狀態；描述資源，推導實例。</li>
+<li>以資料庫的資料列鎖讓認領依序進行，上鎖之後才計數，並在程序啟動之前寫入資料列。</li>
+<li>讓每個代理程式根據共用資料，自問自己是不是最好的主機，並使用穩定的平手決定方式；容錯移轉就不需要任何程式碼。</li>
+<li>以一個旋鈕依硬體調整實例規模；對確定與不確定的需求使用不同的冷卻時間。</li>
+<li>只根據新鮮、重複的觀察讓伺服器退役，先砍程序再刪除，並以核心的工作物件監督子程序。</li>
+</ul></div>
 </div>
 </section>
 
@@ -217,6 +269,7 @@ server   : workers = processors / instances − 2</code></pre></div>
 <footer class="site-footer" id="mq-footer"></footer>
 <script src="assets/js/site-data.js" defer></script>
 <script src="assets/js/glossary-data.js" defer></script>
+<script src="assets/js/ui-zh.js" defer></script>
 <script src="assets/js/app.js" defer></script>
 <script src="assets/js/widgets.js" defer></script>
 </body>

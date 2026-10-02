@@ -7,12 +7,12 @@
 <meta name="description" content="Every process in the architecture, what it owns, and the path a player's packets take through it.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Chakra+Petch:wght@500;600&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Chakra+Petch:wght@500;600&family=JetBrains+Mono:wght@400;500;600&family=Noto+Sans+TC:wght@400;700&display=swap">
 <link rel="stylesheet" href="assets/css/site.css">
-<script>(function(){var r=document.documentElement,l,t;try{l=localStorage.getItem("mq-lang");t=localStorage.getItem("mq-theme");}catch(e){}if(l!=="en"&&l!=="fr"){l=(navigator.language||"").toLowerCase().indexOf("fr")===0?"fr":"en";}r.setAttribute("data-lang",l);r.setAttribute("lang",l);if(t==="light"||t==="dark")r.setAttribute("data-theme",t);})();</script>
+<script>(function(){var r=document.documentElement,l,t,n;try{l=localStorage.getItem("mq-lang");t=localStorage.getItem("mq-theme");}catch(e){}if(l!=="en"&&l!=="fr"&&l!=="zh"){n=(navigator.language||"").toLowerCase();l=n.indexOf("fr")===0?"fr":n.indexOf("zh")===0?"zh":"en";}r.setAttribute("data-lang",l);r.setAttribute("lang",l==="zh"?"zh-TW":l);if(t==="light"||t==="dark")r.setAttribute("data-theme",t);})();</script>
 </head>
 <body data-page="big-picture">
-<a class="skip-link" href="#main"><span lang="en">Skip to content</span><span lang="fr">Aller au contenu</span></a>
+<a class="skip-link" href="#main"><span lang="en">Skip to content</span><span lang="fr">Aller au contenu</span><span lang="zh-TW">跳到主要內容</span></a>
 <header class="site-header" id="mq-header"></header>
 <div class="layout">
 <aside class="sidebar" id="mq-sidebar"></aside>
@@ -20,8 +20,8 @@
 <article>
 <header class="chapter-head">
   <div class="eyebrow" data-auto></div>
-  <h1><span lang="en">The system at a glance</span><span lang="fr">Le système d'un coup d'œil</span></h1>
-  <p class="dek"><span lang="en">Every process in the architecture, what it owns, and the path a player's packets take through it.</span><span lang="fr">Chaque processus de l'architecture, ce qu'il possède, et le chemin que prennent les paquets d'un joueur.</span></p>
+  <h1><span lang="en">The system at a glance</span><span lang="fr">Le système d'un coup d'œil</span><span lang="zh-TW">系統全貌</span></h1>
+  <p class="dek"><span lang="en">Every process in the architecture, what it owns, and the path a player's packets take through it.</span><span lang="fr">Chaque processus de l'architecture, ce qu'il possède, et le chemin que prennent les paquets d'un joueur.</span><span lang="zh-TW">架構中的每個程序、各自負責什麼，以及玩家的封包在其中走過的路徑。</span></p>
   <div class="meta-row" data-auto></div>
 </header>
 
@@ -36,6 +36,9 @@
 <h2>La carte</h2>
 <p>MoonQwak tourne sous la forme d'un petit nombre de programmes séparés. Chacun existe parce qu'il possède quelque chose que les autres ne doivent pas toucher, ou parce qu'il doit continuer de tourner pendant que les autres redémarrent. Le schéma ci-dessous les montre tous, avec les messages qu'ils échangent. Les points qui bougent sont du trafic : ambre pour les entrées et requêtes des joueurs, bleu pour l'état qui revient, vert pour le parc et la base de données.</p>
 </div>
+<div lang="zh-TW">
+<h2>系統地圖</h2>
+<p>MoonQwak 由少數幾個彼此獨立的程式組成。每一個之所以存在，要嘛是因為它擁有其他程式不該碰的東西，要嘛是因為它必須在其他程式重新啟動時繼續運作。下圖列出所有程式以及它們交換的訊息。移動的點代表流量：琥珀色是玩家的輸入與請求，藍色是流回來的狀態，綠色是叢集與資料庫。</p></div>
 <figure class="fig fig-scroll">
 <svg viewBox="0 0 900 540" role="img" aria-label="System map: launcher and update server, game client, gateway, game servers, node agents, database, world simulation and monitor, with the messages between them" data-flow>
   <defs>
@@ -56,65 +59,65 @@
   <path d="M755 110 L755 82" class="dg-line" marker-end="url(#bp-arr)" data-flow-path data-flow-class="alt" data-flow-rate="1" data-flow-speed="40"/>
 
   <!-- edge labels -->
-  <text class="dg-small" x="126" y="104"><tspan lang="en">HTTP: pointer, manifest, objects</tspan><tspan lang="fr">HTTP : pointeur, manifeste, objets</tspan></text>
-  <text class="dg-small" x="126" y="192"><tspan lang="en">starts the game</tspan><tspan lang="fr">lance le jeu</tspan></text>
-  <text class="dg-small" x="416" y="218" text-anchor="middle"><tspan lang="en">inputs, requests (UDP, encrypted)</tspan><tspan lang="fr">entrées, requêtes (UDP, chiffré)</tspan></text>
-  <text class="dg-small" x="416" y="262" text-anchor="middle"><tspan lang="en">snapshots at 25 per second</tspan><tspan lang="fr">snapshots, 25 par seconde</tspan></text>
-  <text class="dg-small" x="162" y="318" text-anchor="end"><tspan lang="en">login, characters, chat</tspan><tspan lang="fr">login, personnages, chat</tspan></text>
-  <text class="dg-small" x="536" y="394"><tspan lang="en">assign maps, validate tokens</tspan><tspan lang="fr">cartes, jetons</tspan></text>
-  <text class="dg-small" x="435" y="430"><tspan lang="en">accounts, desired servers</tspan><tspan lang="fr">comptes, serveurs désirés</tspan></text>
-  <text class="dg-small" x="640" y="402"><tspan lang="en">background writes</tspan><tspan lang="fr">écritures en fond</tspan></text>
-  <text class="dg-small" x="765" y="398"><tspan lang="en">starts / retires</tspan><tspan lang="fr">lance / retire</tspan></text>
-  <text class="dg-small" x="765" y="100"><tspan lang="en">tick metrics</tspan><tspan lang="fr">métriques du tick</tspan></text>
-  <text class="dg-small" x="210" y="470"><tspan lang="en">hourly world tick</tspan><tspan lang="fr">tick horaire</tspan></text>
+  <text class="dg-small" x="126" y="104"><tspan lang="en">HTTP: pointer, manifest, objects</tspan><tspan lang="fr">HTTP : pointeur, manifeste, objets</tspan><tspan lang="zh-TW">HTTP：指標、清單、物件</tspan></text>
+  <text class="dg-small" x="126" y="192"><tspan lang="en">starts the game</tspan><tspan lang="fr">lance le jeu</tspan><tspan lang="zh-TW">啟動遊戲</tspan></text>
+  <text class="dg-small" x="416" y="218" text-anchor="middle"><tspan lang="en">inputs, requests (UDP, encrypted)</tspan><tspan lang="fr">entrées, requêtes (UDP, chiffré)</tspan><tspan lang="zh-TW">輸入、請求（UDP，加密）</tspan></text>
+  <text class="dg-small" x="416" y="262" text-anchor="middle"><tspan lang="en">snapshots at 25 per second</tspan><tspan lang="fr">snapshots, 25 par seconde</tspan><tspan lang="zh-TW">快照，每秒 25 份</tspan></text>
+  <text class="dg-small" x="162" y="318" text-anchor="end"><tspan lang="en">login, characters, chat</tspan><tspan lang="fr">login, personnages, chat</tspan><tspan lang="zh-TW">登入、角色、聊天</tspan></text>
+  <text class="dg-small" x="536" y="394"><tspan lang="en">assign maps, validate tokens</tspan><tspan lang="fr">cartes, jetons</tspan><tspan lang="zh-TW">指派地圖、驗證權杖</tspan></text>
+  <text class="dg-small" x="435" y="430"><tspan lang="en">accounts, desired servers</tspan><tspan lang="fr">comptes, serveurs désirés</tspan><tspan lang="zh-TW">帳號、期望伺服器數</tspan></text>
+  <text class="dg-small" x="640" y="402"><tspan lang="en">background writes</tspan><tspan lang="fr">écritures en fond</tspan><tspan lang="zh-TW">背景寫入</tspan></text>
+  <text class="dg-small" x="765" y="398"><tspan lang="en">starts / retires</tspan><tspan lang="fr">lance / retire</tspan><tspan lang="zh-TW">啟動／退役</tspan></text>
+  <text class="dg-small" x="765" y="100"><tspan lang="en">tick metrics</tspan><tspan lang="fr">métriques du tick</tspan><tspan lang="zh-TW">tick 指標</tspan></text>
+  <text class="dg-small" x="210" y="470"><tspan lang="en">hourly world tick</tspan><tspan lang="fr">tick horaire</tspan><tspan lang="zh-TW">每小時的世界 tick</tspan></text>
 
   <!-- nodes -->
   <rect x="30" y="30" width="170" height="52" rx="8" class="dg-box"/>
-  <text class="dg-text" x="115" y="52" text-anchor="middle" font-weight="700"><tspan lang="en">Update server</tspan><tspan lang="fr">Serveur de MAJ</tspan></text>
-  <text class="dg-small" x="115" y="70" text-anchor="middle"><tspan lang="en">static files, no logic</tspan><tspan lang="fr">fichiers statiques, sans logique</tspan></text>
+  <text class="dg-text" x="115" y="52" text-anchor="middle" font-weight="700"><tspan lang="en">Update server</tspan><tspan lang="fr">Serveur de MAJ</tspan><tspan lang="zh-TW">更新伺服器</tspan></text>
+  <text class="dg-small" x="115" y="70" text-anchor="middle"><tspan lang="en">static files, no logic</tspan><tspan lang="fr">fichiers statiques, sans logique</tspan><tspan lang="zh-TW">靜態檔案，沒有邏輯</tspan></text>
 
   <rect x="30" y="116" width="170" height="52" rx="8" class="dg-box"/>
-  <text class="dg-text" x="115" y="138" text-anchor="middle" font-weight="700">Launcher</text>
-  <text class="dg-small" x="115" y="156" text-anchor="middle"><tspan lang="en">patches, then starts</tspan><tspan lang="fr">met à jour, puis lance</tspan></text>
+  <text class="dg-text" x="115" y="138" text-anchor="middle" font-weight="700"><tspan lang="en">Launcher</tspan><tspan lang="fr">Launcher</tspan><tspan lang="zh-TW">啟動器</tspan></text>
+  <text class="dg-small" x="115" y="156" text-anchor="middle"><tspan lang="en">patches, then starts</tspan><tspan lang="fr">met à jour, puis lance</tspan><tspan lang="zh-TW">先更新，再啟動</tspan></text>
 
   <rect x="30" y="206" width="172" height="66" rx="8" class="dg-hot"/>
-  <text class="dg-text" x="116" y="232" text-anchor="middle" font-weight="700"><tspan lang="en">Game client</tspan><tspan lang="fr">Client de jeu</tspan></text>
-  <text class="dg-small" x="116" y="250" text-anchor="middle"><tspan lang="en">Unity: predicts, renders</tspan><tspan lang="fr">Unity : prédit, affiche</tspan></text>
+  <text class="dg-text" x="116" y="232" text-anchor="middle" font-weight="700"><tspan lang="en">Game client</tspan><tspan lang="fr">Client de jeu</tspan><tspan lang="zh-TW">遊戲用戶端</tspan></text>
+  <text class="dg-small" x="116" y="250" text-anchor="middle"><tspan lang="en">Unity: predicts, renders</tspan><tspan lang="fr">Unity : prédit, affiche</tspan><tspan lang="zh-TW">Unity：預測、繪製</tspan></text>
 
   <rect x="330" y="318" width="192" height="86" rx="8" class="dg-box-2"/>
-  <text class="dg-text" x="426" y="344" text-anchor="middle" font-weight="700">Gateway</text>
-  <text class="dg-small" x="426" y="362" text-anchor="middle"><tspan lang="en">auth, sessions, social,</tspan><tspan lang="fr">auth, sessions, social,</tspan></text>
-  <text class="dg-small" x="426" y="378" text-anchor="middle"><tspan lang="en">map placement, capacity</tspan><tspan lang="fr">placement, capacité</tspan></text>
+  <text class="dg-text" x="426" y="344" text-anchor="middle" font-weight="700"><tspan lang="en">Gateway</tspan><tspan lang="fr">Gateway</tspan><tspan lang="zh-TW">閘道</tspan></text>
+  <text class="dg-small" x="426" y="362" text-anchor="middle"><tspan lang="en">auth, sessions, social,</tspan><tspan lang="fr">auth, sessions, social,</tspan><tspan lang="zh-TW">驗證、連線階段、社交、</tspan></text>
+  <text class="dg-small" x="426" y="378" text-anchor="middle"><tspan lang="en">map placement, capacity</tspan><tspan lang="fr">placement, capacité</tspan><tspan lang="zh-TW">地圖配置、容量</tspan></text>
 
   <rect x="630" y="30" width="250" height="52" rx="8" class="dg-box"/>
-  <text class="dg-text" x="755" y="52" text-anchor="middle" font-weight="700">Monitor</text>
-  <text class="dg-small" x="755" y="70" text-anchor="middle"><tspan lang="en">dev tool: live tick metrics, fleet view</tspan><tspan lang="fr">outil : métriques du tick, vue du parc</tspan></text>
+  <text class="dg-text" x="755" y="52" text-anchor="middle" font-weight="700"><tspan lang="en">Monitor</tspan><tspan lang="fr">Monitor</tspan><tspan lang="zh-TW">監控器</tspan></text>
+  <text class="dg-small" x="755" y="70" text-anchor="middle"><tspan lang="en">dev tool: live tick metrics, fleet view</tspan><tspan lang="fr">outil : métriques du tick, vue du parc</tspan><tspan lang="zh-TW">開發工具：即時 tick 指標、叢集檢視</tspan></text>
 
   <rect x="630" y="110" width="250" height="258" rx="10" fill="none" class="dg-box" stroke-dasharray="5 4"/>
-  <text class="dg-label" x="646" y="130"><tspan lang="en">Game servers</tspan><tspan lang="fr">Serveurs de jeu</tspan></text>
+  <text class="dg-label" x="646" y="130"><tspan lang="en">Game servers</tspan><tspan lang="fr">Serveurs de jeu</tspan><tspan lang="zh-TW">遊戲伺服器</tspan></text>
   <rect x="646" y="142" width="218" height="58" rx="7" class="dg-box-2"/>
   <text class="dg-mono" x="662" y="166">MACHINE-A#0</text>
-  <text class="dg-small" x="662" y="186"><tspan lang="en">maps 12, 40, 41 · 25 ticks/s</tspan><tspan lang="fr">cartes 12, 40, 41 · 25 ticks/s</tspan></text>
+  <text class="dg-small" x="662" y="186"><tspan lang="en">maps 12, 40, 41 · 25 ticks/s</tspan><tspan lang="fr">cartes 12, 40, 41 · 25 ticks/s</tspan><tspan lang="zh-TW">地圖 12、40、41 · 每秒 25 tick</tspan></text>
   <rect x="646" y="208" width="218" height="58" rx="7" class="dg-hot"/>
   <text class="dg-mono" x="662" y="232">MACHINE-A#1</text>
-  <text class="dg-small" x="662" y="252"><tspan lang="en">your map lives here</tspan><tspan lang="fr">votre carte vit ici</tspan></text>
+  <text class="dg-small" x="662" y="252"><tspan lang="en">your map lives here</tspan><tspan lang="fr">votre carte vit ici</tspan><tspan lang="zh-TW">你的地圖在這裡</tspan></text>
   <rect x="646" y="274" width="218" height="58" rx="7" class="dg-box-2"/>
   <text class="dg-mono" x="662" y="298">MACHINE-B#0</text>
-  <text class="dg-small" x="662" y="318"><tspan lang="en">started on demand</tspan><tspan lang="fr">lancé à la demande</tspan></text>
+  <text class="dg-small" x="662" y="318"><tspan lang="en">started on demand</tspan><tspan lang="fr">lancé à la demande</tspan><tspan lang="zh-TW">按需啟動</tspan></text>
 
   <rect x="664" y="420" width="216" height="64" rx="8" class="dg-box"/>
-  <text class="dg-text" x="772" y="444" text-anchor="middle" font-weight="700"><tspan lang="en">Node agents</tspan><tspan lang="fr">Agents de machine</tspan></text>
-  <text class="dg-small" x="772" y="462" text-anchor="middle"><tspan lang="en">one per machine, reconcile</tspan><tspan lang="fr">un par machine, réconcilient</tspan></text>
+  <text class="dg-text" x="772" y="444" text-anchor="middle" font-weight="700"><tspan lang="en">Node agents</tspan><tspan lang="fr">Agents de machine</tspan><tspan lang="zh-TW">節點代理程式</tspan></text>
+  <text class="dg-small" x="772" y="462" text-anchor="middle"><tspan lang="en">one per machine, reconcile</tspan><tspan lang="fr">un par machine, réconcilient</tspan><tspan lang="zh-TW">每台機器一個，負責調和</tspan></text>
 
   <rect x="330" y="448" width="192" height="62" rx="8" class="dg-box"/>
-  <text class="dg-text" x="426" y="474" text-anchor="middle" font-weight="700"><tspan lang="en">Database</tspan><tspan lang="fr">Base de données</tspan></text>
-  <text class="dg-small" x="426" y="492" text-anchor="middle"><tspan lang="en">MySQL, the journal</tspan><tspan lang="fr">MySQL, le journal</tspan></text>
+  <text class="dg-text" x="426" y="474" text-anchor="middle" font-weight="700"><tspan lang="en">Database</tspan><tspan lang="fr">Base de données</tspan><tspan lang="zh-TW">資料庫</tspan></text>
+  <text class="dg-small" x="426" y="492" text-anchor="middle"><tspan lang="en">MySQL, the journal</tspan><tspan lang="fr">MySQL, le journal</tspan><tspan lang="zh-TW">MySQL，系統的日誌</tspan></text>
 
   <rect x="30" y="448" width="172" height="62" rx="8" class="dg-box"/>
-  <text class="dg-text" x="116" y="474" text-anchor="middle" font-weight="700"><tspan lang="en">World simulation</tspan><tspan lang="fr">Simulation du monde</tspan></text>
-  <text class="dg-small" x="116" y="492" text-anchor="middle"><tspan lang="en">factions, territory</tspan><tspan lang="fr">factions, territoires</tspan></text>
+  <text class="dg-text" x="116" y="474" text-anchor="middle" font-weight="700"><tspan lang="en">World simulation</tspan><tspan lang="fr">Simulation du monde</tspan><tspan lang="zh-TW">世界模擬</tspan></text>
+  <text class="dg-small" x="116" y="492" text-anchor="middle"><tspan lang="en">factions, territory</tspan><tspan lang="fr">factions, territoires</tspan><tspan lang="zh-TW">陣營、領土</tspan></text>
 </svg>
-<figcaption><span lang="en"><strong>The whole system.</strong> Two connections leave the player's machine: one to the gateway, one to the game server hosting their current map. The game servers never talk to each other; anything that crosses maps goes through the gateway or the database.</span><span lang="fr"><strong>Le système entier.</strong> Deux connexions partent de la machine du joueur : une vers la gateway, une vers le serveur de jeu qui héberge sa carte. Les serveurs de jeu ne se parlent jamais entre eux ; tout ce qui traverse les cartes passe par la gateway ou par la base.</span></figcaption>
+<figcaption><span lang="en"><strong>The whole system.</strong> Two connections leave the player's machine: one to the gateway, one to the game server hosting their current map. The game servers never talk to each other; anything that crosses maps goes through the gateway or the database.</span><span lang="fr"><strong>Le système entier.</strong> Deux connexions partent de la machine du joueur : une vers la gateway, une vers le serveur de jeu qui héberge sa carte. Les serveurs de jeu ne se parlent jamais entre eux ; tout ce qui traverse les cartes passe par la gateway ou par la base.</span><span lang="zh-TW"><strong>整個系統。</strong>玩家的機器會建立兩條連線：一條連到閘道，一條連到託管他目前所在地圖的遊戲伺服器。遊戲伺服器之間從不直接溝通；任何跨地圖的事情都經過閘道或資料庫。</span></figcaption>
 </figure>
 </section>
 
@@ -151,12 +154,29 @@
 <tr><td><strong>Monitor</strong></td><td>Rien : il ne fait que lire</td><td>Un outil de développement qui montre les phases du tick, la bande passante et le parc. Voir <a href="observability.html">10.1</a>.</td></tr>
 </tbody></table></div>
 </div>
+<div lang="zh-TW">
+<h2>誰負責什麼</h2>
+<div class="table-wrap"><table>
+<thead><tr><th>程序</th><th>擁有</th><th>為什麼要獨立</th></tr></thead>
+<tbody>
+<tr><td><strong>遊戲用戶端</strong></td><td>繪製、輸入、預測玩家自己的移動</td><td>在玩家的機器上執行；什麼都不能信任它。</td></tr>
+<tr><td><strong>啟動器</strong></td><td>遊戲與它自己的已安裝檔案</td><td>必須能在用戶端執行之前，更新用戶端以及它自己。</td></tr>
+<tr><td><strong>更新伺服器</strong></td><td>已發布的組建，以雜湊值命名的檔案</td><td>可以換成任何靜態檔案主機或 CDN。見 <a href="updater.html">8.1</a>。</td></tr>
+<tr><td><strong>閘道</strong></td><td>帳號、連線階段、上線狀態、聊天、隊伍、公會、哪台伺服器託管哪張地圖、每個世界需要幾台伺服器</td><td>唯一一個每位玩家、每台伺服器都會與之溝通的元件。它看得到全體玩家；遊戲伺服器只看得到自己的地圖。</td></tr>
+<tr><td><strong>遊戲伺服器</strong>（多台）</td><td>它所託管地圖的即時狀態，存放在 RAM 中</td><td>就是模擬本身。它可以當機或退役，而不會連帶拖垮帳號或其他地圖。</td></tr>
+<tr><td><strong>節點代理程式</strong>（每台機器一個）</td><td>該機器上的遊戲伺服器程序</td><td>啟動與停止伺服器。刻意不放在閘道裡，讓面對網際網路的程序無法啟動程式。</td></tr>
+<tr><td><strong>資料庫</strong></td><td>所有必須在重新啟動後留存的東西</td><td>持久性日誌。從不在 tick 之內被呼叫。</td></tr>
+<tr><td><strong>世界模擬</strong></td><td>陣營影響力與領土，每小時推進一次</td><td>一個有自己時鐘的慢速模擬，遠離 25 Hz 的迴圈。見 <a href="world-sim.html">9.1</a>。</td></tr>
+<tr><td><strong>監控器</strong></td><td>什麼都不擁有：它只讀取</td><td>一個顯示 tick 各階段、頻寬與叢集的開發者工具。見 <a href="observability.html">10.1</a>。</td></tr>
+</tbody></table></div></div>
 <div lang="en">
 <div class="note rule"><p class="note-label">Rule</p><p>Every fact has exactly one writer: the process that observes it.</p><p>The gateway writes how many servers a world needs because it alone sees both hosted maps and waiting maps. Each node agent writes the CPU and RAM of its own machine because it alone runs there. The gateway writes each server's map and player counts because it alone routes them. When two processes could both write a value, they eventually write different ones.</p></div>
 </div>
 <div lang="fr">
 <div class="note rule"><p class="note-label">Règle</p><p>Chaque fait a exactement un écrivain : le processus qui l'observe.</p><p>La gateway écrit combien de serveurs un monde demande, parce qu'elle seule voit à la fois les cartes hébergées et celles qui attendent. Chaque agent écrit le CPU et la RAM de sa machine, parce qu'il est le seul à y tourner. La gateway écrit les comptes de cartes et de joueurs de chaque serveur, parce qu'elle seule les route. Quand deux processus peuvent écrire la même valeur, ils finissent par en écrire deux différentes.</p></div>
 </div>
+<div lang="zh-TW">
+<div class="note rule"><p class="note-label">規則</p><p>每一項事實都恰好只有一個寫入者：觀察到它的那個程序。</p><p>閘道寫入每個世界需要幾台伺服器，因為只有它同時看得到已託管與等待中的地圖。每個節點代理程式寫入自己機器的 CPU 與 RAM，因為只有它在那台機器上執行。閘道寫入每台伺服器的地圖數與玩家數，因為只有它負責路由。當兩個程序都可能寫入同一個值時，它們遲早會寫入不同的值。</p></div></div>
 </section>
 
 <section class="sec" id="journey">
@@ -168,18 +188,21 @@
 <h2>Le parcours d'un joueur</h2>
 <p>Parcourez pas à pas ce qui se passe entre le double-clic sur le launcher et le passage d'une frontière de carte. Chaque flèche est un vrai message du protocole. Les chapitres suivants détaillent chaque étape.</p>
 </div>
+<div lang="zh-TW">
+<h2>一位玩家的旅程</h2>
+<p>一步步看看從雙擊啟動器到飛越地圖邊界之間發生了什麼。每個箭頭都是協定中一則真實的訊息。後面的章節會逐一展開每個步驟。</p></div>
 <div class="lab" data-stepper>
-<div class="lab-head"><span class="lab-title"><span lang="en">Sequence walkthrough</span><span lang="fr">Déroulé de la séquence</span></span><span class="lab-sub"><span lang="en">From launch to crossing a map edge</span><span lang="fr">Du lancement au passage d'une frontière</span></span></div>
+<div class="lab-head"><span class="lab-title"><span lang="en">Sequence walkthrough</span><span lang="fr">Déroulé de la séquence</span><span lang="zh-TW">流程逐步解說</span></span><span class="lab-sub"><span lang="en">From launch to crossing a map edge</span><span lang="fr">Du lancement au passage d'une frontière</span><span lang="zh-TW">從啟動到跨越地圖邊界</span></span></div>
 <div class="lab-body">
 <div class="fig-scroll">
 <svg viewBox="0 0 900 580" role="img" aria-label="Sequence diagram of a player's session: update, login, character selection, map assignment, entering the game server, validation, arrival, snapshots and map transition">
   <defs><marker id="sq-arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs>
   <g class="dg-text">
-    <rect x="10" y="12" width="140" height="34" rx="6" class="dg-box"/><text x="80" y="34" text-anchor="middle" class="dg-text" font-weight="700"><tspan lang="en">Update server</tspan><tspan lang="fr">Serveur MAJ</tspan></text>
-    <rect x="180" y="12" width="140" height="34" rx="6" class="dg-hot"/><text x="250" y="34" text-anchor="middle" class="dg-text" font-weight="700"><tspan lang="en">Player PC</tspan><tspan lang="fr">PC du joueur</tspan></text>
-    <rect x="360" y="12" width="140" height="34" rx="6" class="dg-box-2"/><text x="430" y="34" text-anchor="middle" class="dg-text" font-weight="700">Gateway</text>
-    <rect x="540" y="12" width="140" height="34" rx="6" class="dg-box-2"/><text x="610" y="34" text-anchor="middle" class="dg-text" font-weight="700"><tspan lang="en">Game server</tspan><tspan lang="fr">Serveur de jeu</tspan></text>
-    <rect x="720" y="12" width="160" height="34" rx="6" class="dg-box"/><text x="800" y="34" text-anchor="middle" class="dg-text" font-weight="700"><tspan lang="en">DB · agents</tspan><tspan lang="fr">Base · agents</tspan></text>
+    <rect x="10" y="12" width="140" height="34" rx="6" class="dg-box"/><text x="80" y="34" text-anchor="middle" class="dg-text" font-weight="700"><tspan lang="en">Update server</tspan><tspan lang="fr">Serveur MAJ</tspan><tspan lang="zh-TW">更新伺服器</tspan></text>
+    <rect x="180" y="12" width="140" height="34" rx="6" class="dg-hot"/><text x="250" y="34" text-anchor="middle" class="dg-text" font-weight="700"><tspan lang="en">Player PC</tspan><tspan lang="fr">PC du joueur</tspan><tspan lang="zh-TW">玩家電腦</tspan></text>
+    <rect x="360" y="12" width="140" height="34" rx="6" class="dg-box-2"/><text x="430" y="34" text-anchor="middle" class="dg-text" font-weight="700"><tspan lang="en">Gateway</tspan><tspan lang="fr">Gateway</tspan><tspan lang="zh-TW">閘道</tspan></text>
+    <rect x="540" y="12" width="140" height="34" rx="6" class="dg-box-2"/><text x="610" y="34" text-anchor="middle" class="dg-text" font-weight="700"><tspan lang="en">Game server</tspan><tspan lang="fr">Serveur de jeu</tspan><tspan lang="zh-TW">遊戲伺服器</tspan></text>
+    <rect x="720" y="12" width="160" height="34" rx="6" class="dg-box"/><text x="800" y="34" text-anchor="middle" class="dg-text" font-weight="700"><tspan lang="en">DB · agents</tspan><tspan lang="fr">Base · agents</tspan><tspan lang="zh-TW">資料庫 · 代理程式</tspan></text>
   </g>
   <g class="dg-line dg-dash"><line x1="80" y1="46" x2="80" y2="570"/><line x1="250" y1="46" x2="250" y2="570"/><line x1="430" y1="46" x2="430" y2="570"/><line x1="610" y1="46" x2="610" y2="570"/><line x1="800" y1="46" x2="800" y2="570"/></g>
 
@@ -187,15 +210,15 @@
     <line class="dg-line seq-msg" x1="250" y1="80" x2="84" y2="80" marker-end="url(#sq-arr)"/>
     <text class="dg-small" x="165" y="74" text-anchor="middle">GET latest.json</text>
     <line class="dg-line seq-msg" x1="80" y1="104" x2="246" y2="104" marker-end="url(#sq-arr)"/>
-    <text class="dg-small" x="165" y="98" text-anchor="middle"><tspan lang="en">only the changed objects</tspan><tspan lang="fr">seulement les objets changés</tspan></text>
+    <text class="dg-small" x="165" y="98" text-anchor="middle"><tspan lang="en">only the changed objects</tspan><tspan lang="fr">seulement les objets changés</tspan><tspan lang="zh-TW">只有變動的物件</tspan></text>
   </g>
   <g data-step="2">
     <line class="dg-line seq-msg" x1="250" y1="140" x2="426" y2="140" marker-end="url(#sq-arr)"/>
     <text class="dg-small" x="340" y="134" text-anchor="middle">Login(user, pass, protocol)</text>
     <line class="dg-line seq-msg" x1="430" y1="160" x2="796" y2="160" marker-end="url(#sq-arr)"/>
-    <text class="dg-small" x="615" y="154" text-anchor="middle"><tspan lang="en">verify PBKDF2 hash</tspan><tspan lang="fr">vérifier le hachage PBKDF2</tspan></text>
+    <text class="dg-small" x="615" y="154" text-anchor="middle"><tspan lang="en">verify PBKDF2 hash</tspan><tspan lang="fr">vérifier le hachage PBKDF2</tspan><tspan lang="zh-TW">驗證 PBKDF2 雜湊</tspan></text>
     <line class="dg-line seq-msg" x1="430" y1="180" x2="254" y2="180" marker-end="url(#sq-arr)"/>
-    <text class="dg-small" x="340" y="174" text-anchor="middle"><tspan lang="en">session token</tspan><tspan lang="fr">jeton de session</tspan></text>
+    <text class="dg-small" x="340" y="174" text-anchor="middle"><tspan lang="en">session token</tspan><tspan lang="fr">jeton de session</tspan><tspan lang="zh-TW">連線階段權杖</tspan></text>
   </g>
   <g data-step="3">
     <line class="dg-line seq-msg" x1="250" y1="216" x2="426" y2="216" marker-end="url(#sq-arr)"/>
@@ -207,7 +230,7 @@
   </g>
   <g data-step="4">
     <line class="dg-line seq-msg" x1="430" y1="294" x2="254" y2="294" marker-end="url(#sq-arr)"/>
-    <text class="dg-small" x="340" y="288" text-anchor="middle"><tspan lang="en">ip:port + game token</tspan><tspan lang="fr">ip:port + jeton de jeu</tspan></text>
+    <text class="dg-small" x="340" y="288" text-anchor="middle"><tspan lang="en">ip:port + game token</tspan><tspan lang="fr">ip:port + jeton de jeu</tspan><tspan lang="zh-TW">ip:port + 遊戲權杖</tspan></text>
     <line class="dg-line seq-msg" x1="250" y1="316" x2="606" y2="316" marker-end="url(#sq-arr)"/>
     <text class="dg-small" x="520" y="310" text-anchor="middle">EnterGame(token)</text>
   </g>
@@ -215,11 +238,11 @@
     <line class="dg-line seq-msg" x1="610" y1="350" x2="434" y2="350" marker-end="url(#sq-arr)"/>
     <text class="dg-small" x="520" y="344" text-anchor="middle">ValidateSession(token)</text>
     <line class="dg-line seq-msg" x1="430" y1="372" x2="606" y2="372" marker-end="url(#sq-arr)"/>
-    <text class="dg-small" x="520" y="366" text-anchor="middle"><tspan lang="en">valid: character 42</tspan><tspan lang="fr">valide : personnage 42</tspan></text>
+    <text class="dg-small" x="520" y="366" text-anchor="middle"><tspan lang="en">valid: character 42</tspan><tspan lang="fr">valide : personnage 42</tspan><tspan lang="zh-TW">有效：角色 42</tspan></text>
   </g>
   <g data-step="6">
     <line class="dg-line seq-msg" x1="610" y1="404" x2="796" y2="404" marker-end="url(#sq-arr)"/>
-    <text class="dg-small" x="705" y="398" text-anchor="middle"><tspan lang="en">load character (off tick)</tspan><tspan lang="fr">charger le perso (hors tick)</tspan></text>
+    <text class="dg-small" x="705" y="398" text-anchor="middle"><tspan lang="en">load character (off tick)</tspan><tspan lang="fr">charger le perso (hors tick)</tspan><tspan lang="zh-TW">載入角色（tick 之外）</tspan></text>
     <line class="dg-line seq-msg" x1="610" y1="426" x2="254" y2="426" marker-end="url(#sq-arr)"/>
     <text class="dg-small" x="430" y="420" text-anchor="middle">EnterGameResult · MapInit</text>
     <line class="dg-line seq-msg" x1="250" y1="448" x2="606" y2="448" marker-end="url(#sq-arr)"/>
@@ -227,27 +250,27 @@
   </g>
   <g data-step="7">
     <line class="dg-line seq-msg" x1="250" y1="482" x2="606" y2="482" marker-end="url(#sq-arr)"/>
-    <text class="dg-small" x="430" y="476" text-anchor="middle"><tspan lang="en">inputs, every tick</tspan><tspan lang="fr">entrées, à chaque tick</tspan></text>
+    <text class="dg-small" x="430" y="476" text-anchor="middle"><tspan lang="en">inputs, every tick</tspan><tspan lang="fr">entrées, à chaque tick</tspan><tspan lang="zh-TW">輸入，每個 tick</tspan></text>
     <line class="dg-line seq-msg" x1="610" y1="502" x2="254" y2="502" marker-end="url(#sq-arr)"/>
-    <text class="dg-small" x="430" y="496" text-anchor="middle"><tspan lang="en">snapshots, 25 per second</tspan><tspan lang="fr">snapshots, 25 par seconde</tspan></text>
+    <text class="dg-small" x="430" y="496" text-anchor="middle"><tspan lang="en">snapshots, 25 per second</tspan><tspan lang="fr">snapshots, 25 par seconde</tspan><tspan lang="zh-TW">快照，每秒 25 份</tspan></text>
   </g>
   <g data-step="8">
     <line class="dg-line seq-msg" x1="610" y1="534" x2="434" y2="534" marker-end="url(#sq-arr)"/>
     <text class="dg-small" x="520" y="528" text-anchor="middle">MapTransition</text>
     <line class="dg-line seq-msg" x1="430" y1="556" x2="254" y2="556" marker-end="url(#sq-arr)"/>
-    <text class="dg-small" x="340" y="550" text-anchor="middle"><tspan lang="en">GameConnect(other server)</tspan><tspan lang="fr">GameConnect(autre serveur)</tspan></text>
+    <text class="dg-small" x="340" y="550" text-anchor="middle"><tspan lang="en">GameConnect(other server)</tspan><tspan lang="fr">GameConnect(autre serveur)</tspan><tspan lang="zh-TW">GameConnect（另一台伺服器）</tspan></text>
   </g>
 </svg>
 </div>
 <ol class="steps">
-<li><span lang="en"><strong>Update.</strong> The launcher downloads one small pointer file, compares the build it describes with what is installed, and fetches only the files whose hash changed. Then it starts the game. (<a href="launcher.html">8.2</a>)</span><span lang="fr"><strong>Mise à jour.</strong> Le launcher télécharge un petit fichier pointeur, compare le build qu'il décrit avec ce qui est installé, et ne récupère que les fichiers dont le hachage a changé. Puis il lance le jeu. (<a href="launcher.html">8.2</a>)</span></li>
-<li><span lang="en"><strong>Login.</strong> The client connects to the gateway over encrypted UDP and sends its credentials together with the protocol version it was built with. The gateway rejects a mismatched version before touching the database, then verifies the password hash and returns a session token. (<a href="login-flow.html">2.2</a>)</span><span lang="fr"><strong>Connexion.</strong> Le client se connecte à la gateway en UDP chiffré et envoie ses identifiants avec la version de protocole avec laquelle il a été compilé. La gateway refuse une version différente avant de toucher la base, puis vérifie le hachage du mot de passe et renvoie un jeton de session. (<a href="login-flow.html">2.2</a>)</span></li>
-<li><span lang="en"><strong>Where to play.</strong> The player picks a character. If no game server hosts that character's map yet, the gateway asks the least loaded server to load it, and waits for the answer. If no server has room, the gateway raises the desired server count and a node agent starts a new process. (<a href="map-hosting.html">7.1</a>)</span><span lang="fr"><strong>Où jouer.</strong> Le joueur choisit un personnage. Si aucun serveur de jeu n'héberge encore sa carte, la gateway demande au serveur le moins chargé de la charger, et attend la réponse. Si aucun serveur n'a de place, la gateway relève le nombre de serveurs désirés et un agent de machine lance un nouveau processus. (<a href="map-hosting.html">7.1</a>)</span></li>
-<li><span lang="en"><strong>A ticket.</strong> The gateway sends back the game server's address and a random game-session token. The client opens a second connection, to that server, and presents the token.</span><span lang="fr"><strong>Un ticket.</strong> La gateway renvoie l'adresse du serveur de jeu et un jeton de session de jeu aléatoire. Le client ouvre une seconde connexion, vers ce serveur, et présente le jeton.</span></li>
-<li><span lang="en"><strong>Validation.</strong> The game server cannot check the token itself; it asks the gateway. The gateway answers with the character id and records that this session now lives on this server, which is how chat and group messages find the player later.</span><span lang="fr"><strong>Validation.</strong> Le serveur de jeu ne peut pas vérifier le jeton lui-même ; il le demande à la gateway. La gateway répond avec l'identifiant du personnage et note que cette session vit désormais sur ce serveur, ce qui permettra plus tard aux messages de chat et de groupe de retrouver le joueur.</span></li>
-<li><span lang="en"><strong>Arrival.</strong> The server loads the character outside the tick, tells the client which map to load, then what that map contains. The ship is added to the world only when the client answers that it is ready. Before that, nothing is sent that the client could render half-loaded. (<a href="login-flow.html">2.2</a>)</span><span lang="fr"><strong>Arrivée.</strong> Le serveur charge le personnage hors du tick, dit au client quelle carte charger, puis ce qu'elle contient. Le vaisseau n'entre dans le monde que quand le client répond qu'il est prêt. Avant ça, rien n'est envoyé que le client pourrait afficher à moitié chargé. (<a href="login-flow.html">2.2</a>)</span></li>
-<li><span lang="en"><strong>Playing.</strong> The client sends its inputs every tick; the server simulates and sends each player a snapshot of what is around them, 25 times a second. Unknown objects in a snapshot trigger a one-time request for their details. (Parts <a href="tick-loop.html">3</a> and <a href="aoi.html">4</a>)</span><span lang="fr"><strong>En jeu.</strong> Le client envoie ses entrées à chaque tick ; le serveur simule et envoie à chaque joueur un snapshot de ce qui l'entoure, 25 fois par seconde. Les objets inconnus d'un snapshot déclenchent une demande unique de leurs détails. (Parties <a href="tick-loop.html">3</a> et <a href="aoi.html">4</a>)</span></li>
-<li><span lang="en"><strong>Crossing a border.</strong> The next map may live in another process. The server tells the gateway, which creates the next session, makes sure the destination is hosted, and sends the client the new address. The client disconnects and reconnects there. (<a href="handover.html">2.3</a>)</span><span lang="fr"><strong>Passer une frontière.</strong> La carte suivante peut vivre dans un autre processus. Le serveur prévient la gateway, qui crée la session suivante, s'assure que la destination est hébergée et envoie la nouvelle adresse au client. Le client se déconnecte et se reconnecte là-bas. (<a href="handover.html">2.3</a>)</span></li>
+<li><span lang="en"><strong>Update.</strong> The launcher downloads one small pointer file, compares the build it describes with what is installed, and fetches only the files whose hash changed. Then it starts the game. (<a href="launcher.html">8.2</a>)</span><span lang="fr"><strong>Mise à jour.</strong> Le launcher télécharge un petit fichier pointeur, compare le build qu'il décrit avec ce qui est installé, et ne récupère que les fichiers dont le hachage a changé. Puis il lance le jeu. (<a href="launcher.html">8.2</a>)</span><span lang="zh-TW"><strong>更新。</strong>啟動器下載一個小小的指標檔，把它描述的組建與已安裝的內容比對，只抓取雜湊值有變動的檔案。然後啟動遊戲。（<a href="launcher.html">8.2</a>）</span></li>
+<li><span lang="en"><strong>Login.</strong> The client connects to the gateway over encrypted UDP and sends its credentials together with the protocol version it was built with. The gateway rejects a mismatched version before touching the database, then verifies the password hash and returns a session token. (<a href="login-flow.html">2.2</a>)</span><span lang="fr"><strong>Connexion.</strong> Le client se connecte à la gateway en UDP chiffré et envoie ses identifiants avec la version de protocole avec laquelle il a été compilé. La gateway refuse une version différente avant de toucher la base, puis vérifie le hachage du mot de passe et renvoie un jeton de session. (<a href="login-flow.html">2.2</a>)</span><span lang="zh-TW"><strong>登入。</strong>用戶端透過加密的 UDP 連上閘道，送出帳密以及建置時所用的協定版本。閘道在碰資料庫之前就先拒絕版本不符者，接著驗證密碼雜湊，並回傳連線階段權杖。（<a href="login-flow.html">2.2</a>）</span></li>
+<li><span lang="en"><strong>Where to play.</strong> The player picks a character. If no game server hosts that character's map yet, the gateway asks the least loaded server to load it, and waits for the answer. If no server has room, the gateway raises the desired server count and a node agent starts a new process. (<a href="map-hosting.html">7.1</a>)</span><span lang="fr"><strong>Où jouer.</strong> Le joueur choisit un personnage. Si aucun serveur de jeu n'héberge encore sa carte, la gateway demande au serveur le moins chargé de la charger, et attend la réponse. Si aucun serveur n'a de place, la gateway relève le nombre de serveurs désirés et un agent de machine lance un nouveau processus. (<a href="map-hosting.html">7.1</a>)</span><span lang="zh-TW"><strong>去哪裡玩。</strong>玩家選擇一個角色。如果還沒有遊戲伺服器託管該角色所在的地圖，閘道會請負載最輕的伺服器載入它，並等待回覆。如果沒有伺服器有空間，閘道會調高期望伺服器數，由某個節點代理程式啟動一個新程序。（<a href="map-hosting.html">7.1</a>）</span></li>
+<li><span lang="en"><strong>A ticket.</strong> The gateway sends back the game server's address and a random game-session token. The client opens a second connection, to that server, and presents the token.</span><span lang="fr"><strong>Un ticket.</strong> La gateway renvoie l'adresse du serveur de jeu et un jeton de session de jeu aléatoire. Le client ouvre une seconde connexion, vers ce serveur, et présente le jeton.</span><span lang="zh-TW"><strong>一張票。</strong>閘道回傳遊戲伺服器的位址，以及一個隨機的遊戲連線階段權杖。用戶端開啟第二條連線，連到那台伺服器，並出示權杖。</span></li>
+<li><span lang="en"><strong>Validation.</strong> The game server cannot check the token itself; it asks the gateway. The gateway answers with the character id and records that this session now lives on this server, which is how chat and group messages find the player later.</span><span lang="fr"><strong>Validation.</strong> Le serveur de jeu ne peut pas vérifier le jeton lui-même ; il le demande à la gateway. La gateway répond avec l'identifiant du personnage et note que cette session vit désormais sur ce serveur, ce qui permettra plus tard aux messages de chat et de groupe de retrouver le joueur.</span><span lang="zh-TW"><strong>驗證。</strong>遊戲伺服器無法自己檢查權杖；它會詢問閘道。閘道回覆角色 ID，並記下這個連線階段現在位於這台伺服器上——之後聊天與隊伍訊息就是靠這個找到玩家。</span></li>
+<li><span lang="en"><strong>Arrival.</strong> The server loads the character outside the tick, tells the client which map to load, then what that map contains. The ship is added to the world only when the client answers that it is ready. Before that, nothing is sent that the client could render half-loaded. (<a href="login-flow.html">2.2</a>)</span><span lang="fr"><strong>Arrivée.</strong> Le serveur charge le personnage hors du tick, dit au client quelle carte charger, puis ce qu'elle contient. Le vaisseau n'entre dans le monde que quand le client répond qu'il est prêt. Avant ça, rien n'est envoyé que le client pourrait afficher à moitié chargé. (<a href="login-flow.html">2.2</a>)</span><span lang="zh-TW"><strong>抵達。</strong>伺服器在 tick 之外載入角色，告訴用戶端要載入哪張地圖，再告訴它這張地圖上有什麼。只有在用戶端回覆已準備好時，船艦才會被加入世界。在那之前，不會送出任何用戶端可能只載入一半就畫出來的東西。（<a href="login-flow.html">2.2</a>）</span></li>
+<li><span lang="en"><strong>Playing.</strong> The client sends its inputs every tick; the server simulates and sends each player a snapshot of what is around them, 25 times a second. Unknown objects in a snapshot trigger a one-time request for their details. (Parts <a href="tick-loop.html">3</a> and <a href="aoi.html">4</a>)</span><span lang="fr"><strong>En jeu.</strong> Le client envoie ses entrées à chaque tick ; le serveur simule et envoie à chaque joueur un snapshot de ce qui l'entoure, 25 fois par seconde. Les objets inconnus d'un snapshot déclenchent une demande unique de leurs détails. (Parties <a href="tick-loop.html">3</a> et <a href="aoi.html">4</a>)</span><span lang="zh-TW"><strong>遊玩。</strong>用戶端每個 tick 都送出輸入；伺服器進行模擬，並以每秒 25 次的頻率，送給每位玩家一份描述其周遭事物的快照。快照中出現未知物件時，會觸發一次性的細節請求。（第 <a href="tick-loop.html">3</a> 部與第 <a href="aoi.html">4</a> 部）</span></li>
+<li><span lang="en"><strong>Crossing a border.</strong> The next map may live in another process. The server tells the gateway, which creates the next session, makes sure the destination is hosted, and sends the client the new address. The client disconnects and reconnects there. (<a href="handover.html">2.3</a>)</span><span lang="fr"><strong>Passer une frontière.</strong> La carte suivante peut vivre dans un autre processus. Le serveur prévient la gateway, qui crée la session suivante, s'assure que la destination est hébergée et envoie la nouvelle adresse au client. Le client se déconnecte et se reconnecte là-bas. (<a href="handover.html">2.3</a>)</span><span lang="zh-TW"><strong>跨越邊界。</strong>下一張地圖可能位於另一個程序中。伺服器通知閘道，閘道建立下一個連線階段、確保目的地已被託管，並把新位址送給用戶端。用戶端斷線後重新連到那裡。（<a href="handover.html">2.3</a>）</span></li>
 </ol>
 </div>
 </div>
@@ -276,6 +299,16 @@
 <li><strong>Le parc</strong> est décrit par trois tables : les machines et leur capacité (saisies à la main), le nombre de serveurs demandé par chaque monde (écrit par la gateway), et les serveurs qui tournent réellement (écrits par les agents). (<a href="capacity.html">7.2</a>)</li>
 </ul>
 </div>
+<div lang="zh-TW">
+<h2>真相存放在哪裡</h2>
+<p>分散式系統說穿了，大多是一份清單，決定某項事實的哪一份副本才是真的。以下是 MoonQwak 的決定：</p>
+<ul>
+<li><strong>世界的目前狀態</strong>存放在託管該地圖的遊戲伺服器的 RAM 中。資料庫是事後在背景寫入的，只有在地圖載入或玩家連線時才會被讀回。（<a href="persistence.html">6.1</a>）</li>
+<li><strong>玩家看到的</strong>是一份副本，在每個 tick 之後送出，永遠稍微舊一點。用戶端只預測自己角色的行走，並依伺服器的結果修正。（<a href="prediction.html">5.3</a>）</li>
+<li><strong>連線階段與上線狀態</strong>存放在閘道的記憶體中。遊戲伺服器知道自己託管了哪些玩家；只有閘道知道每個人在哪裡。</li>
+<li><strong>易手的物品</strong>是「RAM 優先」的例外：交易、市場購買或包裹會立即在一筆交易中寫入資料庫。（<a href="transactions.html">6.2</a>）</li>
+<li><strong>叢集</strong>由三張資料表描述：機器及其容量（人工輸入）、每個世界需要的伺服器數（由閘道寫入），以及實際執行中的伺服器（由代理程式寫入）。（<a href="capacity.html">7.2</a>）</li>
+</ul></div>
 </section>
 
 <section class="sec" id="inside-a-server">
@@ -309,6 +342,20 @@
 <tr><td>Écriture console</td><td>BelowNormal</td><td>Écrit les lignes de journal en file sur la vraie console</td><td>Faire attendre qui que ce soit pour la console</td></tr>
 </tbody></table></div>
 </div>
+<div lang="zh-TW">
+<h2>一台遊戲伺服器的內部</h2>
+<p>一個遊戲伺服器程序不是單一迴圈，而是少數幾條執行緒，各自能碰什麼都有嚴格的規則。第 3 部會解釋這些規則；這裡先介紹登場角色。</p>
+<div class="table-wrap"><table>
+<thead><tr><th>執行緒</th><th>優先權</th><th>負責</th><th>絕不做</th></tr></thead>
+<tbody>
+<tr><td>世界 tick</td><td>最高</td><td>每秒 25 次推進每張地圖，並準備每位玩家的快照位元組</td><td>等待資料庫、主控台或其他執行緒的鎖</td></tr>
+<tr><td>Tick 工作執行緒</td><td>AboveNormal</td><td>協助世界 tick 執行它的平行迴圈（地圖、快照）</td><td>在 tick 迴圈之外執行任何東西</td></tr>
+<tr><td>快照傳送執行緒</td><td>AboveNormal</td><td>送出準備好的快照，接著送出「這些物件已離開」的通知</td><td>碰物理或地圖</td></tr>
+<tr><td>網路接收</td><td>Normal</td><td>解密、解析並分派用戶端封包；處理常式把意圖排入佇列交給 tick</td><td>直接修改物理世界</td></tr>
+<tr><td>閘道連線 + 地圖載入器</td><td>Normal</td><td>與閘道溝通；四個工作執行緒在地圖建立之前，從資料庫讀取地圖內容</td><td>在地圖載入時卡住閘道連線</td></tr>
+<tr><td>背景工作</td><td>Normal</td><td>所有 tick 不被允許做的資料庫寫入，一次一個，依序執行</td><td>碰任何由 tick 擁有的東西</td></tr>
+<tr><td>主控台寫入</td><td>BelowNormal</td><td>把排隊中的日誌行寫到真正的主控台</td><td>讓任何人等主控台</td></tr>
+</tbody></table></div></div>
 </section>
 
 <section class="sec" id="shared-code">
@@ -322,6 +369,10 @@
 <p>Quatre bibliothèques sont compilées à la fois pour le serveur et pour le client Unity : la couche de transport et de chiffrement, les définitions de paquets avec leur code de sérialisation, les catalogues de données de jeu et les règles partagées (dont la version du protocole), et les maths de la grille hexagonale. Un script de build les copie dans le projet Unity.</p>
 <p>Ce partage permet au client de recalculer les statistiques d'un vaisseau ou le temps de recharge d'une arme exactement comme le serveur, au lieu de les recevoir par le réseau. Il a un coût : il faut recompiler le client dès que le code partagé change, et un client compilé avec de vieilles bibliothèques est refusé au login par la vérification de version. Le chapitre <a href="protocol-testing.html">1.6</a> explique comment les deux bouts restent d'accord.</p>
 </div>
+<div lang="zh-TW">
+<h2>兩端共用的程式碼</h2>
+<p>有四個函式庫同時為伺服器與 Unity 用戶端編譯：傳輸與加密層、封包定義及其序列化程式碼、遊戲資料目錄與共用規則（包括協定版本），以及六角形網格數學。一個建置指令碼會把它們複製到 Unity 專案中。</p>
+<p>正是因為共用，用戶端才能像伺服器一樣精確地重新計算船艦的數值或武器的冷卻時間，而不必透過網路接收。這有代價：每當共用程式碼改變，用戶端就必須重新建置，而以舊函式庫建置的用戶端，會在登入時被協定版本檢查拒絕。第 <a href="protocol-testing.html">1.6</a> 章會說明兩端如何保持一致。</p></div>
 </section>
 
 <section class="sec" id="takeaways">
@@ -338,6 +389,12 @@
 <li>Chaque processus possède un ensemble clair de faits, et chaque fait a un seul écrivain.</li>
 <li>Dans un serveur de jeu, le tick monde est le thread le plus protégé : il n'attend jamais rien de plus lent que lui.</li>
 </ul></div>
+<div lang="zh-TW"><h2>重點整理</h2><ul>
+<li>玩家持有兩條連線：一條連到閘道，處理身分與社交；一條連到託管他所在地圖的遊戲伺服器。</li>
+<li>遊戲伺服器之間從不直接溝通。跨地圖的事務經過閘道或資料庫。</li>
+<li>每個程序擁有一組明確的事實，而每項事實只有一個寫入者。</li>
+<li>在遊戲伺服器內部，世界 tick 是受保護最嚴密的執行緒：它從不等待任何比它慢的東西。</li>
+</ul></div>
 </div>
 </section>
 
@@ -350,6 +407,7 @@
 <footer class="site-footer" id="mq-footer"></footer>
 <script src="assets/js/site-data.js" defer></script>
 <script src="assets/js/glossary-data.js" defer></script>
+<script src="assets/js/ui-zh.js" defer></script>
 <script src="assets/js/app.js" defer></script>
 <script src="assets/js/widgets.js" defer></script>
 </body>

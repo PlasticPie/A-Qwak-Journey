@@ -7,12 +7,12 @@
 <meta name="description" content="Moving your own character instantly, and correcting it against the server without visible snaps.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Chakra+Petch:wght@500;600&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Chakra+Petch:wght@500;600&family=JetBrains+Mono:wght@400;500;600&family=Noto+Sans+TC:wght@400;700&display=swap">
 <link rel="stylesheet" href="assets/css/site.css">
-<script>(function(){var r=document.documentElement,l,t;try{l=localStorage.getItem("mq-lang");t=localStorage.getItem("mq-theme");}catch(e){}if(l!=="en"&&l!=="fr"){l=(navigator.language||"").toLowerCase().indexOf("fr")===0?"fr":"en";}r.setAttribute("data-lang",l);r.setAttribute("lang",l);if(t==="light"||t==="dark")r.setAttribute("data-theme",t);})();</script>
+<script>(function(){var r=document.documentElement,l,t,n;try{l=localStorage.getItem("mq-lang");t=localStorage.getItem("mq-theme");}catch(e){}if(l!=="en"&&l!=="fr"&&l!=="zh"){n=(navigator.language||"").toLowerCase();l=n.indexOf("fr")===0?"fr":n.indexOf("zh")===0?"zh":"en";}r.setAttribute("data-lang",l);r.setAttribute("lang",l==="zh"?"zh-TW":l);if(t==="light"||t==="dark")r.setAttribute("data-theme",t);})();</script>
 </head>
 <body data-page="prediction">
-<a class="skip-link" href="#main"><span lang="en">Skip to content</span><span lang="fr">Aller au contenu</span></a>
+<a class="skip-link" href="#main"><span lang="en">Skip to content</span><span lang="fr">Aller au contenu</span><span lang="zh-TW">跳到主要內容</span></a>
 <header class="site-header" id="mq-header"></header>
 <div class="layout">
 <aside class="sidebar" id="mq-sidebar"></aside>
@@ -20,8 +20,8 @@
 <article>
 <header class="chapter-head">
   <div class="eyebrow" data-auto></div>
-  <h1><span lang="en">Prediction and reconciliation</span><span lang="fr">Prédiction et réconciliation</span></h1>
-  <p class="dek"><span lang="en">Moving your own character instantly, and correcting it against the server without visible snaps.</span><span lang="fr">Déplacer son propre personnage instantanément, et le corriger contre le serveur sans à-coup visible.</span></p>
+  <h1><span lang="en">Prediction and reconciliation</span><span lang="fr">Prédiction et réconciliation</span><span lang="zh-TW">預測與校正</span></h1>
+  <p class="dek"><span lang="en">Moving your own character instantly, and correcting it against the server without visible snaps.</span><span lang="fr">Déplacer son propre personnage instantanément, et le corriger contre le serveur sans à-coup visible.</span><span lang="zh-TW">讓自己的角色立即移動，並在不出現明顯跳動的情況下依伺服器結果修正。</span></p>
   <div class="meta-row" data-auto></div>
 </header>
 
@@ -48,6 +48,15 @@
 <li>Le <strong>mouvement du vaisseau</strong> n'est pas prédit. C'est un corps rigide dans le monde physique du serveur (Box2D v3), qui entre en collision avec les vaisseaux des autres joueurs, et le prédire fidèlement veut dire faire tourner, côté client, une simulation physique d'accord avec celle du serveur. Chaque façon d'y arriver est un chantier à elle seule : faire tourner la physique d'Unity sur le serveur au lieu de Box2D ; remplacer la physique d'Unity côté client par le moteur du serveur ; écrire un moteur physique maison partagé par les deux côtés et l'intégrer à Unity sans perdre en performance ; ou passer à un moteur qui rend une simulation partagée facile, voire en écrire un. La décision, pour l'instant, a été de rester simple. Tout ce qui <em>entoure</em> le mouvement du vaisseau réagit instantanément côté client (propulseurs, jauges de recharge des armes, compteurs de munitions), et le mouvement lui-même arrive par le lissage du chapitre <a href="interpolation.html">5.2</a>. La prédiction du vaisseau est notée comme un problème ouvert, pas comme un problème résolu (chapitre <a href="open-problems.html#network">10.6</a>).</li>
 </ul>
 </div>
+<div lang="zh-TW">
+<h2>你自己的輸入不能等一個往返</h2>
+<p>在權威伺服器下，你做的任何事在伺服器確認之前都不算數。如果用戶端等待確認，每一次按鍵都會晚一個往返時間才出現在畫面上：100 ms、200 ms，甚至更久。遠端物件稍微晚一點顯示不會有人察覺（第 <a href="interpolation.html">5.2</a> 章）；你自己的移動卻不行。</p>
+<p><strong>用戶端預測</strong>立刻在本機以與伺服器相同的規則套用你的輸入，而<strong>校正</strong>則在伺服器的回應到達時修復預測。做得好的話，修復是看不見的，因為預測本來就是對的。</p>
+<p>MoonQwak 以兩種不同的方式預測，而這個差異是刻意的取捨：</p>
+<ul>
+<li><strong>行走中的角色</strong>完全被預測，使用下面描述的經典序號、確認與重播機制。</li>
+<li><strong>船艦的運動</strong>不被預測。它是伺服器物理世界（Box2D v3）中的一個剛體，會與其他玩家的船艦碰撞，要忠實地預測它，就得在用戶端上執行一個與伺服器一致的物理模擬。每一條通往那裡的路，本身都是一個專案：在伺服器上改用 Unity 的物理而不是 Box2D；在用戶端上用伺服器的引擎取代 Unity 的物理；撰寫一套由兩端共用的自訂物理引擎，並在不損失效能的情況下整合進 Unity；或是改用一個讓共用模擬變得容易的引擎，甚至自己寫一個。目前的決定是保持簡單。船艦運動<em>周邊</em>的一切在用戶端上都會立即反應（推進器、武器冷卻量表、彈藥計數器），而運動本身則經由第 <a href="interpolation.html">5.2</a> 章的平滑處理呈現。船艦預測被列為待解問題，而不是已解決的問題（第 <a href="open-problems.html#network">10.6</a> 章）。</li>
+</ul></div>
 </section>
 
 <section class="sec" id="replay">
@@ -73,6 +82,16 @@
 </ol>
 <p>Dans le cas normal, le rejeu reproduit exactement ce qui était déjà à l'écran, et il n'y a rien à corriger. Une différence n'apparaît que si le serveur n'était pas d'accord avec le client, par exemple parce que quelque chose que seul le serveur connaît a ralenti le personnage. Essayez dans le labo : la zone grise ralentit le personnage côté serveur uniquement.</p>
 </div>
+<div lang="zh-TW">
+<h2>序號、確認、重播</h2>
+<p>這個機制被許多競技遊戲使用，值得一步一步理解：</p>
+<ol>
+<li>用戶端送出的每個輸入都帶著一個遞增的<strong>序號</strong>，同時也保存在本機的緩衝區中，連同它所代表的方向與持續時間。</li>
+<li>用戶端立刻把輸入套用到自己的角色副本上，經過一個包含與船艦牆壁碰撞的行走步驟。</li>
+<li>每份快照都會回傳伺服器已納入的最高序號：也就是<strong>確認</strong>。</li>
+<li>當確認推進時，用戶端從緩衝區中丟掉已確認的輸入，<strong>重設基準</strong>到伺服器的權威位置，並經由同一個行走步驟<strong>重播</strong>伺服器還沒看到的輸入。</li>
+</ol>
+<p>在正常情況下，重播會重現畫面上原本就有的東西，沒有任何東西需要修正。只有當伺服器與用戶端意見不同時才會出現差異，例如因為某個只有伺服器知道的東西讓角色變慢了。在實驗室中試試看：灰色區域只在伺服器端讓角色變慢。</p></div>
 <div data-widget="predict"></div>
 <div class="code"><div class="code-head"><span class="file">QwakClient/Scripts/Game/Character/PlayerCharacterController.cs · Reconcile, simplified</span></div><pre><code data-lang="cs">var ack = _selfCharacter.LastAckedInputSeq;
 if (_hasAck &amp;&amp; ack == _lastProcessedAck) return;  // nothing new from the server
@@ -94,6 +113,8 @@ foreach (var input in _pendingInputs)
 <div lang="fr">
 <p>Le recalage brutal (au-delà de 15 unités) est un filet de sécurité pour les vraies désynchronisations : une reconnexion, une téléportation administrative, un énorme pic de latence. L'approche précédente comparait des distances brutes à un seuil pour la latence ordinaire, et elle recalait sans cesse sur les grands vaisseaux en rotation, où le bras de levier de la rotation de la coque amplifie les petites différences de position avec la taille du vaisseau, même quand rien ne va mal.</p>
 </div>
+<div lang="zh-TW">
+<p>硬拉回（超過 15 單位）是一張為真正的不同步準備的安全網：重新連線、管理員傳送、巨大的延遲尖峰。之前的做法是拿原始距離與一個為日常延遲而設的門檻比較，結果在大型旋轉船艦上不停地拉回，因為船體旋轉的槓桿效應，會讓微小的位置差異隨船的大小被放大，即使什麼都沒出錯。</p></div>
 </section>
 
 <section class="sec" id="cadence">
@@ -109,6 +130,11 @@ foreach (var input in _pendingInputs)
 <p>Le client accumule maintenant le temps réel et envoie exactement une entrée par intervalle de tick serveur, en portant cet intervalle comme durée. Après un à-coup, il jette l'excédent au lieu d'envoyer plusieurs entrées en rafale dans une image : un seul tick un peu en retard est invisible, une rafale d'entrées renvoyées ne l'est pas.</p>
 <div class="note rule"><p class="note-label">Règle</p><p>Prédire avec le même pas, la même durée et la même cadence que l'autorité.</p><p>Toute différence dans la fréquence ou la durée d'application d'une entrée devient une correction. Aligner la cadence en supprime toute une famille avant même que la réconciliation ait quelque chose à faire.</p></div>
 </div>
+<div lang="zh-TW">
+<h2>以伺服器的頻率送出，而不是引擎的頻率</h2>
+<p>伺服器不會把輸入排入佇列：每個世界 tick，它取樣最近到達的輸入，並把它套用一整個 tick，覆寫原本在那裡的任何東西（第 <a href="threading.html#handoffs">3.3</a> 章）。Unity 的 FixedUpdate 經常跑得比伺服器的 25 Hz 還快。當用戶端每次 FixedUpdate 送出一個輸入時，可能有兩個輸入落在同一個伺服器 tick 內，例如「還在移動」然後「停下了」，而第一個在伺服器用到它之前就被覆寫了。這一小段移動從未在伺服器上發生，用戶端卻早已預測並畫了出來：在停下的那一刻，出現一次與速度成正比的小幅往回拉。</p>
+<p>現在用戶端會累積真實時間，每個伺服器 tick 間隔恰好送出一個輸入，並以這個間隔作為它的持續時間。發生頓挫之後，它會丟掉多出來的部分，而不是在一個影格中連發好幾個輸入：單獨一個稍微晚到的 tick 看不出來，一連串重送的輸入則看得出來。</p>
+<div class="note rule"><p class="note-label">規則</p><p>以與權威端相同的步驟、相同的持續時間、相同的節奏進行預測。</p><p>輸入套用的頻率或時間長度上的任何差異，都會變成一次修正。讓節奏一致，能在校正有事可做之前，就先消除一整類修正。</p></div></div>
 </section>
 
 <section class="sec" id="epsilon">
@@ -122,6 +148,10 @@ foreach (var input in _pendingInputs)
 <p>Même avec une cadence alignée, le serveur peut reconnaître un arrêt jusqu'à un tick après le client : une différence allant jusqu'à <em>vitesse / cadence</em> est attendue et ne signifie rien. Sous cette tolérance (plus 20 %), le client ne touche pas du tout à sa prédiction. Ce n'est pas une décroissance progressive vers la valeur du serveur, qui a été essayée et tremblait beaucoup ; c'est simplement « pas de correction ». Au-dessus de la tolérance, la position logique est corrigée d'un coup, en entier.</p>
 <p>Ce que voit le joueur est une valeur séparée, lissée, qui suit la position logique avec un court ressort critique (80 ms). La première version utilisait une approche à vitesse constante, qui refermait en une seule image tout écart inférieur à une image de marche : pour exactement les petites corrections que la réconciliation produit le plus, un saut instantané au lieu d'une approche lissée. Le ressort étale tout écart, si petit soit-il, sur son temps de lissage.</p>
 </div>
+<div lang="zh-TW">
+<h2>多大的差異值得修正</h2>
+<p>即使節奏一致，伺服器認知到停止的時間仍可能比用戶端晚最多一個 tick，所以最多<em>速度 / tick 頻率</em>的差異是預期中的，而且沒有意義。在這個容許誤差（再加 20 %）以下，用戶端完全不動它的預測。這不是逐漸衰減趨近伺服器的值——那曾經試過，抖動得很厲害——而就只是「不修正」。超過容許誤差時，邏輯位置會立刻被完整地修正。</p>
+<p>玩家看到的是另一個經過平滑的值，它以一個短的臨界阻尼彈簧（80 ms）跟隨邏輯位置。第一版使用等速趨近，它會在單一影格內補上任何小於一個影格行走距離的差距：對於校正最常產生的那種小修正，結果是瞬間跳動，而不是平滑的趨近。彈簧則會把任何差距，不論多小，都分散到它的平滑時間中。</p></div>
 </section>
 
 <section class="sec" id="frames">
@@ -137,6 +167,11 @@ foreach (var input in _pendingInputs)
 <p>La réconciliation compare la prédiction à la position du serveur, et la façon évidente de le faire était fausse. Convertir la position monde du serveur dans le repère du vaisseau avec le transform <em>affiché</em> du vaisseau mélangeait deux instants : la coque affichée est lissée et extrapolée, donc elle n'est pas là où était la coque au tick du snapshot. Sur une coque qui tourne, ce retard multiplié par la distance au centre dépassait la tolérance à chaque snapshot, et le personnage était balancé d'une correction à l'autre alors qu'il se tenait parfaitement immobile sur le pont. La position serveur est maintenant convertie avec la pose <strong>snapshot</strong> de la coque, du même tick, ce qui donne un décalage local stable.</p>
 <div class="note rule"><p class="note-label">Règle</p><p>Ne comparer que des valeurs qui décrivent le même instant, dans le même repère.</p><p>Une valeur lissée est, par construction, d'un temps légèrement différent. La mélanger avec un échantillon qui fait autorité mesure le lissage, pas l'erreur.</p></div>
 </div>
+<div lang="zh-TW">
+<h2>在正確的參考系、相同的 tick 下比較</h2>
+<p>角色是走<em>在</em>船上的，而船會移動也會旋轉。角色的位置以船的區域座標系中的偏移量保存，世界位置則每個影格都從船目前的 Transform 重新組合，即使行走者站著不動，也會被船帶著走。</p>
+<p>校正要比較預測與伺服器的位置，而顯而易見的做法是錯的。用船<em>繪製出來的</em> Transform 把伺服器的世界位置轉換到船的座標系，混合了兩個不同的時間點：繪製出來的船體經過平滑與外插，所以它並不在快照那個 tick 時船體所在的位置。在旋轉的船體上，這個落差乘以離中心的距離，在每份快照中都超過了容許誤差，角色明明在甲板上完全靜止，卻被一次又一次的修正搖來晃去。現在伺服器位置改用同一個 tick 的船體<strong>快照</strong>姿態來轉換，得到一個穩定的區域偏移量。</p>
+<div class="note rule"><p class="note-label">規則</p><p>只比較描述同一瞬間、位於同一參考系的數值。</p><p>經過平滑的數值，在結構上就來自一個稍微不同的時間。把它與權威樣本混在一起，量到的是平滑，而不是誤差。</p></div></div>
 </section>
 
 <section class="sec" id="cosmetic">
@@ -162,6 +197,16 @@ foreach (var input in _pendingInputs)
 <div class="note pitfall"><p class="note-label">Piège rencontré</p><p>La jauge de recharge ne bougeait plus du tout. La prédiction lisait « le bouton droit de la souris est-il enfoncé ? » pendant que le paquet d'entrée lisait « la barre d'espace est-elle enfoncée ? » : deux copies de la même question, écrites à des moments différents, qui avaient fini par désigner deux touches différentes après un changement de la touche de tir. Le symptôme (« je ne vois plus l'effet de rechargement ») ne ressemblait en rien à sa cause. Il n'y a plus qu'une expression, <code>FireHeld</code>, lue par le paquet et par la prédiction.</p></div>
 <div class="note rule"><p class="note-label">Règle</p><p>Une question, une expression : ne jamais laisser deux lecteurs de « le joueur a-t-il fait X » le calculer chacun de son côté.</p><p>Une règle sœur est venue du même fichier : <strong>les fronts dans Update, les niveaux dans FixedUpdate</strong>. Une touche bascule lue dans la mise à jour fixe pouvait être vue deux fois dans une image ou pas du tout, ce qui faisait basculer l'écoutille de soute au hasard.</p></div>
 </div>
+<div lang="zh-TW">
+<h2>其他一切的外觀預測</h2>
+<p>對於船艦，用戶端會預測它在沒有物理世界時所能預測的東西：</p>
+<ul>
+<li><strong>推進器</strong>根據剛剛送出的那些按鍵亮起，所以船在你按下的那個影格就看得出反應。</li>
+<li><strong>武器冷卻量表</strong>完全在用戶端上模擬：它從共用目錄知道每把武器的射速，也看得到自己的扳機。這個近似是公開承認的：伺服器也可能因為角度或能量而拒絕一次射擊，而量表會忽略這一點。對快速武器來說這看不出來；對長冷卻的武器來說，射擊幾乎總是在武器準備好的那一刻就發出，所以量表在重要的地方說的是實話。</li>
+<li><strong>彈藥計數器</strong>完全依照伺服器的消耗規則（相同的等級順序、每單位相同的射擊次數）。計數器從不寫入庫存快取：它在旁邊保存「自上次庫存更新以來消耗的量」並顯示差值，所以伺服器的每一次更新都會重設基準，預測不可能漂移。</li>
+</ul>
+<div class="note pitfall"><p class="note-label">我踩過的坑</p><p>冷卻量表完全停止移動。預測讀的是「滑鼠右鍵有沒有按下？」，而輸入封包讀的是「空白鍵有沒有按下？」：同一個問題的兩份副本，在不同時間寫成，在開火鍵改變之後，最後指向了不同的按鍵。症狀（「我再也看不到裝填效果了」）看起來與原因毫無關係。現在只有一個運算式 <code>FireHeld</code>，由封包與預測共同讀取。</p></div>
+<div class="note rule"><p class="note-label">規則</p><p>一個問題，一個運算式：絕不讓「玩家有沒有做 X」的兩個讀取端各自計算。</p><p>同一個檔案還帶來了一條配套規則：<strong>邊緣在 Update 中讀，電位在 FixedUpdate 中讀</strong>。在 FixedUpdate 中讀取的切換鍵，可能在一個影格中被看到兩次或一次都沒看到，讓貨艙門開開關關、無法預料。</p></div></div>
 </section>
 
 <section class="sec" id="takeaways">
@@ -180,6 +225,13 @@ foreach (var input in _pendingInputs)
 <li>Ignorer les différences sous un tick de quantification, corriger entièrement au-dessus, et lisser l'affichage à part.</li>
 <li>Comparer dans le même repère au même tick ; là où la prédiction complète coûte trop, prédire cosmétiquement à partir de règles partagées.</li>
 </ul></div>
+<div lang="zh-TW"><h2>重點整理</h2><ul>
+<li>在本機預測玩家自己的移動，為輸入標上序號，並在重設到伺服器位置後重播未確認的輸入。</li>
+<li>硬拉回只保留給真正的不同步，絕不用於日常延遲。</li>
+<li>每個伺服器 tick 送出一個輸入，並以該 tick 的長度作為持續時間，讓伺服器無法悄悄覆寫你預測的一部分。</li>
+<li>忽略一個 tick 量化以下的差異，超過時完整修正，並另外平滑顯示的數值。</li>
+<li>在同一參考系、同一個 tick 下比較；在完整預測成本太高的地方，依共用規則做外觀上的預測。</li>
+</ul></div>
 </div>
 </section>
 
@@ -192,6 +244,7 @@ foreach (var input in _pendingInputs)
 <footer class="site-footer" id="mq-footer"></footer>
 <script src="assets/js/site-data.js" defer></script>
 <script src="assets/js/glossary-data.js" defer></script>
+<script src="assets/js/ui-zh.js" defer></script>
 <script src="assets/js/app.js" defer></script>
 <script src="assets/js/widgets.js" defer></script>
 </body>

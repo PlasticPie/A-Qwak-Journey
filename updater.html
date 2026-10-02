@@ -7,12 +7,12 @@
 <meta name="description" content="Manifests of hashes, one shared object store, a pointer written last, and an update server with no logic at all.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Chakra+Petch:wght@500;600&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Chakra+Petch:wght@500;600&family=JetBrains+Mono:wght@400;500;600&family=Noto+Sans+TC:wght@400;700&display=swap">
 <link rel="stylesheet" href="assets/css/site.css">
-<script>(function(){var r=document.documentElement,l,t;try{l=localStorage.getItem("mq-lang");t=localStorage.getItem("mq-theme");}catch(e){}if(l!=="en"&&l!=="fr"){l=(navigator.language||"").toLowerCase().indexOf("fr")===0?"fr":"en";}r.setAttribute("data-lang",l);r.setAttribute("lang",l);if(t==="light"||t==="dark")r.setAttribute("data-theme",t);})();</script>
+<script>(function(){var r=document.documentElement,l,t,n;try{l=localStorage.getItem("mq-lang");t=localStorage.getItem("mq-theme");}catch(e){}if(l!=="en"&&l!=="fr"&&l!=="zh"){n=(navigator.language||"").toLowerCase();l=n.indexOf("fr")===0?"fr":n.indexOf("zh")===0?"zh":"en";}r.setAttribute("data-lang",l);r.setAttribute("lang",l==="zh"?"zh-TW":l);if(t==="light"||t==="dark")r.setAttribute("data-theme",t);})();</script>
 </head>
 <body data-page="updater">
-<a class="skip-link" href="#main"><span lang="en">Skip to content</span><span lang="fr">Aller au contenu</span></a>
+<a class="skip-link" href="#main"><span lang="en">Skip to content</span><span lang="fr">Aller au contenu</span><span lang="zh-TW">跳到主要內容</span></a>
 <header class="site-header" id="mq-header"></header>
 <div class="layout">
 <aside class="sidebar" id="mq-sidebar"></aside>
@@ -20,8 +20,8 @@
 <article>
 <header class="chapter-head">
   <div class="eyebrow" data-auto></div>
-  <h1><span lang="en">Content-addressed updates</span><span lang="fr">Des mises à jour adressées par contenu</span></h1>
-  <p class="dek"><span lang="en">Manifests of hashes, one shared object store, a pointer written last, and an update server with no logic at all.</span><span lang="fr">Des manifestes de hachages, un magasin d'objets partagé, un pointeur écrit en dernier, et un serveur de mise à jour sans aucune logique.</span></p>
+  <h1><span lang="en">Content-addressed updates</span><span lang="fr">Des mises à jour adressées par contenu</span><span lang="zh-TW">內容定址的更新</span></h1>
+  <p class="dek"><span lang="en">Manifests of hashes, one shared object store, a pointer written last, and an update server with no logic at all.</span><span lang="fr">Des manifestes de hachages, un magasin d'objets partagé, un pointeur écrit en dernier, et un serveur de mise à jour sans aucune logique.</span><span lang="zh-TW">雜湊清單、一個共用的物件儲存區、最後才寫入的指標，以及完全沒有邏輯的更新伺服器。</span></p>
   <div class="meta-row" data-auto></div>
 </header>
 
@@ -50,6 +50,16 @@
 <li><strong>En flux, jamais lu en entier.</strong> Les fichiers sont hachés à travers un tampon de 64 Ko. Un fichier <code>.assets</code> d'Unity dépasse couramment le gigaoctet, et le lire en entier pour le hacher mettrait ce gigaoctet sur le tas managé, dans le tas des grands objets, qui n'est pas compacté. Sur une machine chargée, c'est une erreur de mémoire pour une opération qui n'a besoin que de quelques kilo-octets.</li>
 </ul>
 </div>
+<div lang="zh-TW">
+<h2>以內容來識別檔案</h2>
+<p>一個遊戲組建有數萬個檔案、數百 MB，在開發期間一個晚上就會發布好幾次。不論玩家的安裝處於什麼狀態——最新、落後好幾個版本、裝到一半，或被一顆疲憊的硬碟悄悄損壞——他們最後都必須得到完全正確的位元組。</p>
+<p>顯而易見的設計是每個檔案一個版本號，但它會拖著歷史走：要知道該下載什麼，就得知道玩家是從哪裡來的。<strong>內容的雜湊值</strong>則能獨力回答唯一重要的問題：「我磁碟上的這個檔案，是否正是伺服器所描述的那一個？」任何用戶端，不論處於什麼狀態，得到的都是同一個答案：這些是缺少的物件。任何地方都不需要維護一個「最新」狀態，因此也沒有任何會失去同步的狀態。</p>
+<div class="note beginner"><p class="note-label">新手須知</p><p>像 SHA-256 這樣的密碼學雜湊，能把任何檔案變成一個 64 個字元的指紋。改一個位元組，指紋就完全不同；兩個不同的檔案實際上永遠不會有同一個指紋。所以指紋可以當作檔案的<em>名稱</em>：這就是<strong>內容定址儲存</strong>，也是 Git 的物件儲存區與許多套件快取背後的概念。</p></div>
+<p>雜湊的計算方式中，有兩個選擇比看起來更重要：</p>
+<ul>
+<li><strong>使用 SHA-256，而不是 xxHash 這類快速雜湊。</strong>這個雜湊決定的是一個檔案<em>不需要</em>重新下載，也是唯一能確認收到的位元組就是送出的位元組的檢查。一次碰撞不會只是變慢，而是一次無聲無息的錯誤安裝。它的成本，在有硬體加速的現代 CPU 上約每秒 1 GB，與它所省下的網路相比微不足道。</li>
+<li><strong>以串流方式處理，絕不整個讀入。</strong>檔案透過一個 64 KB 的緩衝區計算雜湊。一個 Unity <code>.assets</code> 檔案常常超過 1 GB，把它整個讀進來計算雜湊，會把那 1 GB 放到受控堆積的大型物件堆積上，而那裡不會被壓縮整理。在一台忙碌的機器上，這就是為了一個只需要幾 KB 的操作而發生記憶體不足錯誤。</li>
+</ul></div>
 </section>
 
 <section class="sec" id="store">
@@ -61,12 +71,15 @@
 <h2>Un magasin d'objets, beaucoup de versions</h2>
 <p>Le serveur de mise à jour ne range pas les versions côte à côte, chacune complète. Il range des <strong>objets</strong> sous leur hachage, et une version n'est qu'un <em>manifeste</em> : une liste de chemins, chacun avec une taille et le hachage de son contenu. Deux versions qui partagent 95 % de leurs fichiers partagent 95 % de leurs objets, sur le disque comme sur le réseau. Si chaque version ne change que quelques pour cent de ses fichiers, dix versions d'une build de 500 Mo occupent environ 600 Mo au lieu de cinq gigaoctets. Et « ne télécharger que ce qui a changé » n'est pas une optimisation du launcher : c'est la seule chose qu'il sache faire, parce qu'il demande des hachages, pas des fichiers.</p>
 </div>
+<div lang="zh-TW">
+<h2>一個物件儲存區，許多組建</h2>
+<p>更新伺服器不會把每個完整的組建並排存放。它以雜湊值為名存放<strong>物件</strong>，而一個組建只是一份<em>清單</em>：一串路徑，每個路徑附上大小與其內容的雜湊值。兩個共用 95 % 檔案的組建，就共用 95 % 的物件，不論是在磁碟上還是在網路上。如果每個組建只改變百分之幾的檔案，一個 500 MB 組建的十個版本只佔大約 600 MB，而不是 5 GB。而且「只下載改變的部分」不是啟動器的一項最佳化：它是啟動器唯一會做的事，因為它要求的是雜湊值，而不是檔案。</p></div>
 <figure class="fig fig-scroll">
 <svg viewBox="0 0 760 250" role="img" aria-label="Server layout: game/latest.json points to game/manifests/41.json, which lists paths with sizes and hashes; each hash names a file under objects/, in a two-character sub-folder; manifests 40 and 41 share most objects">
   <defs><marker id="up-arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="currentColor" opacity="0.7"/></marker></defs>
   <rect x="20" y="30" width="170" height="52" rx="8" class="dg-hot"/>
   <text class="dg-text dg-mono" x="105" y="52" text-anchor="middle" font-weight="700">game/latest.json</text>
-  <text class="dg-small" x="105" y="70" text-anchor="middle"><tspan lang="en">the only mutable file</tspan><tspan lang="fr">le seul fichier modifiable</tspan></text>
+  <text class="dg-small" x="105" y="70" text-anchor="middle"><tspan lang="en">the only mutable file</tspan><tspan lang="fr">le seul fichier modifiable</tspan><tspan lang="zh-TW">唯一可變的檔案</tspan></text>
   <line x1="190" y1="56" x2="246" y2="56" class="dg-line" marker-end="url(#up-arr)"/>
   <text class="dg-small" x="218" y="46" text-anchor="middle">+ sha</text>
   <rect x="250" y="20" width="220" height="100" rx="8" class="dg-box"/>
@@ -80,17 +93,17 @@
   <text class="dg-small dg-mono" x="262" y="202">Data/level0 · 77b1…</text>
   <rect x="540" y="20" width="200" height="200" rx="8" class="dg-box-2"/>
   <text class="dg-text dg-mono" x="640" y="42" text-anchor="middle" font-weight="700">objects/</text>
-  <text class="dg-small dg-mono" x="556" y="70">9f/9f2c… <tspan lang="en">(shared)</tspan><tspan lang="fr">(partagé)</tspan></text>
+  <text class="dg-small dg-mono" x="556" y="70">9f/9f2c… <tspan lang="en">(shared)</tspan><tspan lang="fr">(partagé)</tspan><tspan lang="zh-TW">（共用）</tspan></text>
   <text class="dg-small dg-mono" x="556" y="94">1a/1a07…</text>
   <text class="dg-small dg-mono" x="556" y="118">77/77b1…</text>
   <text class="dg-small dg-mono" x="556" y="142">41/41ce…</text>
-  <text class="dg-small" x="556" y="176"><tspan lang="en">named by hash, immutable,</tspan><tspan lang="fr">nommés par hachage, immuables,</tspan></text>
-  <text class="dg-small" x="556" y="194"><tspan lang="en">256 two-character drawers</tspan><tspan lang="fr">256 tiroirs de deux caractères</tspan></text>
+  <text class="dg-small" x="556" y="176"><tspan lang="en">named by hash, immutable,</tspan><tspan lang="fr">nommés par hachage, immuables,</tspan><tspan lang="zh-TW">以雜湊命名，不可變，</tspan></text>
+  <text class="dg-small" x="556" y="194"><tspan lang="en">256 two-character drawers</tspan><tspan lang="fr">256 tiroirs de deux caractères</tspan><tspan lang="zh-TW">256 個兩字元抽屜</tspan></text>
   <line x1="470" y1="60" x2="536" y2="66" class="dg-line" marker-end="url(#up-arr)"/>
   <line x1="470" y1="180" x2="536" y2="72" class="dg-line dg-dash" marker-end="url(#up-arr)"/>
   <line x1="470" y1="198" x2="536" y2="114" class="dg-line dg-dash" marker-end="url(#up-arr)"/>
 </svg>
-<figcaption><span lang="en"><strong>Builds are lists; files are objects.</strong> Two manifests point at the same object when a file did not change, so only new objects are ever stored or downloaded.</span><span lang="fr"><strong>Les versions sont des listes ; les fichiers sont des objets.</strong> Deux manifestes pointent vers le même objet quand un fichier n'a pas changé : seuls les nouveaux objets sont stockés ou téléchargés.</span></figcaption>
+<figcaption><span lang="en"><strong>Builds are lists; files are objects.</strong> Two manifests point at the same object when a file did not change, so only new objects are ever stored or downloaded.</span><span lang="fr"><strong>Les versions sont des listes ; les fichiers sont des objets.</strong> Deux manifestes pointent vers le même objet quand un fichier n'a pas changé : seuls les nouveaux objets sont stockés ou téléchargés.</span><span lang="zh-TW"><strong>組建是清單；檔案是物件。</strong>檔案沒有改變時，兩份清單會指向同一個物件，所以只有新的物件會被儲存或下載。</span></figcaption>
 </figure>
 <div lang="en">
 <p>A few details of the layout, each paid for by a real or easily imagined failure:</p>
@@ -112,6 +125,15 @@
 <li><strong>Les doublons sont copiés une fois.</strong> Une build contient des fichiers identiques sous des noms différents (licences, fichiers vides). Le hachage les confond, c'est voulu ; l'outil de publication doit simplement ne pas copier deux fois le même objet.</li>
 </ul>
 </div>
+<div lang="zh-TW">
+<p>配置中的幾個細節，每一個都是用一次真實或很容易想像到的失敗換來的：</p>
+<ul>
+<li><strong>物件被歸檔在一個以其雜湊值前兩個字元命名的子資料夾中。</strong>一個 Unity 組建有數萬個檔案，而常見的檔案系統在單一目錄中超過幾千個項目後，會明顯變慢。兩個十六進位字元能提供 256 個抽屜，讓每個抽屜在累積數十個組建時仍然只有幾百個物件。</li>
+<li><strong>清單是縮排過的 JSON</strong>，雖然它是給機器看的檔案，這會讓它變大。當一次更新出錯時，第一個診斷動作就是在瀏覽器中打開清單，而如果它有版本控制，還可以做差異比對；對一個比它所描述的組建小一千倍的檔案來說，多幾個百分比是值得的。</li>
+<li><strong>路徑一律使用正斜線</strong>，並由單一函式負責轉換。一個被遺忘的反斜線，會讓啟動器在每次啟動時重新下載一個它早已擁有的檔案，而且沒有任何東西會回報這件事。</li>
+<li><strong>路徑比較時不分大小寫。</strong>在 Windows 上，<code>Data/x.dll</code> 和 <code>data/X.dll</code> 是同一個檔案；把它們當成兩個項目，會讓一個被下載蓋在另一個上面，然後發現第一個不見了，永無止境。</li>
+<li><strong>重複的檔案只複製一次。</strong>一個組建中會有不同名稱的相同檔案（授權條款、空檔案）。雜湊會把它們合併，這是刻意的；發布端只要不把同一個物件複製兩次就好。</li>
+</ul></div>
 </section>
 
 <section class="sec" id="pointer">
@@ -125,18 +147,22 @@
 <p>Le launcher ne connaît qu'un seul chemin par cœur : <code>game/latest.json</code>. Ce petit fichier nomme la version courante, le chemin de son manifeste et le hachage du manifeste. Tout le reste s'en déduit. Il existe comme fichier séparé, plutôt que le serveur réponde à « quelle est la dernière version ? », parce qu'un serveur qui doit répondre à des questions a une logique, et qu'un serveur qui a une logique ne peut pas être remplacé par un dossier partagé. Le chemin du manifeste est écrit dans le pointeur plutôt que déduit d'une convention de nommage pour la même raison : le jour où le rangement change, les launchers déjà distribués suivent sans être remplacés.</p>
 <p>Le pointeur est aussi ce qui rend la publication atomique, simplement par l'ordre des opérations. Tant que <code>latest.json</code> pointe vers la version précédente, la nouvelle est invisible : elle peut être à moitié téléversée sans que personne ne la voie. Déroulez une publication :</p>
 </div>
+<div lang="zh-TW">
+<h2>一個最後才寫入的指標</h2>
+<p>啟動器只牢記一條路徑：<code>game/latest.json</code>。這個小檔案寫著目前的組建、其清單的路徑，以及清單的雜湊值。其他一切都由它推導出來。它之所以是一個獨立的檔案，而不是由伺服器回答「最新的版本是什麼？」，是因為一個必須回答問題的伺服器就有了邏輯，而一個有邏輯的伺服器就無法被一個共用資料夾取代。清單的路徑寫在指標中，而不是由命名慣例推導，也是同樣的道理：配置改變的那一天，已經發出去的啟動器不需要被取代就能跟上。</p>
+<p>指標也讓發布變得不可分割，單純是透過操作的順序。只要 <code>latest.json</code> 還指向上一個組建，新的組建就是看不見的，所以它可以上傳到一半而沒有任何人看到。一步步看一次發布：</p></div>
 <div class="lab" data-stepper>
-<div class="lab-head"><span class="lab-title"><span lang="en">Publishing build 41</span><span lang="fr">Publier la build 41</span></span><span class="lab-sub"><span lang="en">Launchers see nothing until the last step</span><span lang="fr">Les launchers ne voient rien avant la dernière étape</span></span></div>
+<div class="lab-head"><span class="lab-title"><span lang="en">Publishing build 41</span><span lang="fr">Publier la build 41</span><span lang="zh-TW">發布組建 41</span></span><span class="lab-sub"><span lang="en">Launchers see nothing until the last step</span><span lang="fr">Les launchers ne voient rien avant la dernière étape</span><span lang="zh-TW">直到最後一步之前，啟動器什麼都看不到</span></span></div>
 <div class="lab-body">
 <div class="fig-scroll">
 <svg viewBox="0 0 760 300" role="img" aria-label="Publication in four steps: hash the build folder, copy only the missing objects, write manifest 41, then rewrite latest.json; launchers read latest.json and see build 40 until the fourth step">
   <defs><marker id="pub-arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs>
   <rect x="20" y="50" width="190" height="130" rx="8" class="dg-box"/>
-  <text class="dg-text" x="115" y="72" text-anchor="middle" font-weight="700"><tspan lang="en">build folder</tspan><tspan lang="fr">dossier de build</tspan></text>
+  <text class="dg-text" x="115" y="72" text-anchor="middle" font-weight="700"><tspan lang="en">build folder</tspan><tspan lang="fr">dossier de build</tspan><tspan lang="zh-TW">組建資料夾</tspan></text>
   <text class="dg-small dg-mono" x="34" y="100">QwakClient.exe</text>
   <text class="dg-small dg-mono" x="34" y="126">Data/level0</text>
   <text class="dg-small dg-mono" x="34" y="152">Data/Managed/…</text>
-  <text class="dg-text" x="405" y="28" text-anchor="middle" font-weight="700"><tspan lang="en">update server</tspan><tspan lang="fr">serveur de mise à jour</tspan></text>
+  <text class="dg-text" x="405" y="28" text-anchor="middle" font-weight="700"><tspan lang="en">update server</tspan><tspan lang="fr">serveur de mise à jour</tspan><tspan lang="zh-TW">更新伺服器</tspan></text>
   <rect x="280" y="40" width="250" height="110" rx="8" class="dg-box-2"/>
   <text class="dg-small dg-mono" x="294" y="60" font-weight="700">objects/</text>
   <text class="dg-small dg-mono" x="294" y="84">9f/9f2c…</text>
@@ -149,12 +175,12 @@
   <text class="dg-small dg-mono" x="294" y="276">→ build 40</text>
   <rect x="590" y="200" width="150" height="90" rx="8" class="dg-box"/>
   <text class="dg-text" x="665" y="222" text-anchor="middle" font-weight="700">launcher</text>
-  <text class="dg-small" x="665" y="242" text-anchor="middle"><tspan lang="en">reads latest.json</tspan><tspan lang="fr">lit latest.json</tspan></text>
-  <text class="dg-small" x="665" y="262" text-anchor="middle"><tspan lang="en">sees build 40</tspan><tspan lang="fr">voit la build 40</tspan></text>
+  <text class="dg-small" x="665" y="242" text-anchor="middle"><tspan lang="en">reads latest.json</tspan><tspan lang="fr">lit latest.json</tspan><tspan lang="zh-TW">讀取 latest.json</tspan></text>
+  <text class="dg-small" x="665" y="262" text-anchor="middle"><tspan lang="en">sees build 40</tspan><tspan lang="fr">voit la build 40</tspan><tspan lang="zh-TW">看到組建 40</tspan></text>
   <line x1="590" y1="261" x2="536" y2="261" class="dg-line dg-dash" marker-end="url(#pub-arr)"/>
-  <text class="dg-small" x="665" y="92" text-anchor="middle"><tspan lang="en">Until step 4, every</tspan><tspan lang="fr">Jusqu'à l'étape 4,</tspan></text>
-  <text class="dg-small" x="665" y="110" text-anchor="middle"><tspan lang="en">launcher still sees</tspan><tspan lang="fr">chaque launcher voit</tspan></text>
-  <text class="dg-small" x="665" y="128" text-anchor="middle"><tspan lang="en">build 40.</tspan><tspan lang="fr">encore la build 40.</tspan></text>
+  <text class="dg-small" x="665" y="92" text-anchor="middle"><tspan lang="en">Until step 4, every</tspan><tspan lang="fr">Jusqu'à l'étape 4,</tspan><tspan lang="zh-TW">在第 4 步之前，</tspan></text>
+  <text class="dg-small" x="665" y="110" text-anchor="middle"><tspan lang="en">launcher still sees</tspan><tspan lang="fr">chaque launcher voit</tspan><tspan lang="zh-TW">每個啟動器看到的</tspan></text>
+  <text class="dg-small" x="665" y="128" text-anchor="middle"><tspan lang="en">build 40.</tspan><tspan lang="fr">encore la build 40.</tspan><tspan lang="zh-TW">都還是組建 40。</tspan></text>
   <g data-step="1">
     <circle cx="210" cy="50" r="11" class="dg-accent"/><text x="210" y="54" text-anchor="middle" class="dg-small" style="fill:var(--on-series);font-weight:700">1</text>
     <text class="dg-small dg-mono" x="150" y="100">9f2c…</text>
@@ -165,9 +191,9 @@
     <line class="dg-line seq-msg" x1="210" y1="126" x2="276" y2="126" marker-end="url(#pub-arr)"/>
     <circle cx="243" cy="110" r="11" class="dg-accent"/><text x="243" y="114" text-anchor="middle" class="dg-small" style="fill:var(--on-series);font-weight:700">2</text>
     <text class="dg-small dg-mono" x="294" y="128" font-weight="700">5d/5d3e…</text>
-    <text class="dg-small" x="518" y="84" text-anchor="end"><tspan lang="en">already there</tspan><tspan lang="fr">déjà là</tspan></text>
-    <text class="dg-small" x="518" y="106" text-anchor="end"><tspan lang="en">already there</tspan><tspan lang="fr">déjà là</tspan></text>
-    <text class="dg-small" x="518" y="128" text-anchor="end"><tspan lang="en">new: .tmp, then rename</tspan><tspan lang="fr">neuf : .tmp, puis renommé</tspan></text>
+    <text class="dg-small" x="518" y="84" text-anchor="end"><tspan lang="en">already there</tspan><tspan lang="fr">déjà là</tspan><tspan lang="zh-TW">已存在</tspan></text>
+    <text class="dg-small" x="518" y="106" text-anchor="end"><tspan lang="en">already there</tspan><tspan lang="fr">déjà là</tspan><tspan lang="zh-TW">已存在</tspan></text>
+    <text class="dg-small" x="518" y="128" text-anchor="end"><tspan lang="en">new: .tmp, then rename</tspan><tspan lang="fr">neuf : .tmp, puis renommé</tspan><tspan lang="zh-TW">新的：.tmp，然後改名</tspan></text>
   </g>
   <g data-step="3">
     <line class="dg-line seq-msg" x1="210" y1="170" x2="276" y2="196" marker-end="url(#pub-arr)"/>
@@ -179,15 +205,15 @@
     <line x1="292" y1="272" x2="372" y2="272" class="dg-line"/>
     <text class="dg-small dg-mono" x="390" y="276" font-weight="700">→ build 41</text>
     <line x1="612" y1="258" x2="718" y2="258" class="dg-line"/>
-    <text class="dg-small" x="665" y="282" text-anchor="middle" font-weight="700"><tspan lang="en">sees build 41</tspan><tspan lang="fr">voit la build 41</tspan></text>
+    <text class="dg-small" x="665" y="282" text-anchor="middle" font-weight="700"><tspan lang="en">sees build 41</tspan><tspan lang="fr">voit la build 41</tspan><tspan lang="zh-TW">看到組建 41</tspan></text>
   </g>
 </svg>
 </div>
 <ol class="steps">
-<li><span lang="en"><strong>Hash.</strong> Every file of the build folder is hashed, in sorted order. The next build number is derived from the manifests already on the server, never from a counter kept aside: a local counter falls out of sync as soon as someone publishes from another machine or restores a backup.</span><span lang="fr"><strong>Hacher.</strong> Chaque fichier du dossier de build est haché, dans un ordre trié. Le numéro de version suivant se déduit des manifestes déjà présents sur le serveur, jamais d'un compteur tenu à part : un compteur local se désynchronise dès que quelqu'un publie depuis une autre machine ou restaure une sauvegarde.</span></li>
-<li><span lang="en"><strong>Copy what is missing.</strong> An object already present under its hash is, by definition, the right one: this is where the "diff" happens, with no version comparison at all. New objects are copied beside their final name and renamed, so an interrupted copy never leaves a truncated file under a name that promises a content.</span><span lang="fr"><strong>Copier ce qui manque.</strong> Un objet déjà présent sous son hachage est, par définition, le bon : c'est ici que se fait le « diff », sans aucune comparaison de versions. Les nouveaux objets sont copiés à côté de leur nom final puis renommés : une copie interrompue ne laisse jamais un fichier tronqué sous un nom qui promet un contenu.</span></li>
-<li><span lang="en"><strong>Write the manifest.</strong> <code>41.json</code> now exists, and every object it names exists too. Still, no launcher knows about it.</span><span lang="fr"><strong>Écrire le manifeste.</strong> <code>41.json</code> existe désormais, et chaque objet qu'il nomme existe aussi. Pourtant, aucun launcher n'en sait rien.</span></li>
-<li><span lang="en"><strong>Move the pointer.</strong> <code>latest.json</code> is written beside and renamed over the old one, carrying the hash of manifest 41. From the next read, every launcher sees build 41, complete. A power cut at any earlier step leaves only orphan objects.</span><span lang="fr"><strong>Déplacer le pointeur.</strong> <code>latest.json</code> est écrit à côté puis renommé par-dessus l'ancien, avec le hachage du manifeste 41. Dès la lecture suivante, chaque launcher voit la build 41, complète. Une coupure de courant à n'importe quelle étape antérieure ne laisse que des objets orphelins.</span></li>
+<li><span lang="en"><strong>Hash.</strong> Every file of the build folder is hashed, in sorted order. The next build number is derived from the manifests already on the server, never from a counter kept aside: a local counter falls out of sync as soon as someone publishes from another machine or restores a backup.</span><span lang="fr"><strong>Hacher.</strong> Chaque fichier du dossier de build est haché, dans un ordre trié. Le numéro de version suivant se déduit des manifestes déjà présents sur le serveur, jamais d'un compteur tenu à part : un compteur local se désynchronise dès que quelqu'un publie depuis une autre machine ou restaure une sauvegarde.</span><span lang="zh-TW"><strong>計算雜湊。</strong>組建資料夾中的每個檔案依排序順序計算雜湊。下一個組建編號是從伺服器上已有的清單推導出來的，而絕不是從另外保存的計數器：只要有人從另一台機器發布或還原了備份，本機的計數器就會失去同步。</span></li>
+<li><span lang="en"><strong>Copy what is missing.</strong> An object already present under its hash is, by definition, the right one: this is where the "diff" happens, with no version comparison at all. New objects are copied beside their final name and renamed, so an interrupted copy never leaves a truncated file under a name that promises a content.</span><span lang="fr"><strong>Copier ce qui manque.</strong> Un objet déjà présent sous son hachage est, par définition, le bon : c'est ici que se fait le « diff », sans aucune comparaison de versions. Les nouveaux objets sont copiés à côté de leur nom final puis renommés : une copie interrompue ne laisse jamais un fichier tronqué sous un nom qui promet un contenu.</span><span lang="zh-TW"><strong>複製缺少的部分。</strong>一個已經以其雜湊值存在的物件，依定義就是正確的那一個：「差異比對」就發生在這裡，完全不需要比較版本。新的物件被複製到其最終名稱的旁邊再改名，所以一次中斷的複製絕不會在一個承諾了某種內容的名稱下，留下一個被截斷的檔案。</span></li>
+<li><span lang="en"><strong>Write the manifest.</strong> <code>41.json</code> now exists, and every object it names exists too. Still, no launcher knows about it.</span><span lang="fr"><strong>Écrire le manifeste.</strong> <code>41.json</code> existe désormais, et chaque objet qu'il nomme existe aussi. Pourtant, aucun launcher n'en sait rien.</span><span lang="zh-TW"><strong>寫入清單。</strong><code>41.json</code> 現在存在了，而它列出的每個物件也都存在。但仍然沒有任何啟動器知道它。</span></li>
+<li><span lang="en"><strong>Move the pointer.</strong> <code>latest.json</code> is written beside and renamed over the old one, carrying the hash of manifest 41. From the next read, every launcher sees build 41, complete. A power cut at any earlier step leaves only orphan objects.</span><span lang="fr"><strong>Déplacer le pointeur.</strong> <code>latest.json</code> est écrit à côté puis renommé par-dessus l'ancien, avec le hachage du manifeste 41. Dès la lecture suivante, chaque launcher voit la build 41, complète. Une coupure de courant à n'importe quelle étape antérieure ne laisse que des objets orphelins.</span><span lang="zh-TW"><strong>移動指標。</strong><code>latest.json</code> 被寫在舊檔旁邊，再改名蓋過舊檔，攜帶清單 41 的雜湊值。從下一次讀取開始，每個啟動器都會看到完整的組建 41。在之前任何一步停電，都只會留下孤兒物件。</span></li>
 </ol>
 </div>
 </div>
@@ -221,6 +247,9 @@ File.Move(latest + ".tmp", latest, overwrite: true);</code></pre></div>
 <p>Inversez deux lignes, et une coupure de courant pendant une publication donnerait à tous les joueurs un manifeste décrivant des fichiers qui n'existent pas. Le pointeur, lui aussi, est écrit à côté puis renommé plutôt qu'écrasé : publier pendant que le serveur sert est le cas normal ici, et une écriture directe laisse quelques microsecondes pendant lesquelles une requête peut lire un fichier vide ou à moitié écrit. Le launcher dirait alors « illisible » sur une publication parfaitement réussie : rare, impossible à reproduire, et cherché du mauvais côté.</p>
 <div class="note rule"><p class="note-label">Règle</p><p>Quand des lecteurs suivent un pointeur, publier tout ce vers quoi mène le pointeur avant de déplacer le pointeur, et le déplacer de façon atomique.</p><p>L'ordre des écritures est la seule atomicité dont un tel système a besoin. Elle fonctionne sur n'importe quel stockage capable de renommer un fichier.</p></div>
 </div>
+<div lang="zh-TW">
+<p>交換其中兩行，一次發布途中的停電就會給每位玩家一份描述著不存在之檔案的清單。指標同樣是寫在旁邊再改名，而不是直接覆寫：在這裡，一邊服務一邊發布是正常情況，而直接寫入會留下幾微秒的空檔，讓某個請求讀到一個空的或寫到一半的檔案。啟動器就會在一次完全成功的發布上回報「無法讀取」：罕見、無法重現，而且會在錯誤的那一端被追查。</p>
+<div class="note rule"><p class="note-label">規則</p><p>當讀取端是跟著指標走的時候，在移動指標之前，先發布指標所通往的一切，並以不可分割的方式移動它。</p><p>寫入的順序，就是這類系統唯一需要的不可分割性。它在任何能為檔案改名的儲存空間上都能運作。</p></div></div>
 </section>
 
 <section class="sec" id="channels">
@@ -234,6 +263,10 @@ File.Move(latest + ".tmp", latest, overwrite: true);</code></pre></div>
 <p>Le jeu et le launcher se publient séparément : ils changent à des rythmes sans rapport (le jeu trois fois par soirée, le launcher trois fois par an), et chacun a son propre pointeur et sa propre numérotation. Mélanger les numérotations ferait bondir un numéro sans qu'aucune version n'ait été publiée. Ils partagent quand même un seul magasin d'objets, non pour économiser (ils ne partagent presque rien) mais parce qu'un seul magasin veut dire un seul nettoyage, un seul chemin de téléchargement et une seule chose à sauvegarder.</p>
 <p>Chaque manifeste et chaque pointeur nomme son canal, de façon redondante avec l'URL d'où il vient, et le launcher refuse un manifeste du mauvais canal : une URL mal recopiée installerait sinon le launcher dans le dossier du jeu, puis le jeu par-dessus le launcher. Côté publication, le canal est un mot obligatoire, sans valeur par défaut. Un défaut « game » serait pratique neuf fois sur dix et catastrophique la dixième : publier le launcher sur le canal du jeu remplacerait la build de tout le monde par un exécutable qui ne sait pas jouer.</p>
 </div>
+<div lang="zh-TW">
+<h2>兩個頻道，一個儲存區</h2>
+<p>遊戲與啟動器是分開發布的：它們以毫不相關的節奏改變（遊戲一個晚上三次，啟動器一年三次），而且各有自己的指標與自己的組建編號。混用編號，會讓一個號碼在沒有發布任何版本的情況下跳號。不過它們仍然共用一個物件儲存區，不是為了省空間（它們幾乎沒有共用任何東西），而是因為一個儲存區就意味著一次清理、一條下載路徑，以及一個要備份的東西。</p>
+<p>每份清單與每個指標都會寫出自己的頻道，與它的來源 URL 互相重複，而啟動器會拒絕來自錯誤頻道的清單：否則一個打錯的 URL，就會把啟動器安裝到遊戲的資料夾中，再把遊戲裝在啟動器上面。在發布端，頻道是一個必填、沒有預設值的字。預設「game」十次有九次很方便，第十次卻是災難：把啟動器發布到遊戲頻道上，會把每個人的組建換成一個無法遊玩的執行檔。</p></div>
 </section>
 
 <section class="sec" id="never-ships">
@@ -267,6 +300,20 @@ File.Move(latest + ".tmp", latest, overwrite: true);</code></pre></div>
 <p>Les fichiers de contrôle du launcher méritent leur propre règle. <code>.qwak-installed.json</code> enregistre quel manifeste a été appliqué en dernier ; le launcher l'écrit à la fin de chaque mise à jour. Publié dans un manifeste, il décrit un fichier dont le contenu dépend du manifeste lui-même. Ce cycle précis a produit une boucle de mise à jour infinie, racontée au chapitre <a href="launcher.html#loop">8.2</a>. Le <code>launcher.json</code> du joueur est exclu pour une seconde raison, tout aussi grave : le publier écraserait, à chaque mise à jour du launcher, l'adresse de serveur que chacun a saisie.</p>
 <div class="note rule"><p class="note-label">Règle</p><p>Un manifeste ne décrit jamais un fichier qui dépend de lui.</p></div>
 </div>
+<div lang="zh-TW">
+<h2>永遠不會出貨的東西</h2>
+<p>組建資料夾中有些檔案絕不能送到玩家手上。排除清單簡短而明確，絕不是一個聰明的過濾器：當某個正當的檔案從玩家的安裝中消失的那一天，你會希望在五秒內讀到原因。</p>
+<div class="table-wrap"><table>
+<thead><tr><th>被排除的</th><th>原因</th></tr></thead>
+<tbody>
+<tr><td><code>.pdb</code>、<code>.mdb</code></td><td>除錯符號：很重，對玩家毫無用處。</td></tr>
+<tr><td>以 <code>_BurstDebugInformation_DoNotShip</code> 或 <code>_BackUpThisFolder_ButDontShipItWithYourGame</code> 結尾的資料夾</td><td>Unity 在資料夾名稱裡就這樣說了。數百 MB，家用上傳頻寬得送給每一位新玩家。</td></tr>
+<tr><td>樹中任何位置的 <code>.qwak-installed.json</code>、<code>launcher.json</code></td><td>由啟動器自己寫入的檔案。發布它們會造成一個循環（見下文）。</td></tr>
+<tr><td><code>launcher-neuf/</code> 資料夾</td><td>啟動器為自己的更新所用的暫存資料夾（第 <a href="launcher.html#self-update">8.2</a> 章）。</td></tr>
+</tbody></table></div>
+<div class="note pitfall"><p class="note-label">我踩過的坑</p><p>Unity 會在這些除錯資料夾前面<em>加上</em>產品名稱：真正的資料夾是 <code>QwakClient_BurstDebugInformation_DoNotShip</code>。第一版的過濾器測試的是與 <code>_BurstDebugInformation_DoNotShip</code> 相等，所以它永遠不可能相符，而除錯符號從一開始就被發布了出去。無聲無息：「已略過」計數器忠實地顯示著零。現在過濾器測試的是後綴。一個永遠不相符的過濾器，看起來就和一個沒事可做的過濾器一模一樣；拿真實的案例測試它一次。</p></div>
+<p>啟動器的控制檔案值得一條自己的規則。<code>.qwak-installed.json</code> 記錄最後套用的是哪一份清單；它在每次更新結束時由啟動器寫入。如果它被發布在一份清單中，就是在描述一個內容取決於這份清單本身的檔案。正是這個循環造成了一次無窮的更新迴圈，在第 <a href="launcher.html#loop">8.2</a> 章中講述。玩家的 <code>launcher.json</code> 被排除還有第二個同樣嚴重的理由：發布它，會在每次啟動器更新時，覆寫每個人自己輸入的伺服器位址。</p>
+<div class="note rule"><p class="note-label">規則</p><p>清單永遠不描述一個依賴它的檔案。</p></div></div>
 </section>
 
 <section class="sec" id="dumb-server">
@@ -296,6 +343,18 @@ File.Move(latest + ".tmp", latest, overwrite: true);</code></pre></div>
 <p>La règle porte sur le <em>nom</em> du fichier, pas sur le chemin complet : elle couvre les pointeurs des deux canaux sans énumérer les canaux, et couvrira le troisième. Deux autres réglages n'existent que parce que les objets sont des fichiers inhabituels : ils n'ont pas d'extension, et le middleware de fichiers statiques refuse par défaut les types inconnus, ce qui répondrait 404 à tous les fichiers de la build. Ils sont servis en <code>application/octet-stream</code>, le type le plus neutre, puisqu'aucun navigateur n'est censé les interpréter. L'affichage des dossiers et les pages par défaut sont coupés : une redirection silencieuse rendrait un 404 indiscernable d'un chemin mal formé.</p>
 <p>Au démarrage, le serveur lit chaque pointeur une fois, seulement pour afficher ce qu'il sert. « Le serveur tourne » et « le serveur a quelque chose à servir » sont deux états différents, et les confondre coûte le quart d'heure passé à se demander pourquoi le launcher dit « à jour » juste après une publication.</p>
 </div>
+<div lang="zh-TW">
+<h2>完全沒有邏輯的更新伺服器</h2>
+<p>更新伺服器不計算任何東西、不比較任何東西，既不知道版本也不知道玩家。它像檔案分享一樣，以路徑提供位元組，所有的智慧都存在於發布工具所寫、由啟動器解讀的清單中。這是一個特性，而不是偷懶：當家用上傳頻寬不夠用的那一天，這個程式可以被一個物件儲存空間的 bucket 或任何 CDN 後面的靜態主機取代，而啟動器不會察覺。它只是換一個 URL。</p>
+<p>它全部的設定，就是兩行快取策略，而這直接來自設計本身：</p>
+<div class="table-wrap"><table>
+<thead><tr><th>檔案</th><th>快取標頭</th><th>原因</th></tr></thead>
+<tbody>
+<tr><td>物件與清單</td><td><code>public, max-age=31536000, immutable</code></td><td>物件的名稱就是它的內容：它永遠不會改變，所以前面的任何快取都可以保留它一年。清單的編號也永遠不會被重複使用。</td></tr>
+<tr><td><code>latest.json</code></td><td><code>no-store</code></td><td>系統中唯一可變的檔案。在這裡快取一小時，玩家就會下載一個一小時前的組建，同時以為它是最新的，這是一個沒有人能診斷的失敗，因為從他那一端看，一切都「已是最新」。</td></tr>
+</tbody></table></div>
+<p>這條規則比對的是檔案<em>名稱</em>，而不是完整路徑，所以它不必列出頻道就能涵蓋兩個頻道的指標，未來也會涵蓋第三個。另外兩項設定之所以存在，只是因為物件是不尋常的檔案：它們沒有副檔名，而靜態檔案中介軟體預設會拒絕未知的類型，這會讓組建中的每個檔案都回應 404。它們以 <code>application/octet-stream</code> 提供，這是最中性的類型，因為沒有任何瀏覽器需要解讀它們。目錄列表與預設頁面都關閉了：一次無聲的重新導向，會讓 404 與一個格式錯誤的路徑無法區分。</p>
+<p>啟動時，伺服器會讀取每個指標一次，只為了印出它正在提供什麼。「伺服器正在執行」和「伺服器有東西可以提供」是兩種不同的狀態，把它們搞混的代價，是花十五分鐘納悶為什麼啟動器在一次發布之後立刻說「已是最新」。</p></div>
 </section>
 
 <section class="sec" id="publishing">
@@ -311,6 +370,11 @@ File.Move(latest + ".tmp", latest, overwrite: true);</code></pre></div>
 <div class="note tradeoff"><p class="note-label">Compromis</p><p>Une route HTTP pour publier aurait été plus pratique encore : publier de n'importe où. C'est précisément le problème. Le processus est exposé à Internet par une règle NAT, et une route qui lit un dossier et réécrit ce que tous les launchers vont télécharger est une exécution de code à distance déguisée en commodité. Un jeton pour la protéger vivrait en clair sur la machine même qu'il protège. Le clavier de la machine est l'authentification, et elle est gratuite : le serveur rend des octets et n'en accepte aucun.</p></div>
 <p>Après chaque publication, la console affiche le chiffre qui compte pour la suite : combien d'octets neufs un joueur téléchargera réellement depuis la version précédente. C'est aussi la mesure qui dira si des deltas binaires valent leur complexité sur ces fichiers-là. Douze mégaoctets neufs ne justifient aucune machinerie de diff binaire ; 340 la justifient tout de suite. Un dossier <code>patches/</code> est déjà réservé dans le rangement, et un delta ira d'un objet à un autre, deux identités stables, sans jamais parler de versions.</p>
 </div>
+<div lang="zh-TW">
+<h2>發布：用鍵盤，而不是用路由</h2>
+<p>發布是在更新伺服器自己的主控台上進行的，它同時持續提供服務；或是透過一個供指令碼使用的小型命令列工具。兩者都呼叫同一個 <code>Publisher</code>：一份實作，就意味著只有一個需要保持正確的步驟順序。每個程式各有一份副本就會分歧，而當某一邊改了順序的那一天，另一邊會繼續太早寫入 <code>latest.json</code>，直到一次中斷的發布弄壞了某人的安裝之前，都沒有人會察覺。命令列工具在失敗時會回傳非零的結束代碼，因為它最後會被放進指令碼裡，而一次回傳零的失敗發布，會讓整條流程繼續下去，「成功地」部署一個從未上傳的版本。</p>
+<div class="note tradeoff"><p class="note-label">取捨</p><p>用一個 HTTP 路由來發布會更方便：從任何地方都能發布。而這正是問題所在。這個程序透過一條 NAT 規則暴露在網際網路上，而一個會讀取資料夾、並改寫每個啟動器要下載之內容的路由，就是一個偽裝成便利功能的遠端程式碼執行。保護它的權杖，會以明文存放在它所要保護的那台機器上。機器的鍵盤就是認證，而且是免費的：這個伺服器只送出位元組，不接受任何位元組。</p></div>
+<p>每次發布後，主控台會印出接下來最重要的那個數字：一位玩家從上一個組建更新時，實際上要下載多少新的位元組。這也是決定二進位差量是否值得它的複雜度的量測依據，就這些特定的檔案而言。新增 12 MB 不值得任何二進位差異比對的機制；340 MB 則立刻值得。配置中已經預留了一個 <code>patches/</code> 資料夾，而差量會從一個物件到另一個物件，兩個穩定的身分，完全不需要談到版本。</p></div>
 </section>
 
 <section class="sec" id="prune">
@@ -322,35 +386,38 @@ File.Move(latest + ".tmp", latest, overwrite: true);</code></pre></div>
 <h2>Faire le ménage : marquer, puis balayer</h2>
 <p>Le stockage par contenu ne réécrit jamais un objet, donc il ne libère jamais rien tout seul. Chaque version ajoute ce qui lui est propre, et au bout de vingt publications les objets uniques des dix-neuf premières dorment sur le disque. La commande <code>prune</code> garde les N dernières versions de chaque canal et supprime les objets qu'aucun manifeste restant ne cite. C'est un petit ramasse-miettes, construit comme tel : marquer d'abord tout ce qui est vivant, balayer ensuite. Supprimer en parcourant effacerait un objet partagé avec une version qu'on garde.</p>
 </div>
+<div lang="zh-TW">
+<h2>清理：先標記，再清掃</h2>
+<p>內容定址儲存從不改寫物件，所以它從不自己釋放任何東西。每個組建都會加入它獨有的物件，而在二十次發布之後，前十九次的獨有物件都還躺在磁碟上。<code>prune</code> 指令會保留每個頻道最後 N 個組建，並刪除沒有任何剩餘清單引用的物件。它是一個小型的垃圾回收器，也是照垃圾回收器的方式打造的：先標記所有存活的東西，之後才清掃。邊走邊刪，會刪掉一個與被保留組建共用的物件。</p></div>
 <figure class="fig fig-scroll">
 <svg viewBox="0 0 760 240" role="img" aria-label="Prune with keep 2: manifests 40 and 41 of the game and 3 of the launcher are kept, 39 is dropped; objects cited by a kept manifest of any channel survive; an object cited only by 39 and a leftover .tmp file are swept">
-  <text class="dg-label" x="20" y="22"><tspan lang="en">manifests (keep 2)</tspan><tspan lang="fr">manifestes (garder 2)</tspan></text>
+  <text class="dg-label" x="20" y="22"><tspan lang="en">manifests (keep 2)</tspan><tspan lang="fr">manifestes (garder 2)</tspan><tspan lang="zh-TW">清單（保留 2 個）</tspan></text>
   <text class="dg-label" x="440" y="22">objects/</text>
   <rect x="20" y="34" width="230" height="30" rx="6" class="dg-box dg-dash" style="opacity:0.6"/>
-  <text class="dg-small dg-mono" x="32" y="54">game/39.json</text><text class="dg-small" x="238" y="54" text-anchor="end"><tspan lang="en">dropped</tspan><tspan lang="fr">retiré</tspan></text>
+  <text class="dg-small dg-mono" x="32" y="54">game/39.json</text><text class="dg-small" x="238" y="54" text-anchor="end"><tspan lang="en">dropped</tspan><tspan lang="fr">retiré</tspan><tspan lang="zh-TW">捨棄</tspan></text>
   <rect x="20" y="74" width="230" height="30" rx="6" class="dg-box"/>
-  <text class="dg-small dg-mono" x="32" y="94">game/40.json</text><text class="dg-small" x="238" y="94" text-anchor="end"><tspan lang="en">kept</tspan><tspan lang="fr">gardé</tspan></text>
+  <text class="dg-small dg-mono" x="32" y="94">game/40.json</text><text class="dg-small" x="238" y="94" text-anchor="end"><tspan lang="en">kept</tspan><tspan lang="fr">gardé</tspan><tspan lang="zh-TW">保留</tspan></text>
   <rect x="20" y="114" width="230" height="30" rx="6" class="dg-hot"/>
-  <text class="dg-small dg-mono" x="32" y="134">game/41.json</text><text class="dg-small" x="238" y="134" text-anchor="end"><tspan lang="en">online</tspan><tspan lang="fr">en ligne</tspan></text>
+  <text class="dg-small dg-mono" x="32" y="134">game/41.json</text><text class="dg-small" x="238" y="134" text-anchor="end"><tspan lang="en">online</tspan><tspan lang="fr">en ligne</tspan><tspan lang="zh-TW">線上</tspan></text>
   <rect x="20" y="154" width="230" height="30" rx="6" class="dg-hot"/>
-  <text class="dg-small dg-mono" x="32" y="174">launcher/3.json</text><text class="dg-small" x="238" y="174" text-anchor="end"><tspan lang="en">online</tspan><tspan lang="fr">en ligne</tspan></text>
+  <text class="dg-small dg-mono" x="32" y="174">launcher/3.json</text><text class="dg-small" x="238" y="174" text-anchor="end"><tspan lang="en">online</tspan><tspan lang="fr">en ligne</tspan><tspan lang="zh-TW">線上</tspan></text>
   <line x1="250" y1="89" x2="440" y2="49" class="dg-line"/>
   <line x1="250" y1="129" x2="440" y2="49" class="dg-line"/>
   <line x1="250" y1="129" x2="440" y2="89" class="dg-line"/>
   <line x1="250" y1="169" x2="440" y2="169" class="dg-line"/>
   <line x1="250" y1="49" x2="440" y2="129" class="dg-line dg-dash"/>
   <rect x="440" y="34" width="300" height="30" rx="6" class="dg-box"/>
-  <text class="dg-small dg-mono" x="452" y="54">9f2c… <tspan lang="en">· cited by 40, 41</tspan><tspan lang="fr">· cité par 40, 41</tspan></text><text class="dg-small" x="728" y="54" text-anchor="end" style="fill:var(--good-ink)"><tspan lang="en">kept</tspan><tspan lang="fr">gardé</tspan></text>
+  <text class="dg-small dg-mono" x="452" y="54">9f2c… <tspan lang="en">· cited by 40, 41</tspan><tspan lang="fr">· cité par 40, 41</tspan><tspan lang="zh-TW">· 被 40、41 引用</tspan></text><text class="dg-small" x="728" y="54" text-anchor="end" style="fill:var(--good-ink)"><tspan lang="en">kept</tspan><tspan lang="fr">gardé</tspan><tspan lang="zh-TW">保留</tspan></text>
   <rect x="440" y="74" width="300" height="30" rx="6" class="dg-box"/>
-  <text class="dg-small dg-mono" x="452" y="94">41ce… <tspan lang="en">· cited by 41</tspan><tspan lang="fr">· cité par 41</tspan></text><text class="dg-small" x="728" y="94" text-anchor="end" style="fill:var(--good-ink)"><tspan lang="en">kept</tspan><tspan lang="fr">gardé</tspan></text>
+  <text class="dg-small dg-mono" x="452" y="94">41ce… <tspan lang="en">· cited by 41</tspan><tspan lang="fr">· cité par 41</tspan><tspan lang="zh-TW">· 被 41 引用</tspan></text><text class="dg-small" x="728" y="94" text-anchor="end" style="fill:var(--good-ink)"><tspan lang="en">kept</tspan><tspan lang="fr">gardé</tspan><tspan lang="zh-TW">保留</tspan></text>
   <rect x="440" y="114" width="300" height="30" rx="6" class="dg-box dg-crit-stroke"/>
-  <text class="dg-small dg-mono" x="452" y="134">77b1… <tspan lang="en">· only 39</tspan><tspan lang="fr">· seulement 39</tspan></text><text class="dg-small" x="728" y="134" text-anchor="end" style="fill:var(--crit-ink)"><tspan lang="en">swept</tspan><tspan lang="fr">balayé</tspan></text>
+  <text class="dg-small dg-mono" x="452" y="134">77b1… <tspan lang="en">· only 39</tspan><tspan lang="fr">· seulement 39</tspan><tspan lang="zh-TW">· 只有 39</tspan></text><text class="dg-small" x="728" y="134" text-anchor="end" style="fill:var(--crit-ink)"><tspan lang="en">swept</tspan><tspan lang="fr">balayé</tspan><tspan lang="zh-TW">清掃</tspan></text>
   <rect x="440" y="154" width="300" height="30" rx="6" class="dg-box"/>
-  <text class="dg-small dg-mono" x="452" y="174">c0de… · launcher/3</text><text class="dg-small" x="728" y="174" text-anchor="end" style="fill:var(--good-ink)"><tspan lang="en">kept</tspan><tspan lang="fr">gardé</tspan></text>
+  <text class="dg-small dg-mono" x="452" y="174">c0de… · launcher/3</text><text class="dg-small" x="728" y="174" text-anchor="end" style="fill:var(--good-ink)"><tspan lang="en">kept</tspan><tspan lang="fr">gardé</tspan><tspan lang="zh-TW">保留</tspan></text>
   <rect x="440" y="194" width="300" height="30" rx="6" class="dg-box dg-crit-stroke"/>
-  <text class="dg-small dg-mono" x="452" y="214">5d3e….tmp <tspan lang="en">· interrupted copy</tspan><tspan lang="fr">· copie interrompue</tspan></text><text class="dg-small" x="728" y="214" text-anchor="end" style="fill:var(--crit-ink)"><tspan lang="en">swept</tspan><tspan lang="fr">balayé</tspan></text>
+  <text class="dg-small dg-mono" x="452" y="214">5d3e….tmp <tspan lang="en">· interrupted copy</tspan><tspan lang="fr">· copie interrompue</tspan><tspan lang="zh-TW">· 中斷的複製</tspan></text><text class="dg-small" x="728" y="214" text-anchor="end" style="fill:var(--crit-ink)"><tspan lang="en">swept</tspan><tspan lang="fr">balayé</tspan><tspan lang="zh-TW">清掃</tspan></text>
 </svg>
-<figcaption><span lang="en"><strong>Mark across every channel, then sweep.</strong> An object survives if any kept manifest of any channel cites it. Leftover <code>.tmp</code> files from interrupted publications are cited by nothing, by construction.</span><span lang="fr"><strong>Marquer sur tous les canaux, puis balayer.</strong> Un objet survit si un manifeste gardé, de n'importe quel canal, le cite. Les <code>.tmp</code> laissés par des publications interrompues ne sont cités par rien, par construction.</span></figcaption>
+<figcaption><span lang="en"><strong>Mark across every channel, then sweep.</strong> An object survives if any kept manifest of any channel cites it. Leftover <code>.tmp</code> files from interrupted publications are cited by nothing, by construction.</span><span lang="fr"><strong>Marquer sur tous les canaux, puis balayer.</strong> Un objet survit si un manifeste gardé, de n'importe quel canal, le cite. Les <code>.tmp</code> laissés par des publications interrompues ne sont cités par rien, par construction.</span><span lang="zh-TW"><strong>跨所有頻道標記，然後清掃。</strong>只要有任何一個頻道中任何一份被保留的清單引用一個物件，它就會留下來。中斷的發布所留下的 <code>.tmp</code> 檔案，在結構上就不會被任何東西引用。</span></figcaption>
 </figure>
 <div lang="en">
 <p>Three details make it safe:</p>
@@ -368,6 +435,13 @@ File.Move(latest + ".tmp", latest, overwrite: true);</code></pre></div>
 <li><strong>Sans le mot <code>go</code>, elle ne fait que rapporter.</strong> <code>prune 3</code> montre ce qui serait supprimé ; <code>prune 3 go</code> le supprime. Les anciennes versions n'existent nulle part ailleurs : deux caractères de plus sont une assurance bon marché.</li>
 </ul>
 </div>
+<div lang="zh-TW">
+<p>有三個細節讓它安全：</p>
+<ul>
+<li><strong>標記永遠涵蓋每一個頻道</strong>，即使你只想整理其中一個。物件是共用的，所以一次只看啟動器頻道的清掃，會刪掉遊戲的檔案。沒有錯誤、沒有痕跡：第一個徵兆會是某位玩家的下載在一個清單承諾存在的物件上得到 404。</li>
+<li><strong>每個頻道的線上組建都不可碰</strong>，不論 N 是多少。即使打錯成 <code>prune 1</code>，<code>latest.json</code> 指向的清單所列出的物件也都仍然存在。</li>
+<li><strong>沒有 <code>go</code> 這個字，它就只報告。</strong><code>prune 3</code> 顯示會刪除什麼；<code>prune 3 go</code> 才真的刪除。舊組建在其他地方都不存在，多打兩個字元是便宜的保險。</li>
+</ul></div>
 </section>
 
 <section class="sec" id="trust">
@@ -385,6 +459,12 @@ File.Move(latest + ".tmp", latest, overwrite: true);</code></pre></div>
 <div class="note pitfall"><p class="note-label">Piège rencontré</p><p>Une build a été publiée avec son exécutable donné en chemin complet, et le manifeste est parti avec <code>C:/Users/&lt;moi&gt;/…/QwakClient.exe</code>. La vérification « l'exécutable existe-t-il ? » l'a confirmé, parce que combiner un dossier avec un chemin absolu rend le chemin absolu, et que sur la machine qui publiait, il existait. Le launcher de l'autre joueur a cherché un dossier qui n'existait que chez moi. Sans conséquence cette fois, et cela a révélé un vrai trou : le launcher écrit où dit le manifeste et lance ce qu'il nomme, donc un chemin comme <code>C:/Windows/…</code> ou <code>../../..</code> le ferait écrire, et exécuter, n'importe où sur la machine. Désormais, l'outil de publication convertit un chemin complet qui pointe dans la build en chemin relatif (coller un chemin depuis l'explorateur est le geste naturel) et refuse celui qui en sort. Le launcher revérifie chaque chemin avant de croire quoi que ce soit, et un seul mauvais chemin fait rejeter tout le manifeste.</p></div>
 <div class="note rule"><p class="note-label">Règle</p><p>Un chemin venu du réseau est une donnée, jamais un emplacement. Vérifier qu'il reste à l'intérieur, là où il entre.</p></div>
 </div>
+<div lang="zh-TW">
+<h2>完整性不等於真實性</h2>
+<p>雜湊能證明一個檔案就是清單所描述的那一個：沒有被截斷、損壞或複製錯誤。它無法證明清單是<em>誰</em>寫的。在純 HTTP 上，路徑上的任何人都可以提供一份前後一致、裝著他所選檔案的清單，而啟動器會勤奮地驗證它們相符之後再執行它們。這是一條傳遞程式碼的通道，而原始碼一次、明白地這樣寫著，而不是把一種虛假的安全感散布在三個檔案中。</p>
+<p>補救方法已經在格式中準備好了。指標攜帶清單的雜湊值，清單攜帶每個物件的雜湊值，所以整條鏈都回溯到一個小檔案：為 <code>latest.json</code> 簽章，就能認證一切。程式庫中已經有 RSA 的機制（遊戲伺服器用來向閘道證明身分的那一套，第 <a href="gateway.html">2.1</a> 章）。目前還沒有任何東西驗證簽章；重點是，加入它的那一天，不需要改變任何格式。在此同時，指標中的清單雜湊值已經能抓到兩種非常真實的失敗：一份被中斷的發布寫了一半的清單，以及一個提供某個版本的指標、卻提供另一個版本清單的 HTTP 快取。</p>
+<div class="note pitfall"><p class="note-label">我踩過的坑</p><p>有一個組建在發布時，執行檔是以完整路徑給定的，於是清單帶著 <code>C:/Users/&lt;me&gt;/…/QwakClient.exe</code> 被送了出去。「執行檔存在嗎？」的檢查確認了它，因為把一個資料夾與一個絕對路徑組合，會回傳那個絕對路徑，而在發布的機器上它確實存在。另一位玩家的啟動器去找一個只存在於我電腦上的資料夾。那次無害，卻揭露了一個真正的漏洞：啟動器會寫入清單說的地方，並執行它所指名的東西，所以一個像 <code>C:/Windows/…</code> 或 <code>../../..</code> 這樣的路徑，會讓它在機器上任何地方寫入並執行。現在發布工具會把指向組建內部的完整路徑轉成相對路徑（從檔案總管貼上路徑是很自然的動作），並拒絕指向組建外部的路徑。啟動器在相信任何東西之前，會再次檢查每一條路徑，只要有一條壞路徑就拒絕整份清單。</p></div>
+<div class="note rule"><p class="note-label">規則</p><p>來自網路的路徑是資料，絕不是位置。在它進入的地方，就檢查它是否留在內部。</p></div></div>
 </section>
 
 <section class="sec" id="takeaways">
@@ -407,6 +487,15 @@ File.Move(latest + ".tmp", latest, overwrite: true);</code></pre></div>
 <li>Ramasser les miettes en marquant sur tous les canaux avant de balayer, ne jamais toucher la version en ligne, et faire d'un essai à blanc le comportement par défaut.</li>
 <li>Traiter les hachages comme de l'intégrité seulement ; préparer une signature sur le pointeur, et rejeter tout chemin de manifeste qui sort de l'installation.</li>
 </ul></div>
+<div lang="zh-TW"><h2>重點整理</h2><ul>
+<li>以串流方式計算檔案內容的 SHA-256 來識別檔案；任何狀態下的任何用戶端，就都只需要「缺少的物件」。</li>
+<li>以雜湊值為名，每個物件只存一次，並把組建描述為清單；組建之間的共用就免費得到了。</li>
+<li>先發布物件，再發布清單，最後是一個小小的指標，每一步都是先寫入再改名；中斷只會留下孤兒。</li>
+<li>讓更新伺服器保持沒有邏輯：不可變的物件快取一年，指標永遠不快取。</li>
+<li>排除除錯輸出與啟動器自己寫入的每個檔案；清單永遠不描述一個依賴它的檔案。</li>
+<li>在清掃之前跨所有頻道標記來回收垃圾，絕不碰線上組建，並預設為只演練不執行。</li>
+<li>把雜湊只當作完整性；為指標準備一個簽章，並拒絕任何離開安裝目錄的清單路徑。</li>
+</ul></div>
 </div>
 </section>
 
@@ -419,6 +508,7 @@ File.Move(latest + ".tmp", latest, overwrite: true);</code></pre></div>
 <footer class="site-footer" id="mq-footer"></footer>
 <script src="assets/js/site-data.js" defer></script>
 <script src="assets/js/glossary-data.js" defer></script>
+<script src="assets/js/ui-zh.js" defer></script>
 <script src="assets/js/app.js" defer></script>
 <script src="assets/js/widgets.js" defer></script>
 </body>
